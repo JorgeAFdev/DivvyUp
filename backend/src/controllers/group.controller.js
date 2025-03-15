@@ -214,7 +214,7 @@ const getGroupDetails = async (req, res) => {
       return res.status(403).json({ error: "You don't have permission to view expenses from this group" });
     }
 
-    const expenses = await Expense.find({ group: groupId }).populate("participants.user", "name").populate({ path: "group", select: "name description members", populate: { path: "members.user", select: "name" } }).populate("paidBy", "name");
+    const expenses = await Expense.find({ group: groupId }).populate("participants.user", "name").populate({ path: "group", select: "name description members", populate: { path: "members.user", select: "name" } }).populate("paidBy", "name profilePicture");
 
     const debts = await Payment.find({
       group: groupId,
