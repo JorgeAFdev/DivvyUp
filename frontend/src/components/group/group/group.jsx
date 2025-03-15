@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import GroupActions from '../groupActions/groupActions';
 import { useDarkMode } from '../../../context/darkModeContext';
 import { useAuth } from '../../../context/userContextAuth';
+import { useNavigate } from 'react-router-dom';
 
 const Group = ({ group, setGroups }) => {
     const [expandedGroupId, setExpandedGroupId] = useState(null);
@@ -13,11 +14,16 @@ const Group = ({ group, setGroups }) => {
     const toggleMembers = (groupId) => {
         setExpandedGroupId(expandedGroupId === groupId ? null : groupId);
     };
+
+    const navigate = useNavigate();
     const { darkMode } = useDarkMode();
     const { token } = useAuth();
 
     const groupMembers = group?.members?.map((p) => p.user)
 
+    const handleActionsClick = (e) => {
+        e.stopPropagation();
+    }
 
     const handleEditGroup = async (data) => {
         try {
@@ -45,14 +51,14 @@ const Group = ({ group, setGroups }) => {
         }
     };
     return (
-        <div className={`${styles.group} ${darkMode ? styles.groupDark : ''}`} id={`group-card-${group._id}`}>
+        <div className={`${styles.group} ${darkMode ? styles.groupDark : ''}`} id={`group-card-${group._id}`} onClick={() => navigate(`/groups/${group._id}/expenses`)}>
             <li className={styles.listItem}>
                 <div className={styles.row} >
                     <div className={styles.left}>
                         <p><strong>{group.name}</strong></p>
                         <p>{group.description}</p>
                     </div>
-                    <div className={styles.right}>
+                    <div className={styles.right} onClick={handleActionsClick}>
                         <GroupActions group={group} groupMembers={groupMembers} editGroup={handleEditGroup} onDelete={onDelete} isEditing={isEditing} setIsEditing={setIsEditing} />
                     </div>
                 </div>
