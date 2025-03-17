@@ -37,6 +37,12 @@
     align-items: center;
 }
 
+.paidBy {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
 .right {
     display: flex;
     justify-content: center;

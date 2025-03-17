@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import ExpenseActions from '../expenseActions/expenseActions';
 import { useDarkMode } from '../../../context/darkModeContext';
 import { useAuth } from '../../../context/userContextAuth';
+import { Avatar } from '@mui/material';
 
 const Expense = ({ expense, refreshGroupDetails }) => {
     const [expandedExpenseId, setExpandedExpenseId] = useState(null);
@@ -48,10 +49,13 @@ const Expense = ({ expense, refreshGroupDetails }) => {
     return (
         <div className={`${styles.expense} ${darkMode ? styles.expenseDark : ''}`}>
             <li className={styles.listItem} onClick={() => toggleParticipants(expense._id)} title='click to see the details'>
-                <div className={styles.row} >
-                    <div className={styles.left} >
+                <div className={styles.row}>
+                    <div className={styles.left}>
                         <p><strong>{expense.description}</strong></p>
-                        <p>Paid by <strong>{expense.paidBy.name}</strong></p>
+                        <div className={styles.paidBy} title={expense.paidBy.name}>
+                            <p>Paid by</p>
+                            <Avatar src={expense.paidBy.profilePicture} alt="" />
+                        </div>
                     </div>
                     <div className={styles.right}>
                         <p><strong>{expense.totalAmount}€</strong></p>
