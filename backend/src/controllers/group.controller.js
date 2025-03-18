@@ -188,8 +188,7 @@ const deleteGroup = async (req, res) => {
     await Group.findByIdAndDelete(groupId);
     res.status(204).send();
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Error deleting group" });
+    res.status(500).json({ error: 'Error deleting group' });
   }
 };
 
