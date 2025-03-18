@@ -27,7 +27,7 @@ const Expense = ({ expense, refreshGroupDetails }) => {
             refreshGroupDetails();
             toast.success('Expense succesfully edited');
         } catch (error) {
-            toast.error(error.response.data.error);
+            toast.error(error.response.data.error || 'there was an error editing the expense');
         }
     }
 
@@ -42,7 +42,7 @@ const Expense = ({ expense, refreshGroupDetails }) => {
             refreshGroupDetails();
             toast.success('Expense succesfully deleted');
         } catch (error) {
-            toast.error(error.response.data.error);
+            toast.error(error.response.data.error || 'there was an error deleting the expense');
         }
     };
 
