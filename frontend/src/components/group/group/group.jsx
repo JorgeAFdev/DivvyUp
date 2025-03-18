@@ -32,7 +32,7 @@ const Group = ({ group, setGroups }) => {
             setIsEditing(false);
             toast.success('Group successfully edited');
         } catch (error) {
-            toast.error(error.response.data.error)
+            toast.error(error.response.data.error || 'there was an error editing the group');
         }
     }
 
@@ -47,7 +47,7 @@ const Group = ({ group, setGroups }) => {
             setGroups((prevGroups) => prevGroups.filter((g) => g._id !== group._id));
             toast.success('Group succesfully deleted')
         } catch (error) {
-            toast.error(error.response.data.error)
+            toast.error(error.response.data.error || 'there was an error deleting the group');
         }
     };
     return (
