@@ -37,7 +37,12 @@ const GroupSchema = new mongoose.Schema(
 GroupSchema.methods.updateBalance = async function () {
   const expenses = await Expense.find({ group: this._id }).populate("participants.user", "name").populate({ path: "group", select: "name description members", populate: { path: "members.user", select: "name" } }).populate("paidBy", "name");
 
-  if (expenses.length === 0) {
+  const completedPayments = await Payment.find({
+    group: this._id,
+    status: 'paid'
+  });
+
+  if (expenses.length === 0 && completedPayments.length === 0) {
     this.balance = this.members.map(member => ({
       user: member.user._id,
       amount: 0
@@ -57,11 +62,24 @@ GroupSchema.methods.updateBalance = async function () {
         const { user, amountOwed } = participant;
         if (!balance[user._id]) {
           balance[user._id] = { user: user._id, amount: -amountOwed };
+
         } else {
           balance[user._id].amount -= amountOwed;
         }
       });
     });
+
+    completedPayments.forEach((payment) => {
+      const { from, to, amount } = payment;
+      if (balance[from].amount) {
+        balance[from].amount += amount;
+      }
+
+      if (balance[to].amount) {
+        balance[to].amount -= amount;
+      }
+    });
+
     this.balance = Object.values(balance);
   }
   await this.save();
