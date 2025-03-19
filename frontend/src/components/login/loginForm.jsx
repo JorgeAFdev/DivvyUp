@@ -18,7 +18,7 @@ const Login = ({ forceUpdate }) => {
       
       if (response?.data.token) {
         login(response.data);
-        toast.success('Login exitoso 🎉');
+        toast.success('Login successfully 🎉');
         navigate('/groups');
       }
     } catch (error) {
