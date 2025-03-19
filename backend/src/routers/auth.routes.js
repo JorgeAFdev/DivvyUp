@@ -16,16 +16,16 @@ Router.post('/register', upload.single('profilePicture'), async (req, res) => {
         console.log(email, name, password, req.file);
 
         if (!email) {
-            return res.status(400).json({ error: { register: 'Email not received' } });
+            return res.status(400).json({ error:  'Email not received' });
         }
 
         if (!password) {
-            return res.status(400).json({ error: { register: 'Password not received' } });
+            return res.status(400).json({ error:  'Password not received' });
         }
 
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ error: { email: 'Email already registered' } });
+            return res.status(400).json({ error: 'Email already registered'  });
         }
 
         // Si hay un archivo de imagen, lo subimos a Cloudinary
@@ -62,19 +62,19 @@ Router.post('/login', async (req, res) => {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            return res.status(400).json({ error: { login: 'Missing email or password' } });
+            return res.status(400).json({ error: 'Missing email or password' });
         }
 
         const foundUser = await User.findOne({ email });
 
         if (!foundUser) {
-            return res.status(400).json({ error: { email: 'User not found, please Register' } });
+            return res.status(400).json({ error:  'User not found, please Register' });
         }
 
         // Compara la contraseña
         const isMatch = await foundUser.comparePassword(password);
         if (!isMatch) {
-            return res.status(400).json({ error: { password: 'Invalid Password' } });
+            return res.status(400).json({ error:  'Invalid Password' });
         }
 
         return res.status(200).json({
@@ -88,7 +88,7 @@ Router.post('/login', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: { login: 'Error Logging in :(', error: error.message } });
+        return res.status(500).json({ error: 'Error Logging in' });
     }
 });
 
