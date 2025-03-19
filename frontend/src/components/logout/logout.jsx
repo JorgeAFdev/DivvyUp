@@ -18,3 +18,5 @@ const Logout = ({forceUpdate}) => {
         <button onClick={doLogout}>Logout</button>
     )
 }
+
+export default Logout;
