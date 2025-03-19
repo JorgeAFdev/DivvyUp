@@ -22,7 +22,6 @@ const Login = ({ forceUpdate }) => {
         navigate('/groups');
       }
     } catch (error) {
-      console.log(error.response.data)
       toast.error(error.response?.data?.error || 'Login failed. Please try again.');
     }
   };

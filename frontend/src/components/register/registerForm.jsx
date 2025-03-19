@@ -28,7 +28,6 @@ const RegisterForm = () => {
         } catch (error) {
             const errorMessage = error.response?.data?.error || 'Registration failed. Please try again.';
             toast.error(errorMessage);
-            throw new Error(errorMessage);
         }
     };
 
