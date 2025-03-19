@@ -4,46 +4,49 @@ import api from '../../utils/axios';
 import styles from './registerForm.module.css';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../context/userContextAuth';
+import { toast } from 'react-toastify';
 
 const RegisterForm = () => {
     const queryClient = useQueryClient();
     const { register, handleSubmit, watch, formState: { errors } } = useForm();
 
-    const createUser = (data) => {
-        // Creamos un objeto FormData para enviar los datos como archivo y texto
-        const formData = new FormData();
-        formData.append('name', data.name);
-        formData.append('email', data.email);
-        formData.append('password', data.password);
-        formData.append('profilePicture', data.profilePicture[0]);  // El archivo es un array, tomamos el primer elemento
+    const createUser = async (data) => {
+        try {
+            const formData = new FormData();
+            formData.append('name', data.name);
+            formData.append('email', data.email);
+            formData.append('password', data.password);
+            formData.append('profilePicture', data.profilePicture[0]);
 
-        return api.post('/auth/register', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data', // Importante para el envío de archivos
-            },
-        });
+            const response = await api.post('/auth/register', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            
+            return response.data;
+        } catch (error) {
+            const errorMessage = error.response?.data?.error || 'Registration failed. Please try again.';
+            toast.error(errorMessage);
+            throw new Error(errorMessage);
+        }
     };
 
     const { login } = useAuth();
     const navigate = useNavigate();
     const mutation = useMutation(createUser, {
-        onSuccess: (response) => {
-            const userData = response.data;
+        onSuccess: (userData) => {
             login(userData);
             queryClient.invalidateQueries('users');
+            toast.success('Registration successful 🎉');
             navigate('/groups');
-        },
-        onError: (error) => {
-            console.log(error);
         }
     });
 
     const onSubmit = (data) => {
-        console.log(data);
         mutation.mutate(data);
     };
 
-    
     const profilePicture = watch('profilePicture');
 
     return (
@@ -55,36 +58,35 @@ const RegisterForm = () => {
                 <input
                     className={styles.registerInput}
                     type="text"
-                    placeholder="Register your Name.."
+                    placeholder="Enter your name.."
                     {...register('name', {
-                        required: 'El nombre es obligatorio',
-                        maxLength: { value: 20, message: 'El nombre es demasiado largo' },
+                        required: 'Name is required',
+                        maxLength: { value: 20, message: 'Name is too long' },
                     })}
                 />
                 {errors.name && <p className={styles.registerErrorMessage}>{errors.name.message}</p>}
             </label>
 
             <label className={styles.registerLabel}>
-                Correo electrónico:
+                Email:
                 <input
                     className={styles.registerInput}
                     type="text"
-                    placeholder="pepe@example.com"
+                    placeholder="example@example.com"
                     {...register('email', {
-                        pattern: { value: /^\S+@\S+$/i, message: 'Formato de correo inválido' },
+                        pattern: { value: /^\S+@\S+$/i, message: 'Invalid email format' },
                     })}
                 />
-                {errors.email && <p className={styles.registerErrorMessage}>{errors.email.message}</p>}
             </label>
 
             <label className={styles.registerLabel}>
-                Contraseña:
+                Password:
                 <input
                     className={styles.registerInput}
                     type="password"
-                    placeholder="12345678"
+                    placeholder="********"
                     {...register('password', {
-                        minLength: { value: 8, message: 'La contraseña es muy corta' },
+                        minLength: { value: 8, message: 'Password is too short' },
                         required: true,
                     })}
                 />
@@ -92,30 +94,27 @@ const RegisterForm = () => {
             </label>
 
             <label className={styles.registerLabel}>
-                Foto de perfil:
+                Profile Picture:
                 <input
                     className={styles.registerInputFile}
                     type="file"
                     {...register('profilePicture', {
-                        required: 'La foto de perfil es obligatoria',
-                        validate: (value) => value.length > 0 || 'Debe seleccionar una imagen',
+                        required: 'Profile picture is required',
+                        validate: (value) => value.length > 0 || 'You must select an image',
                     })}
                 />
                 {errors.profilePicture && <p className={styles.registerErrorMessage}>{errors.profilePicture.message}</p>}
             </label>
 
-            <button type="submit" className={styles.registerSubmitButton}>Registrarse</button>
-
-            {mutation.isSuccess && <p>Usuario creado correctamente!</p>}
-            {mutation.isError && <p>Hubo un error al crear el usuario. Intenta nuevamente.</p>}
+            <button type="submit" className={styles.registerSubmitButton}>Register</button>
 
             <h3>Preview:</h3>
             <p>
                 Profile Picture:{' '}
                 {profilePicture?.[0] ? (
-                    <img className={styles.registerPreviewImage} src={URL.createObjectURL(profilePicture[0])} alt="Vista previa" />
+                    <img className={styles.registerPreviewImage} src={URL.createObjectURL(profilePicture[0])} alt="Preview" />
                 ) : (
-                    'No se ha proporcionado una foto'
+                    'No image selected'
                 )}
             </p>
         </form>
@@ -123,4 +122,3 @@ const RegisterForm = () => {
 };
 
 export default RegisterForm;
-
