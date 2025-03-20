@@ -1,30 +1,39 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Avatar } from '@mui/material';
+import { Avatar, Menu, MenuItem, IconButton } from '@mui/material';
 import Logout from '../logout/logout';
 
 const UserMenu = ({ forceUpdate }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const isMenuOpen = Boolean(anchorEl);
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
   };
 
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
   return (
-    <div className="user-menu-container">
-      <div className="avatar" onClick={toggleMenu}>
-        <Avatar>A</Avatar> {/* Esto puede cambiar dependiendo del nombre o imagen del usuario */}
-      </div>
-
-      {isMenuOpen && (
-        <div className="menu">
-          <Link to="/profile" className="menu-item">Profile</Link>
-          {/* Llamamos a Logout como un componente aquí */}
+    <div>
+      <IconButton onClick={handleMenuOpen} style={{ padding: 0 }}>
+        <Avatar>A</Avatar>
+      </IconButton>
+      <Menu
+        anchorEl={anchorEl}
+        open={isMenuOpen}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={handleMenuClose} component={Link} to="/profile">
+          Profile
+        </MenuItem>
+        <MenuItem onClick={handleMenuClose} >
           <Logout forceUpdate={forceUpdate} />
-        </div>
-      )}
+        </MenuItem>
+      </Menu>
     </div>
   );
 };
 
 export default UserMenu;
+

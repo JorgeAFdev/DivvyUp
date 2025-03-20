@@ -13,9 +13,10 @@ const Logout = ({forceUpdate}) => {
         removeSession();
         forceUpdate();
         navigate('/');
+        window.location.reload();
     }
     return (
-        <button onClick={doLogout}>Logout</button>
+        <button onClick={doLogout} style={{ all: 'unset', cursor: 'pointer' }}>Logout</button>
     )
 }
 
