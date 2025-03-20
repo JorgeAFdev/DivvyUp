@@ -207,11 +207,26 @@ const getExpensesByUserId = async (req, res) => {
             return res.status(400).json({ error: "Invalid user ID" });
         }
 
-        const expenses = await Expense.find({ "participants.user": userId }).populate("participants.user", "name").populate("group", "name description").populate("paidBy", "name");
+        const expenses = await Expense.find({ $or: [{ "participants.user": userId }, { paidBy: userId }] }).populate("participants.user", "name").populate({ path: "group", select: "name description members", populate: { path: "members.user", select: "name" } }).populate("paidBy", "name profilePicture");
 
         if (expenses.length <= 0) { return res.status(404).json({ error: "Expenses not found for this user" }) }
 
-        res.status(200).json(expenses);
+        const expensesByGroup = {};
+
+        expenses.forEach(expense => {
+            const groupId = expense.group._id.toString();
+
+            expensesByGroup[groupId] = expensesByGroup[groupId] ?? {
+                groupId: groupId,
+                groupName: expense.group.name,
+                groupDescription: expense.group.description,
+                expenses: []
+            };
+
+            expensesByGroup[groupId].expenses.push(expense);
+        });
+        const groupedExpenses = Object.values(expensesByGroup);
+        res.status(200).json(groupedExpenses);
     } catch (error) {
         console.log(error);
         res.status(500).json({ error: "Error getting expenses" });
