@@ -1,7 +1,7 @@
 import { authHeaders } from "./authHeaders";
 import api from "./axios";
 
-export const getAllUserExpensesById = async (token) => {
+export const getAllUserExpenses = async (token) => {
   const response = await api.get(`/user/expenses`, authHeaders(token));
   return response.data;
 };
