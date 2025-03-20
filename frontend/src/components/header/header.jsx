@@ -26,14 +26,11 @@ const Header = () => {
         <header className={`${styles.header} ${darkMode ? styles.headerDark : ''}`}>
             <h1 className={styles.logo}>DivvyUp</h1>
             <nav className={styles.nav}>
-                <Link to="/friends" className={`${styles.navItem} ${darkMode ? styles.navItemDark : ''}`}>Friends</Link>
                 <Link to="/groups" className={`${styles.navItem} ${darkMode ? styles.navItemDark : ''}`}>Groups</Link>
                 <Link to="/my-expenses" className={`${styles.navItem} ${darkMode ? styles.navItemDark : ''}`}>Expenses</Link>
             </nav>
             <div className={styles.right}>
                 {darkMode ? <Icon handleClick={() => toggleDarkMode()} variant='light' className='theme' /> : <Icon handleClick={() => toggleDarkMode()} variant='dark' className='theme' />}
-                
-               
                 <UserMenu forceUpdate={() => {}} />
             </div>
         </header>

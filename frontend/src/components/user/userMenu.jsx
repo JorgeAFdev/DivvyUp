@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar, Menu, MenuItem, IconButton } from '@mui/material';
 import Logout from '../logout/logout';
+import { getUserSession } from '../../utils/localStorage'; 
 
 const UserMenu = ({ forceUpdate }) => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -14,10 +15,12 @@ const UserMenu = ({ forceUpdate }) => {
   const handleMenuClose = () => {
     setAnchorEl(null);
   };
+  const user = getUserSession(); 
+  const profilePicture = user.profilePicture || 'https://via.placeholder.com/150';
   return (
     <div>
       <IconButton onClick={handleMenuOpen} style={{ padding: 0 }}>
-        <Avatar>A</Avatar>
+        <Avatar src={profilePicture}/>
       </IconButton>
       <Menu
         anchorEl={anchorEl}
