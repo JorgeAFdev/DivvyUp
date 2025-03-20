@@ -20,7 +20,7 @@ const UserMenu = ({ forceUpdate }) => {
   return (
     <div>
       <IconButton onClick={handleMenuOpen} style={{ padding: 0 }}>
-        <Avatar src={profilePicture}/>
+        <Avatar src={profilePicture} alt="profile Picture" sx={{ backgroundColor: 'white' }}/>
       </IconButton>
       <Menu
         anchorEl={anchorEl}
