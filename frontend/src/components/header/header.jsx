@@ -4,6 +4,7 @@ import styles from './header.module.css';
 import { useDarkMode } from '../../context/darkModeContext';
 import Icon from '../icon/icon';
 import UserMenu from '../user/userMenu';
+import Notifications from '../notifications/notifications';
 
 const Header = () => {
     const { darkMode, toggleDarkMode } = useDarkMode();
