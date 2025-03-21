@@ -3,12 +3,11 @@ import { useAuth } from '../../context/userContextAuth';
 import styles from './header.module.css';
 import { useDarkMode } from '../../context/darkModeContext';
 import Icon from '../icon/icon';
-import Avatar from '@mui/material/Avatar';
 import UserMenu from '../user/userMenu';
 
 const Header = () => {
     const { darkMode, toggleDarkMode } = useDarkMode();
-    const { token } = useAuth();  
+    const { token } = useAuth();
 
     if (!token) {
         return (
@@ -31,7 +30,8 @@ const Header = () => {
             </nav>
             <div className={styles.right}>
                 {darkMode ? <Icon handleClick={() => toggleDarkMode()} variant='light' className='theme' /> : <Icon handleClick={() => toggleDarkMode()} variant='dark' className='theme' />}
-                <UserMenu forceUpdate={() => {}} />
+                <Notifications />
+                <UserMenu forceUpdate={() => { }} />
             </div>
         </header>
     );
