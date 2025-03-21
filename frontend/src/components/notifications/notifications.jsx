@@ -10,7 +10,7 @@ const Notifications = () => {
     const { id: userId } = getUserSession();
 
     useEffect(() => {
-        const newSocket = io('http://localhost:3001');
+        const newSocket = io(import.meta.env.VITE_SOCKET_URL);
         setSocket(newSocket);
 
         newSocket.emit('register', userId);
