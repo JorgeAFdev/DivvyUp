@@ -3,6 +3,7 @@ const Group = require("../schemas/group.schema");
 const Payment = require("../schemas/payment.schema");
 const User = require("../schemas/user.schema");
 const mongoose = require("mongoose");
+const { sendNotificationToUser, notificationTypes } = require("../services/notifications");
 
 const createGroup = async (req, res) => {
   try {
@@ -46,6 +47,18 @@ const createGroup = async (req, res) => {
 
     const newGroup = await Group.findById(group._id).populate("members.user", "name email")
     await newGroup.updateBalance();
+
+    const io = req.app.get('socketio');
+    existingUsers.forEach(user => {
+      if (user._id.toString() === userId) { return; }
+
+      sendNotificationToUser(io, user._id.toString(), notificationTypes.GROUP_CREATED, `you have been added to group ${group.name}`, {
+        groupId: group._id,
+        groupName: group.name,
+        groupDescription: group.description
+      })
+    });
+
     res.status(201).json(newGroup);
   } catch (error) {
     console.error(error);

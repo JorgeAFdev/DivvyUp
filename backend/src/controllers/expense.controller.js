@@ -2,6 +2,7 @@ const Expense = require("../schemas/expense.schema");
 const User = require("../schemas/user.schema");
 const Group = require("../schemas/group.schema");
 const mongoose = require("mongoose");
+const { sendNotificationToUser, notificationTypes } = require("../services/notifications");
 
 const createExpense = async (req, res) => {
     try {
@@ -75,6 +76,17 @@ const createExpense = async (req, res) => {
         });
 
         const expense = await Expense.findById(newExpense._id).populate("participants.user", "name").populate({ path: "group", select: "name description members", populate: { path: "members.user", select: "name" } }).populate("paidBy", "name");
+
+        const io = req.app.get('socketio');
+        participantIds.forEach(participant => {
+            if (participant.toString() === userId) { return; }
+
+            sendNotificationToUser(io, participant.toString(), notificationTypes.EXPENSE_CREATED, `you have been added to expense ${expense.description} from group ${expense.group.name}`, {
+                expenseId: expense._id,
+                expenseDescription: expense.description,
+                expenseAmount: expense.totalAmount
+            })
+        });
 
         res.status(201).json(expense);
     } catch (error) {

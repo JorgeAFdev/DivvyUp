@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Group = require("../schemas/group.schema");
 const Payment = require("../schemas/payment.schema");
+const { sendNotificationToUser, notificationTypes } = require("../services/notifications");
 
 const pay = async (req, res) => {
   try {
@@ -11,7 +12,7 @@ const pay = async (req, res) => {
       return res.status(400).json({ error: "Invalid group ID" });
     }
 
-    const payment = await Payment.findById(paymentId).populate('from', '_id').populate('to', '_id');
+    const payment = await Payment.findById(paymentId).populate('from', '_id name').populate('to', '_id name');
     if (!payment) {
       return res.status(404).json({ error: "Payment not found" });
     }
@@ -37,6 +38,14 @@ const pay = async (req, res) => {
 
     payment.status = "paid";
     await payment.save();
+
+    const io = req.app.get('socketio');
+
+    sendNotificationToUser(io, to, notificationTypes.DEBT_SETTLED, `${payment.from.name} has settled his debt with ${payment.to.name}`, {
+      paymentId: payment._id,
+      paymentAmount: payment.amount,
+      groupId: payment.group._id.toString()
+    })
 
     await group.updateBalance();
     await group.generateDebts();
