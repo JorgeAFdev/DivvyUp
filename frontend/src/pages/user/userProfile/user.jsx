@@ -1,13 +1,14 @@
 import React from 'react';
 import { getUserSession } from '../../../utils/localStorage'; 
 import styles from './user.module.css';
+import UserEdit from '../../../components/user/userEdit';
 
 const User = () => {
     const user = getUserSession();
-    console.log(user);
+    
 
     if (!user) {
-        return <div className={styles.error}>Usuario no encontrado. Por favor, inicia sesión.</div>;
+        return <div className={styles.error}>User not found. Please log in.</div>;
     }
 
     return (
@@ -20,6 +21,8 @@ const User = () => {
             />
             <p className={styles.text}><strong>Nombre:</strong> {user.name}</p>
             <p className={styles.text}><strong>Email:</strong> {user.email}</p>
+            <UserEdit user={user} />
+
         </div>
     );
 };
