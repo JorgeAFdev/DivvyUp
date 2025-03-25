@@ -6,6 +6,7 @@ import ExpenseActions from '../expenseActions/expenseActions';
 import { useDarkMode } from '../../../context/darkModeContext';
 import { useAuth } from '../../../context/userContextAuth';
 import { Avatar } from '@mui/material';
+import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 
 const Expense = ({ expense, refreshGroupDetails }) => {
     const [expandedExpenseId, setExpandedExpenseId] = useState(null);
@@ -13,6 +14,7 @@ const Expense = ({ expense, refreshGroupDetails }) => {
 
     const { darkMode } = useDarkMode();
     const { token } = useAuth();
+    const { showConfirmationToast } = useConfirmationToast();
 
     const groupMembers = expense.group.members.map((member) => member.user);
 
@@ -31,12 +33,14 @@ const Expense = ({ expense, refreshGroupDetails }) => {
         }
     }
 
-    const onDelete = async () => {
-        const userConfirmed = window.confirm('Are you sure you want to delete this expense?');
-        if (!userConfirmed) {
-            return;
-        }
+    const handleDeleteExpense = async () => {
+        showConfirmationToast({
+            message: `Are you sure you want to delete this expense?`,
+            onConfirm: onDelete,
+        });
+    };
 
+    const onDelete = async () => {
         try {
             await deleteGroupExpense(expense.group._id, expense._id, token);
             refreshGroupDetails();
@@ -60,7 +64,7 @@ const Expense = ({ expense, refreshGroupDetails }) => {
                     <div className={styles.right}>
                         <p><strong>{expense.totalAmount}€</strong></p>
                         <div className={styles.actions}>
-                            <ExpenseActions groupMembers={groupMembers} handleEditExpense={handleEditExpense} onDelete={onDelete} isEditing={isEditing} setIsEditing={setIsEditing} defaultValues={expense} />
+                            <ExpenseActions groupMembers={groupMembers} handleEditExpense={handleEditExpense} onDelete={handleDeleteExpense} isEditing={isEditing} setIsEditing={setIsEditing} defaultValues={expense} />
                         </div>
                     </div>
                 </div>
