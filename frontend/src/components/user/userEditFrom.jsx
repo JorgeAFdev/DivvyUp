@@ -59,7 +59,7 @@ const UserEditForm = ({ user, onClose }) => {
                 if (!oldData) return [updatedUser.user];
                 return oldData.map((u) => (u.id === updatedUser.user.id ? updatedUser.user : u));
             });
-            //window.location.reload();
+            window.location.reload();
 
             // Notificar éxito y cerrar el formulario
             toast.success("¡Usuario actualizado con éxito! 🎉");
