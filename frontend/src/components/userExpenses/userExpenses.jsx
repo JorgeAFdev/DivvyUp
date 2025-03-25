@@ -36,7 +36,7 @@ const UserExpenses = () => {
             {data?.map((group) => (
                 <div key={group.groupId}>
                     <h2 className={styles.title} onClick={() => navigate(`/groups/${group.groupId}/expenses`)}>{group.groupName}</h2>
-                    <ExpenseList groupExpenses={group.expenses} refreshGroupDetails={refreshExpenses} className='list' />
+                    <ExpenseList groupExpenses={group.expenses} refreshGroupDetails={refreshExpenses} className='list' title={false} />
                 </div>
             ))}
         </div>
