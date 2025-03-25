@@ -6,6 +6,7 @@ import GroupActions from '../groupActions/groupActions';
 import { useDarkMode } from '../../../context/darkModeContext';
 import { useAuth } from '../../../context/userContextAuth';
 import { useNavigate } from 'react-router-dom';
+import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 
 const Group = ({ group, setGroups }) => {
     const [expandedGroupId, setExpandedGroupId] = useState(null);
@@ -18,6 +19,7 @@ const Group = ({ group, setGroups }) => {
     const navigate = useNavigate();
     const { darkMode } = useDarkMode();
     const { token } = useAuth();
+    const { showConfirmationToast } = useConfirmationToast();
 
     const groupMembers = group?.members?.map((p) => p.user)
 
@@ -36,12 +38,14 @@ const Group = ({ group, setGroups }) => {
         }
     }
 
-    const onDelete = async () => {
-        const userConfirmed = window.confirm('Are you sure you want to delete this group?');
-        if (!userConfirmed) {
-            return;
-        }
+    const handleDeleteExpense = async () => {
+        showConfirmationToast({
+            message: `Are you sure you want to delete this group?`,
+            onConfirm: onDelete,
+        });
+    };
 
+    const onDelete = async () => {
         try {
             await deleteGroup(group._id, token);
             setGroups((prevGroups) => prevGroups.filter((g) => g._id !== group._id));
@@ -59,7 +63,7 @@ const Group = ({ group, setGroups }) => {
                         <p>{group.description}</p>
                     </div>
                     <div className={styles.right} onClick={handleActionsClick}>
-                        <GroupActions group={group} groupMembers={groupMembers} editGroup={handleEditGroup} onDelete={onDelete} isEditing={isEditing} setIsEditing={setIsEditing} />
+                        <GroupActions group={group} groupMembers={groupMembers} editGroup={handleEditGroup} onDelete={handleDeleteExpense} isEditing={isEditing} setIsEditing={setIsEditing} />
                     </div>
                 </div>
                 {expandedGroupId === group._id && (
