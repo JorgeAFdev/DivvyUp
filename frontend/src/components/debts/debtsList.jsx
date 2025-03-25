@@ -6,11 +6,14 @@ const DebtsList = ({ groupDebts, refreshGroupDetails }) => {
         <div className={styles.debtsList}>
             <div>
                 {groupDebts?.length === 0 ? '' : (
-                    <ul className={styles.list}>
-                        {groupDebts?.map((debt) => (
-                            <Debt key={debt._id} debt={debt} refreshGroupDetails={refreshGroupDetails} />
-                        ))}
-                    </ul>
+                    <>
+                        <h2 className={styles.title}>Debts</h2>
+                        <ul className={styles.list}>
+                            {groupDebts?.map((debt) => (
+                                <Debt key={debt._id} debt={debt} refreshGroupDetails={refreshGroupDetails} />
+                            ))}
+                        </ul>
+                    </>
                 )}
             </div>
         </div>
