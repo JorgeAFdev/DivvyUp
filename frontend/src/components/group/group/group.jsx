@@ -7,14 +7,11 @@ import { useDarkMode } from '../../../context/darkModeContext';
 import { useAuth } from '../../../context/userContextAuth';
 import { useNavigate } from 'react-router-dom';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
+import { Avatar } from '@mui/material';
+import { Tooltip } from 'react-tooltip';
 
 const Group = ({ group, setGroups }) => {
-    const [expandedGroupId, setExpandedGroupId] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
-
-    const toggleMembers = (groupId) => {
-        setExpandedGroupId(expandedGroupId === groupId ? null : groupId);
-    };
 
     const navigate = useNavigate();
     const { darkMode } = useDarkMode();
@@ -59,25 +56,23 @@ const Group = ({ group, setGroups }) => {
             <li className={styles.listItem}>
                 <div className={styles.row} >
                     <div className={styles.left}>
-                        <p><strong>{group.name}</strong></p>
-                        <p>{group.description}</p>
+                        <div className={styles.info}>
+                            <p><strong>{group.name}</strong></p>
+                            <p>{group.description}</p>
+                        </div>
+                        <div className={styles.avatar}>
+                            {group.members.map(({ user }) => (
+                                <div key={user._id}>
+                                    <Avatar src={user.profilePicture} data-tooltip-id={user._id} sx={{ backgroundColor: 'white' }} />
+                                    <Tooltip id={user._id} content={user.name} />
+                                </div>
+                            ))}
+                        </div>
                     </div>
                     <div className={styles.right} onClick={handleActionsClick}>
                         <GroupActions group={group} groupMembers={groupMembers} editGroup={handleEditGroup} onDelete={handleDeleteExpense} isEditing={isEditing} setIsEditing={setIsEditing} />
                     </div>
                 </div>
-                {expandedGroupId === group._id && (
-                    <div className={styles.members}>
-                        <p><strong>Members</strong></p>
-                        <ul>
-                            {group.members.map((member, index) => (
-                                <li key={index} className={styles.listItem}>
-                                    {member.user.name}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
             </li>
         </div>
     );
