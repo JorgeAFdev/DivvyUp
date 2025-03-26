@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 
 const CreateGroup = ({ setGroups }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [email, setEmail] = useState(null);
     const openModal = () => setIsModalOpen(true);
     const closeModal = () => setIsModalOpen(false);
 
@@ -20,10 +21,12 @@ const CreateGroup = ({ setGroups }) => {
     useEffect(() => {
         if (token) {
             const session = getUserSession();
-            const email = session?.email;
-            if (!email) {
+            const userEmail = session?.email;
+            if (!userEmail) {
                 logout();
                 navigate('/login');
+            } else {
+                setEmail(userEmail)
             }
         }
     }, [token, logout, navigate]);
