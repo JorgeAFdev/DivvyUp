@@ -9,3 +9,7 @@
         gap: 40px;
     }
 }
+
+.text {
+    color: var(--color-dark-mode);
+}
