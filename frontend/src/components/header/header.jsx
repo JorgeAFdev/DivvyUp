@@ -13,7 +13,9 @@ const Header = () => {
     if (!token) {
         return (
             <header className={`${styles.header} ${darkMode ? styles.headerDark : ''}`}>
-                <h1 className={styles.logo}>DivvyUp</h1>
+                <Link to="/">
+                    <img src="/assets/logo.png" alt="Logo DivvyUp" className={styles.logo} />
+                </Link>
                 <nav className={styles.nav}>
                     <Icon handleClick={() => toggleDarkMode()} variant={darkMode ? 'light' : 'dark'} className='theme' />
                     <Link to="/login" className={`${styles.navItem} ${darkMode ? styles.navItemDark : ''}`}>Login</Link>
@@ -25,7 +27,9 @@ const Header = () => {
 
     return (
         <header className={`${styles.header} ${darkMode ? styles.headerDark : ''}`}>
-            <h1 className={styles.logo}>DivvyUp</h1>
+            <Link to="/">
+                <img src="/assets/logo.png" alt="Logo DivvyUp" className={styles.logo} />
+            </Link>
             <nav className={styles.nav}>
                 <Link to="/groups" className={`${styles.navItem} ${darkMode ? styles.navItemDark : ''}`}>Groups</Link>
                 <Link to="/my-expenses" className={`${styles.navItem} ${darkMode ? styles.navItemDark : ''}`}>Expenses</Link>
