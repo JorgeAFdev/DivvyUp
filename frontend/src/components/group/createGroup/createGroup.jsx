@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createGroup } from "../../../utils/groupApi";
 import GroupForm from "../groupForm/groupForm";
 import Icon from "../../icon/icon";
@@ -13,8 +13,17 @@ const CreateGroup = ({ setGroups }) => {
     const openModal = () => setIsModalOpen(true);
     const closeModal = () => setIsModalOpen(false);
 
-    const { email } = getUserSession()
     const { token } = useAuth();
+
+    let email
+    if (token) {
+        const session = getUserSession();
+        if (session) {
+            email = session.email;
+        } else {
+            window.location.reload();
+        }
+    }
 
     const handleCreateGroup = async (data) => {
         try {
@@ -27,7 +36,7 @@ const CreateGroup = ({ setGroups }) => {
             closeModal();
             toast.success('Group succesfully created')
         } catch (error) {
-            toast.error(error.response.data.error)
+            toast.error(error.response.data.error || 'there was an error creating the group')
         }
     }
 
