@@ -3,6 +3,7 @@ import styles from './grouplist.module.css';
 import { getGroupByUserId } from '../../../utils/groupApi';
 import Group from '../group/group';
 import { useAuth } from '../../../context/userContextAuth';
+import { useDarkMode } from '../../../context/darkModeContext';
 
 const GroupList = ({ groups, setGroups }) => {
     useEffect(() => {
@@ -10,6 +11,7 @@ const GroupList = ({ groups, setGroups }) => {
     }, []);
 
     const { token } = useAuth();
+    const { darkMode } = useDarkMode();
 
     const getGroups = async () => {
         try {
@@ -22,7 +24,7 @@ const GroupList = ({ groups, setGroups }) => {
 
     return (
         <section className={styles.groups}>
-            {groups.length === 0 ? (<p className={styles.text}>There are no groups</p>) : (
+            {groups.length === 0 ? (<p className={darkMode ? styles.text : ''}>There are no groups</p>) : (
                 <ul className={styles.list}>
                     {groups.map((group) => (
                         <Group key={group._id} group={group} setGroups={setGroups} />
