@@ -40,6 +40,23 @@
     align-items: center;
 }
 
+.left {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.avatar {
+    display: flex;
+    gap: 10px;
+}
+
 .right {
     display: flex;
     justify-content: center;
