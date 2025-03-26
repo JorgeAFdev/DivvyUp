@@ -1,4 +1,4 @@
-export  const getStorageObject = (key) => {
+export const getStorageObject = (key) => {
     const item = localStorage.getItem(key);
     if (item !== null) {
         return JSON.parse(item);
@@ -16,7 +16,6 @@ export const deleteStorageObject = (key) => {
 
 export const getUserToken = () => {
     const session = getStorageObject('user-session')
-    console.log("session:", session)
     if (session) {
         return session.token
     }
@@ -33,4 +32,4 @@ export const getUserSession = () => {
 
 export const removeSession = () => {
     deleteStorageObject('user-session');
-  };
+};

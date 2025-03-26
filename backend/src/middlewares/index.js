@@ -1,7 +1,6 @@
 const Group = require("../schemas/group.schema");
 
 const addDateMiddleware = (req, res, next) => {
-  console.log("Request Type:", req.method);
   req.requestInstant = new Date();
   next();
 };
@@ -19,7 +18,6 @@ function validateEmail(password) {
 }
 
 const validateUser = (req, res, next) => {
-  console.log("Request Type:", req.method);
   const user = req.body;
 
   if (user.name === undefined || user.name.length === 0) {
