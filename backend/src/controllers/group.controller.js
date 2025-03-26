@@ -45,7 +45,7 @@ const createGroup = async (req, res) => {
       members: formattedMembers
     })
 
-    const newGroup = await Group.findById(group._id).populate("members.user", "name email")
+    const newGroup = await Group.findById(group._id).populate("members.user", "name email profilePicture")
     await newGroup.updateBalance();
 
     const io = req.app.get('socketio');
@@ -122,7 +122,7 @@ const updateGroup = async (req, res) => {
       members: formattedMembers
     },
       { new: true }
-    ).populate("members.user", "name email");
+    ).populate("members.user", "name email profilePicture");
     if (!newGroup) {
       return res.status(404).json({ error: "Group not found" });
     }
@@ -144,7 +144,7 @@ const getUserGroups = async (req, res) => {
       return res.status(400).json({ error: "Invalid user Id" });
     }
 
-    const groups = await Group.find({ "members.user": userId }).populate("members.user", "name email");
+    const groups = await Group.find({ "members.user": userId }).populate("members.user", "name email profilePicture");
     if (groups.length === 0) {
       return res.status(404).json({ error: "Groups not found" });
     }
@@ -199,6 +199,7 @@ const deleteGroup = async (req, res) => {
     }
 
     await Group.findByIdAndDelete(groupId);
+    await Expense.deleteMany({ group: groupId });
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Error deleting group' });
