@@ -1,6 +1,5 @@
 .text {
-    display: flex;
-    justify-content: center;
+    color: var(--color-dark-mode);
 }
 
 .list {
