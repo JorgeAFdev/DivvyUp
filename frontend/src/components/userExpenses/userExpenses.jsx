@@ -4,7 +4,8 @@ import { useAuth } from "../../context/userContextAuth";
 import { getAllUserExpenses } from "../../utils/expenseApi";
 import ExpenseList from "../expense/expenseList/expenseList";
 import { toast } from "react-toastify";
-import styles from './userExpenses.module.css'
+import styles from './userExpenses.module.css';
+import { Tooltip } from 'react-tooltip';
 
 
 const UserExpenses = () => {
@@ -35,7 +36,8 @@ const UserExpenses = () => {
         <div>
             {data?.map((group) => (
                 <div key={group.groupId}>
-                    <h2 className={styles.title} onClick={() => navigate(`/groups/${group.groupId}/expenses`)}>{group.groupName}</h2>
+                    <h2 className={styles.title} onClick={() => navigate(`/groups/${group.groupId}/expenses`)} data-tooltip-id={group.groupId}>{group.groupName}</h2>
+                    <Tooltip id={group.groupId} content="Click to view group details" />
                     <ExpenseList groupExpenses={group.expenses} refreshGroupDetails={refreshExpenses} className='list' title={false} />
                 </div>
             ))}
