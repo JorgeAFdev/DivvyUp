@@ -7,9 +7,9 @@ import { useDarkMode } from '../../../context/darkModeContext';
 import { useAuth } from '../../../context/userContextAuth';
 import { Avatar } from '@mui/material';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
+import { Tooltip } from 'react-tooltip';
 
 const Expense = ({ expense, refreshGroupDetails }) => {
-    const [expandedExpenseId, setExpandedExpenseId] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
 
     const { darkMode } = useDarkMode();
@@ -17,10 +17,6 @@ const Expense = ({ expense, refreshGroupDetails }) => {
     const { showConfirmationToast } = useConfirmationToast();
 
     const groupMembers = expense.group.members.map((member) => member.user);
-
-    const toggleParticipants = (expenseId) => {
-        setExpandedExpenseId(expandedExpenseId === expenseId || isEditing ? null : expenseId);
-    };
 
     const handleEditExpense = async (data) => {
         try {
@@ -52,13 +48,14 @@ const Expense = ({ expense, refreshGroupDetails }) => {
 
     return (
         <div className={`${styles.expense} ${darkMode ? styles.expenseDark : ''}`}>
-            <li className={styles.listItem} onClick={() => toggleParticipants(expense._id)} title='click to see the details'>
+            <li className={styles.listItem}>
                 <div className={styles.row}>
                     <div className={styles.left}>
                         <p><strong>{expense.description}</strong></p>
-                        <div className={styles.paidBy} title={expense.paidBy.name}>
+                        <div className={styles.paidBy}>
                             <p>Paid by</p>
-                            <Avatar src={expense.paidBy.profilePicture} alt="" />
+                            <Avatar src={expense.paidBy.profilePicture} alt={`Profile picture of ${expense.paidBy.name}`} data-tooltip-id={expense.paidBy._id} sx={{ backgroundColor: 'white' }} />
+                            <Tooltip id={expense.paidBy._id} content={expense.paidBy.name} />
                         </div>
                     </div>
                     <div className={styles.right}>
@@ -68,18 +65,6 @@ const Expense = ({ expense, refreshGroupDetails }) => {
                         </div>
                     </div>
                 </div>
-                {expandedExpenseId === expense._id && (
-                    <div className={styles.participants}>
-                        <p><strong>Participants</strong></p>
-                        <ul>
-                            {expense.participants.map((participant, index) => (
-                                <li key={index} className={styles.listItem}>
-                                    {participant.user.name} {participant.amountOwed}€
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
             </li>
         </div>
     );
