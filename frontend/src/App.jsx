@@ -8,7 +8,6 @@ import MyExpenses from "./pages/user/expenses/myExpenses";
 import NoMatch from "./pages/noMatch/noMatch";
 import { QueryClient, QueryClientProvider } from "react-query";
 import User from "./pages/user/userProfile/user";
-import Userlist from "./pages/user/userList/userList";
 import RegisterForm from "./components/register/registerForm";
 import Login from "./components/login/loginForm";
 import { DarkModeContextProvider } from "./context/darkModeContext";
@@ -35,7 +34,6 @@ function App() {
                 element={token ? <Groups /> : <Navigate to="/login" />}
               />
               <Route path="/register" element={<RegisterForm />} />
-              <Route path="/users" element={<Userlist />} />
               <Route path="/groups/:groupId/expenses" element={token ? <GroupDetails /> : <Navigate to="/login" />} />
               <Route path="/my-expenses" element={token ? <MyExpenses /> : <Navigate to="/login" />} />
               <Route path="*" element={<NoMatch />} />
