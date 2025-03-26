@@ -5,11 +5,13 @@ import api from "../../utils/axios"; // Usa axios desde api.js
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/userContextAuth";
 import styles from "./userEditForm.module.css"; // Mantiene los estilos CSS
+import { useDarkMode } from "../../context/darkModeContext";    
 
 const UserEditForm = ({ user, onClose }) => {
     const queryClient = useQueryClient();
     const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm();
     const { token } = useAuth(); // Token de autenticación
+     const { darkMode } = useDarkMode();
 
     // Cargar los datos actuales del usuario en el formulario
     useEffect(() => {
@@ -79,14 +81,15 @@ const UserEditForm = ({ user, onClose }) => {
     const profilePicture = watch("profilePicture");
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className={styles.formContainer}>
-            <h2 className={styles.formTitle}>Edit User:</h2>
+        <form onSubmit={handleSubmit(onSubmit)} className={`${styles.formContainer} ${darkMode ? styles.formContainerDark : ''}`}>
+            <h2 
+            className={`${styles.formTitle} ${darkMode ? styles.formTitleDark : ''}`}>Edit User:</h2>
 
-            <label className={styles.formLabel}>
+            <label className={`${styles.formLabel} ${darkMode ? styles.formLabelDark : ''}`}>
                 Nombre:
                 <input
                     type="text"
-                    className={styles.formInput}
+                    className={`${styles.formInput} ${darkMode ? styles.formInputDark : ''}`}
                     {...register("name", {
                         required: "El nombre es obligatorio",
                         maxLength: { value: 50, message: "El nombre es demasiado largo" }
@@ -95,11 +98,11 @@ const UserEditForm = ({ user, onClose }) => {
                 {errors.name && <p className={styles.errorMessage}>{errors.name.message}</p>}
             </label>
 
-            <label className={styles.formLabel}>
+            <label className={`${styles.formLabel} ${darkMode ? styles.formLabelDark : ''}`}>
                 Email:
                 <input
                     type="email"
-                    className={styles.formInput}
+                    className={`${styles.formInput} ${darkMode ? styles.formInputDark : ''}`}
                     {...register("email", {
                         required: "El email es obligatorio",
                         pattern: { value: /^\S+@\S+$/i, message: "Formato de email inválido" }
@@ -108,7 +111,7 @@ const UserEditForm = ({ user, onClose }) => {
                 {errors.email && <p className={styles.errorMessage}>{errors.email.message}</p>}
             </label>
 
-            <label className={styles.formLabel}>
+            <label className={`${styles.formLabel} ${darkMode ? styles.formLabelDark : ''}`}>
                 Profile Picture:
                 <input
                     type="file"

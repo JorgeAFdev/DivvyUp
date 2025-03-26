@@ -8,7 +8,10 @@
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
-
+.formContainerDark {
+    background-color: var(--secondary-bg-dark-mode);
+    color: var(--color-dark-mode);
+}
 /* Título del formulario */
 .formTitle {
     font-size: 24px;
@@ -16,6 +19,9 @@
     margin-bottom: 20px;
     color: #333;
     text-align: center;
+}
+.formTitleDark {
+    color: var(--color-dark-mode);
 }
 
 /* Estilo para las etiquetas */
@@ -25,7 +31,9 @@
     margin-bottom: 8px;
     color: #333;
 }
-
+.formLabelDark {
+    color: var(--color-dark-mode);
+}
 /* Estilo para los campos de entrada (input) */
 .formInput {
     width: 100%;
@@ -36,7 +44,11 @@
     margin-bottom: 15px;
     box-sizing: border-box;
 }
-
+.formInputDark {
+    background-color: var(--secondary-bg-dark-mode);
+    border: 1px solid #626261;
+    color: var(--color-dark-mode);
+}
 .formInput:focus {
     outline: none;
     border-color: #007bff;
