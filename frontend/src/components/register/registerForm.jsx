@@ -5,9 +5,11 @@ import styles from './registerForm.module.css';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../context/userContextAuth';
 import { toast } from 'react-toastify';
+import { useDarkMode } from '../../context/darkModeContext';
 
 const RegisterForm = () => {
     const queryClient = useQueryClient();
+    const {darkMode} = useDarkMode();
     const { register, handleSubmit, watch, formState: { errors } } = useForm();
 
     const createUser = async (data) => {
@@ -49,13 +51,13 @@ const RegisterForm = () => {
     const profilePicture = watch('profilePicture');
 
     return (
-        <form className={styles.registerContainer} onSubmit={handleSubmit(onSubmit)}>
+        <form className={`${styles.registerContainer} ${darkMode ? styles.registerContainerDark : ''}`} onSubmit={handleSubmit(onSubmit)}>
             <h2 className={styles.registerTitle}>Register</h2>
 
-            <label className={styles.registerLabel}>
+            <label className={`${styles.registerLabel} ${darkMode ? styles.registerLabelDark : ''}`}>
                 Name:
                 <input
-                    className={styles.registerInput}
+                    className={`${styles.registerInput} ${darkMode ? styles.registerInputDark : ''}`}
                     type="text"
                     placeholder="Enter your name.."
                     {...register('name', {
@@ -66,10 +68,11 @@ const RegisterForm = () => {
                 {errors.name && <p className={styles.registerErrorMessage}>{errors.name.message}</p>}
             </label>
 
-            <label className={styles.registerLabel}>
+            <label 
+            className={`${styles.registerLabel} ${darkMode ? styles.registerLabelDark : ''}`}>
                 Email:
                 <input
-                    className={styles.registerInput}
+                    className={`${styles.registerInput} ${darkMode ? styles.registerInputDark : ''}`}
                     type="text"
                     placeholder="example@example.com"
                     {...register('email', {
@@ -78,10 +81,11 @@ const RegisterForm = () => {
                 />
             </label>
 
-            <label className={styles.registerLabel}>
+            <label 
+                className={`${styles.registerLabel} ${darkMode ? styles.registerLabelDark : ''}`}>
                 Password:
                 <input
-                    className={styles.registerInput}
+                    className={`${styles.registerInput} ${darkMode ? styles.registerInputDark : ''}`}
                     type="password"
                     placeholder="********"
                     {...register('password', {
@@ -92,10 +96,10 @@ const RegisterForm = () => {
                 {errors.password && <p className={styles.registerErrorMessage}>{errors.password.message}</p>}
             </label>
 
-            <label className={styles.registerLabel}>
+            <label className={`${styles.registerLabel} ${darkMode ? styles.registerLabelDark : ''}`}>
                 Profile Picture:
                 <input
-                    className={styles.registerInputFile}
+                     className={`${styles.registerInputFile} ${darkMode ? styles.registerInputFileDark : ''}`}
                     type="file"
                     {...register('profilePicture', {
                         required: 'Profile picture is required',
@@ -107,9 +111,7 @@ const RegisterForm = () => {
 
             <button type="submit" className={styles.registerSubmitButton}>Register</button>
 
-            <h3>Preview:</h3>
             <p>
-                Profile Picture:{' '}
                 {profilePicture?.[0] ? (
                     <img className={styles.registerPreviewImage} src={URL.createObjectURL(profilePicture[0])} alt="Preview" />
                 ) : (
