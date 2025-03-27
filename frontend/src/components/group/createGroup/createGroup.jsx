@@ -6,15 +6,30 @@ import Modal from "../../modal/modal";
 import { toast } from "react-toastify";
 import { useAuth } from "../../../context/userContextAuth";
 import { getUserSession } from "../../../utils/localStorage";
+import { useNavigate } from "react-router-dom";
 
 
 const CreateGroup = ({ setGroups }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [email, setEmail] = useState(null);
     const openModal = () => setIsModalOpen(true);
     const closeModal = () => setIsModalOpen(false);
 
-    const { email } = getUserSession()
-    const { token } = useAuth();
+    const { token, logout } = useAuth();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (token) {
+            const session = getUserSession();
+            const userEmail = session?.email;
+            if (!userEmail) {
+                logout();
+                navigate('/login');
+            } else {
+                setEmail(userEmail)
+            }
+        }
+    }, [token, logout, navigate]);
 
     const handleCreateGroup = async (data) => {
         try {
@@ -27,7 +42,7 @@ const CreateGroup = ({ setGroups }) => {
             closeModal();
             toast.success('Group succesfully created')
         } catch (error) {
-            toast.error(error.response.data.error)
+            toast.error(error.response.data.error || 'there was an error creating the group')
         }
     }
 

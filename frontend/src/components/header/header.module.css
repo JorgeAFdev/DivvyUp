@@ -10,7 +10,6 @@ body {
     padding: 20px 0;
     width: min(90%, 120rem);
     margin: 0 auto;
-    
 }
 
 .headerDark {
@@ -18,23 +17,17 @@ body {
 }
 
 .logo {
-    logo {
-        font-size: 28px;
-        font-weight: 600px;
-        color: var(--color-primary);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        cursor: pointer;
-        transition: color 0.3s ease;
-        font-weight: bold;
-       
-    }
+    max-width: 80px;
 }
 
 .nav {
     display: flex;
-    gap: 15px;
+    align-items: center;
+
+    @media (min-width: 768px) {
+        margin-left: 10px;
+        gap: 20px;
+    }
 }
 
 .navItem {
@@ -62,9 +55,4 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-}
-
-.avatarLink {
-    text-decoration: none;  /* Eliminar subrayado del link */
-    cursor: pointer;       /* Cambiar el cursor al hacer hover sobre el link */
 }

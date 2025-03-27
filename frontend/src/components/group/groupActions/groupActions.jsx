@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Modal from '../../modal/modal';
 import GroupForm from '../groupForm/groupForm';
 import Icon from '../../icon/icon';
@@ -18,8 +17,6 @@ const GroupActions = ({ group, groupMembers, editGroup, isEditing, setIsEditing,
         setAnchorEl(null);
     };
 
-    const navigate = useNavigate();
-
     const { darkMode } = useDarkMode();
 
 
@@ -33,7 +30,6 @@ const GroupActions = ({ group, groupMembers, editGroup, isEditing, setIsEditing,
                     transition: 'background-color 0.3s', '&:hover': { backgroundColor: darkMode ? '#09090b' : '', }
                 }
             }} id="basic-menu" anchorEl={anchorEl} open={open} onClose={handleClose} MenuListProps={{ 'aria-labelledby': 'basic-button', }}>
-                <MenuItem onClick={() => navigate(`/groups/${group._id}/expenses`)}><p>View details</p></MenuItem>
                 <MenuItem onClick={handleClose} >
                     <Button sx={{ color: darkMode ? '#FAFAFA' : 'black', minWidth: '0px', padding: '0', textTransform: 'none', fontSize: '16px', gap: '5px' }} onClick={() => setIsEditing(true)}>
                         <Icon variant='edit' />

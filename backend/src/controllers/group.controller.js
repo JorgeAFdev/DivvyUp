@@ -3,6 +3,7 @@ const Group = require("../schemas/group.schema");
 const Payment = require("../schemas/payment.schema");
 const User = require("../schemas/user.schema");
 const mongoose = require("mongoose");
+const { sendNotificationToUser, notificationTypes } = require("../services/notifications");
 
 const createGroup = async (req, res) => {
   try {
@@ -44,8 +45,20 @@ const createGroup = async (req, res) => {
       members: formattedMembers
     })
 
-    const newGroup = await Group.findById(group._id).populate("members.user", "name email")
+    const newGroup = await Group.findById(group._id).populate("members.user", "name email profilePicture")
     await newGroup.updateBalance();
+
+    const io = req.app.get('socketio');
+    existingUsers.forEach(user => {
+      if (user._id.toString() === userId) { return; }
+
+      sendNotificationToUser(io, user._id.toString(), notificationTypes.GROUP_CREATED, `you have been added to group ${group.name}`, {
+        groupId: group._id,
+        groupName: group.name,
+        groupDescription: group.description
+      })
+    });
+
     res.status(201).json(newGroup);
   } catch (error) {
     console.error(error);
@@ -109,7 +122,7 @@ const updateGroup = async (req, res) => {
       members: formattedMembers
     },
       { new: true }
-    ).populate("members.user", "name email");
+    ).populate("members.user", "name email profilePicture");
     if (!newGroup) {
       return res.status(404).json({ error: "Group not found" });
     }
@@ -131,7 +144,7 @@ const getUserGroups = async (req, res) => {
       return res.status(400).json({ error: "Invalid user Id" });
     }
 
-    const groups = await Group.find({ "members.user": userId }).populate("members.user", "name email");
+    const groups = await Group.find({ "members.user": userId }).populate("members.user", "name email profilePicture");
     if (groups.length === 0) {
       return res.status(404).json({ error: "Groups not found" });
     }
@@ -186,10 +199,10 @@ const deleteGroup = async (req, res) => {
     }
 
     await Group.findByIdAndDelete(groupId);
+    await Expense.deleteMany({ group: groupId });
     res.status(204).send();
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Error deleting group" });
+    res.status(500).json({ error: 'Error deleting group' });
   }
 };
 
@@ -214,7 +227,7 @@ const getGroupDetails = async (req, res) => {
       return res.status(403).json({ error: "You don't have permission to view expenses from this group" });
     }
 
-    const expenses = await Expense.find({ group: groupId }).populate("participants.user", "name").populate({ path: "group", select: "name description members", populate: { path: "members.user", select: "name" } }).populate("paidBy", "name");
+    const expenses = await Expense.find({ group: groupId }).populate("participants.user", "name").populate({ path: "group", select: "name description members", populate: { path: "members.user", select: "name" } }).populate("paidBy", "name profilePicture");
 
     const debts = await Payment.find({
       group: groupId,

@@ -2,6 +2,7 @@ const Expense = require("../schemas/expense.schema");
 const User = require("../schemas/user.schema");
 const Group = require("../schemas/group.schema");
 const mongoose = require("mongoose");
+const { sendNotificationToUser, notificationTypes } = require("../services/notifications");
 
 const createExpense = async (req, res) => {
     try {
@@ -57,6 +58,10 @@ const createExpense = async (req, res) => {
             return res.status(400).json({ error: "Total amount must be greater than 0" });
         }
 
+        if (totalAmount >= 1000000) {
+            return res.status(400).json({ error: "Total amount must be less than 1,000,000" });
+        }
+
         const totalParticipants = participants.length;
         const amountPerParticipant = totalAmount / totalParticipants;
         const roundedAmount = amountPerParticipant.toFixed(2);
@@ -75,6 +80,17 @@ const createExpense = async (req, res) => {
         });
 
         const expense = await Expense.findById(newExpense._id).populate("participants.user", "name").populate({ path: "group", select: "name description members", populate: { path: "members.user", select: "name" } }).populate("paidBy", "name");
+
+        const io = req.app.get('socketio');
+        participantIds.forEach(participant => {
+            if (participant.toString() === userId) { return; }
+
+            sendNotificationToUser(io, participant.toString(), notificationTypes.EXPENSE_CREATED, `you have been added to expense ${expense.description} from group ${expense.group.name}`, {
+                expenseId: expense._id,
+                expenseDescription: expense.description,
+                expenseAmount: expense.totalAmount
+            })
+        });
 
         res.status(201).json(expense);
     } catch (error) {
@@ -142,6 +158,10 @@ const updateExpense = async (req, res) => {
             return res.status(400).json({ error: "Total amount must be greater than 0" });
         }
 
+        if (totalAmount >= 1000000) {
+            return res.status(400).json({ error: "Total amount must be less than 1,000,000" });
+        }
+
         const totalParticipants = participants.length;
         const amountPerParticipant = totalAmount / totalParticipants;
         const roundedAmount = amountPerParticipant.toFixed(2);
@@ -207,11 +227,26 @@ const getExpensesByUserId = async (req, res) => {
             return res.status(400).json({ error: "Invalid user ID" });
         }
 
-        const expenses = await Expense.find({ "participants.user": userId }).populate("participants.user", "name").populate("group", "name description").populate("paidBy", "name");
+        const expenses = await Expense.find({ $or: [{ "participants.user": userId }, { paidBy: userId }] }).populate("participants.user", "name").populate({ path: "group", select: "name description members", populate: { path: "members.user", select: "name" } }).populate("paidBy", "name profilePicture");
 
         if (expenses.length <= 0) { return res.status(404).json({ error: "Expenses not found for this user" }) }
 
-        res.status(200).json(expenses);
+        const expensesByGroup = {};
+
+        expenses.forEach(expense => {
+            const groupId = expense.group._id.toString();
+
+            expensesByGroup[groupId] = expensesByGroup[groupId] ?? {
+                groupId: groupId,
+                groupName: expense.group.name,
+                groupDescription: expense.group.description,
+                expenses: []
+            };
+
+            expensesByGroup[groupId].expenses.push(expense);
+        });
+        const groupedExpenses = Object.values(expensesByGroup);
+        res.status(200).json(groupedExpenses);
     } catch (error) {
         console.log(error);
         res.status(500).json({ error: "Error getting expenses" });

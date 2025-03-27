@@ -1,0 +1,32 @@
+.text {
+    color: var(--color-dark-mode);
+}
+
+.title {
+    font-size: 16px;
+    color: #1e90ff;
+    margin-bottom: 10px;
+}
+
+.list {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 10px;
+    padding: 10px 0;
+
+    @media (min-width: 768px) {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    @media (min-width: 1200px) {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+    }
+}
+
+.detailsList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}

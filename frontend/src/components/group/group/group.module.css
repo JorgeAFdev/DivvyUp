@@ -5,6 +5,7 @@
     border-radius: 10px;
     border: 1px solid var(--border-color);
     width: 100%;
+    cursor: pointer;
     /* height: 60px;
     overflow: hidden;
     transition: height .3s;
@@ -37,6 +38,23 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.left {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.avatar {
+    display: flex;
+    gap: 10px;
 }
 
 .right {
