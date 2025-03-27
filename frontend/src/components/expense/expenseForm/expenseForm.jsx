@@ -61,6 +61,7 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
                         {...register("totalAmount", {
                             required: "Total amount is required",
                             min: { value: 0.01, message: "Amount must be greater than 0" },
+                            max: { value: 999999, message: "Amount must be less than 1000000" },
                             pattern: {
                                 value: /^(?:\d+|\d*\.\d{1,2})$/,
                                 message: "Enter a valid amount (e.g., 20 or 75.40)",
