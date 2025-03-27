@@ -58,6 +58,10 @@ const createExpense = async (req, res) => {
             return res.status(400).json({ error: "Total amount must be greater than 0" });
         }
 
+        if (totalAmount >= 1000000) {
+            return res.status(400).json({ error: "Total amount must be less than 1,000,000" });
+        }
+
         const totalParticipants = participants.length;
         const amountPerParticipant = totalAmount / totalParticipants;
         const roundedAmount = amountPerParticipant.toFixed(2);
@@ -152,6 +156,10 @@ const updateExpense = async (req, res) => {
 
         if (totalAmount <= 0) {
             return res.status(400).json({ error: "Total amount must be greater than 0" });
+        }
+
+        if (totalAmount >= 1000000) {
+            return res.status(400).json({ error: "Total amount must be less than 1,000,000" });
         }
 
         const totalParticipants = participants.length;
