@@ -24,8 +24,8 @@ jobs:
 
       - name: 'Build Backend Image'
         run: |
-          docker build . --tag ghcr.io/DivvyUp-app/splitwise:latest
-          docker push ghcr.io/DivvyUp-app/splitwise:latest
+          docker build . --tag ghcr.io/divvyUp-app/splitwise:latest
+          docker push ghcr.io/divvyUp-app/splitwise:latest
       
       - name: Install and configure the Koyeb CLI
         uses: koyeb-community/install-koyeb-cli@v2
