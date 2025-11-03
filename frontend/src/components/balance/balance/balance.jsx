@@ -1,11 +1,9 @@
-import { useDarkMode } from "../../../context/darkModeContext";
 import styles from "./balance.module.css"
 
 const Balance = ({ balance }) => {
-    const { darkMode } = useDarkMode();
     return (
         <>
-            <div className={`${styles.card} ${darkMode ? styles.cardDark : ''}`}>
+            <div className={styles.card}>
                 <div className={styles.name}>
                     <p>{balance?.user.name}</p>
                 </div>
