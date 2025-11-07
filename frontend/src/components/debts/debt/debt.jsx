@@ -1,12 +1,11 @@
 import { Button } from '@mui/material';
-import { useDarkMode } from '../../../context/darkModeContext';
 import styles from './debt.module.css'
 import { useAuth } from '../../../context/userContextAuth';
 import { updatePayment } from '../../../utils/paymentApi';
 import { toast } from 'react-toastify';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
+
 const Debt = ({ debt, refreshGroupDetails }) => {
-    const { darkMode } = useDarkMode();
     const { token } = useAuth();
     const { showConfirmationToast } = useConfirmationToast();
 
@@ -29,7 +28,7 @@ const Debt = ({ debt, refreshGroupDetails }) => {
 
     return (
         <>
-            <div className={`${styles.debt} ${darkMode ? styles.debtDark : ''}`}>
+            <div className={styles.debt}>
                 <p>{debt.from.name} owes <strong>{debt.amount}€</strong> to {debt.to.name}</p>
                 <Button
                     variant="contained"
