@@ -3,7 +3,6 @@ import styles from './expense.module.css'
 import { deleteGroupExpense, updateGroupExpense } from '../../../utils/expenseApi';
 import { toast } from 'react-toastify';
 import ExpenseActions from '../expenseActions/expenseActions';
-import { useDarkMode } from '../../../context/darkModeContext';
 import { useAuth } from '../../../context/userContextAuth';
 import { Avatar } from '@mui/material';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
@@ -12,7 +11,6 @@ import { Tooltip } from 'react-tooltip';
 const Expense = ({ expense, refreshGroupDetails }) => {
     const [isEditing, setIsEditing] = useState(false);
 
-    const { darkMode } = useDarkMode();
     const { token } = useAuth();
     const { showConfirmationToast } = useConfirmationToast();
 
@@ -47,7 +45,7 @@ const Expense = ({ expense, refreshGroupDetails }) => {
     };
 
     return (
-        <div className={`${styles.expense} ${darkMode ? styles.expenseDark : ''}`}>
+        <div className={styles.expense}>
             <li className={styles.listItem}>
                 <div className={styles.row}>
                     <div className={styles.left}>
