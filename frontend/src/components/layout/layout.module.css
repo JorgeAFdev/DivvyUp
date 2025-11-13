@@ -1,11 +1,7 @@
 .app {
-    /* background-color: #222222; */
+    background-color: var(--bg-color);
     min-height: 100dvh;
     transition: all .3s ease;
-}
-
-.appDark {
-    background-color: var(--bg-dark-mode);
 }
 
 .main {

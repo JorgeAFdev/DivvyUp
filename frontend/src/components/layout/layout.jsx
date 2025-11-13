@@ -2,13 +2,11 @@ import { Link, Outlet } from 'react-router-dom';
 import Header from '../header/header';
 import styles from './layout.module.css';
 import { Slide, ToastContainer } from 'react-toastify';
-import { useDarkMode } from '../../context/darkModeContext';
 
 const Layout = () => {
-    const { darkMode } = useDarkMode();
 
     return (
-        <div className={`${styles.app} ${darkMode ? styles.appDark : ''}`}>
+        <div className={styles.app}>
             <Header />
             <main className={styles.main}>
                 <Outlet />
