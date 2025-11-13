@@ -3,17 +3,14 @@
   max-width: 400px;
   margin: auto;
   padding: 20px;
-  background: #f9f9f9;
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  background-color: var(--secondary-bg-color);
+  color: var(--color);
 }
-.loginContainerDark {
-  background-color: var(--secondary-bg-dark-mode);
-  color: var(--color-dark-mode);
-}
+
 .loginTitle {
   text-align: center;
   color: #007bff;
@@ -23,26 +20,24 @@
 
 .loginLabel {
   font-weight: bold;
-  color: #555;
-  margin-bottom: 5px;
-}
-.loginLabelDark {
-  color: var(--color-dark-mode);
+  color: var(--color);
+  margin: 15px 0 5px 0;
 }
 
 .loginInput {
   width: 100%;
-  padding: 14px; /* Aumentado para más espacio interno */
-  border: 1px solid #ccc;
+  padding: 14px;
+  background-color: var(--secondary-bg-color);
+  border: 1px solid var(--border-color);
+  color: var(--color);
   border-radius: 5px;
   font-size: 16px;
   outline: none;
   transition: all 0.2s ease-in-out;
 }
-.loginInputDark {
-  background-color: var(--secondary-bg-dark-mode);
-  border: 1px solid #626261;
-  color: var(--color-dark-mode);
+
+.loginInput::placeholder {
+  color: var(--placeholder-color);
 }
 
 .loginInput:focus {
@@ -53,14 +48,16 @@
 .loginError {
   color: red;
   font-size: 14px;
+  margin-top: 5px;
 }
 
 .loginSubmitBtn {
   background-color: #007bff;
   color: white;
   font-size: 16px;
-  border: none;
+  margin-top: 15px;
   padding: 10px;
+  border: none;
   border-radius: 5px;
   cursor: pointer;
   transition: background 0.3s;
