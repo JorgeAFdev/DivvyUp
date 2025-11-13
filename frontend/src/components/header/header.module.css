@@ -10,10 +10,7 @@ body {
     padding: 20px 0;
     width: min(90%, 120rem);
     margin: 0 auto;
-}
-
-.headerDark {
-    color: var(--color-dark-mode);
+    color: var(--color);
 }
 
 .logo {
@@ -40,15 +37,13 @@ body {
     cursor: pointer;
     text-decoration: none;
     transition: all 0.3s ease;
+    color: var(--color);
+
 }
 
 .navItem:hover {
     background-color: #1e90ff;
     color: white;
-}
-
-.navItemDark {
-    color: var(--color-dark-mode);
 }
 
 .right {
