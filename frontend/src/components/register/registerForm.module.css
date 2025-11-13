@@ -1,18 +1,15 @@
 .registerContainer {
   max-width: 400px;
+  background-color: var(--secondary-bg-color);
+  color: var(--color);
   margin: auto;
   padding: 20px;
-  background: #f9f9f9;
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
-.registerContainerDark {
-  background-color: var(--secondary-bg-dark-mode);
-  color: var(--color-dark-mode);
-}
+
 .registerTitle {
   text-align: center;
   color: #007bff;
@@ -22,26 +19,22 @@
 
 .registerLabel {
   font-weight: bold;
-  color: #555;
-  margin-bottom: 5px;
+  margin: 15px 0 5px 0;
+  color: var(--color);
 }
-.registerLabelDark {
-  color: var(--color-dark-mode);
-}
+
 .registerInput {
   width: 100%;
-  padding: 14px; /* Aumentado para más espacio interno */
-  border: 1px solid #ccc;
+  padding: 14px;
+  background-color: var(--secondary-bg-color);
+  color: var(--color);
+  border: 1px solid var(--border-color);
   border-radius: 5px;
   font-size: 16px;
   outline: none;
   transition: all 0.2s ease-in-out;
 }
-.registerInputDark {
-  background-color: var(--secondary-bg-dark-mode);
-  border: 1px solid #626261;
-  color: var(--color-dark-mode);
-}
+
 .registerInput:focus {
   border-color: #007bff;
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
@@ -58,6 +51,7 @@
   font-size: 16px;
   border: none;
   padding: 10px;
+  margin-top: 15px;
   border-radius: 5px;
   cursor: pointer;
   transition: background 0.3s;
@@ -74,31 +68,30 @@
   border-radius: 50%;
   border: 2px solid #007bff;
   margin: auto;
-  display:flex;
+  display: flex;
   justify-content: center;
 }
+
 .registerInputFile {
   padding: 10px;
-  border: 1px solid #ccc;
+  background-color: var(--secondary-bg-color);
+  border: 1px solid var(--border-color);
+  color: var(--color);
   border-radius: 5px;
   font-size: 16px;
   outline: none;
   cursor: pointer;
   width: 100%;
-  background-color: #f9f9f9;
   display: block;
   transition: all 0.2s ease-in-out;
-  -webkit-appearance: none; /* Oculta el texto de selección del archivo en WebKit */
-  appearance: none; /* Oculta el texto de selección en otros navegadores */
-}
-.registerInputFileDark { 
-  background-color: var(--secondary-bg-dark-mode);
-  border: 1px solid #626261;
-  color: var(--color-dark-mode);
+  -webkit-appearance: none;
+  /* Oculta el texto de selección del archivo en WebKit */
+  appearance: none;
+  /* Oculta el texto de selección en otros navegadores */
 }
 
 .registerInputFile::file-selector-button {
-  display: none; /* Oculta el texto y el botón predeterminado */
+  display: none;
 }
 
 .registerInputFile:focus {
