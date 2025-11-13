@@ -6,7 +6,6 @@ import ExpenseList from "../expense/expenseList/expenseList";
 import { toast } from "react-toastify";
 import styles from './userExpenses.module.css';
 import { Tooltip } from 'react-tooltip';
-import { useDarkMode } from "../../context/darkModeContext";
 
 
 const UserExpenses = () => {
@@ -14,17 +13,16 @@ const UserExpenses = () => {
     const navigate = useNavigate();
 
     const { token } = useAuth();
-    const { darkMode } = useDarkMode();
 
     const { data, isLoading, isError, error } = useQuery(['myExpenses'], () => getAllUserExpenses(token), { retry: 0 });
 
     if (isLoading) {
-        return <div className={darkMode ? styles.text : ''}>Loading your expenses...</div>;
+        return <div className={styles.text}>Loading your expenses...</div>;
     }
 
     if (isError) {
         if (error.response.status === 404) {
-            return <div className={darkMode ? styles.text : ''}>You don't have any expenses</div>;
+            return <div className={styles.text}>You don't have any expenses</div>;
         } else {
             toast.error(error?.response?.data.error || 'Something went wrong')
         }
