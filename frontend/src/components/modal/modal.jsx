@@ -1,12 +1,10 @@
-import { useDarkMode } from '../../context/darkModeContext';
 import styles from './modal.module.css';
 
 const Modal = ({ children }) => {
-    const { darkMode } = useDarkMode();
 
     return (
         <div className={styles.modal}>
-            <div className={`${styles.content} ${darkMode ? styles.contentDark : ''}`}>
+            <div className={styles.content}>
                 {children}
             </div>
         </div>

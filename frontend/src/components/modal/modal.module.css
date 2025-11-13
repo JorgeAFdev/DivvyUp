@@ -17,10 +17,8 @@
     border-radius: 10px;
     width: 400px;
     animation: slideIn 0.3s ease-out;
-}
+    background: var(--secondary-bg-color);
 
-.contentDark {
-    background: var(--secondary-bg-dark-mode);
 }
 
 @keyframes slideIn {
