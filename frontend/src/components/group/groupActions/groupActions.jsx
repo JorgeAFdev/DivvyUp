@@ -5,7 +5,7 @@ import Icon from '../../icon/icon';
 import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import { useDarkMode } from '../../../context/darkModeContext';
+import { useTheme } from '@mui/material';
 
 const GroupActions = ({ group, groupMembers, editGroup, isEditing, setIsEditing, onDelete }) => {
     const [anchorEl, setAnchorEl] = useState(null);
@@ -17,27 +17,29 @@ const GroupActions = ({ group, groupMembers, editGroup, isEditing, setIsEditing,
         setAnchorEl(null);
     };
 
-    const { darkMode } = useDarkMode();
-
+    const theme = useTheme();
+    const textColor = theme.palette.text.primary;
+    const colorBg = theme.palette.background.color;
+    const hoverBg = theme.palette.action.hover;
 
     return (
         <>
-            <Button sx={{ color: darkMode ? '#FAFAFA' : 'black', minWidth: '0px' }} id="basic-button" aria-controls={open ? 'basic-menu' : undefined} aria-haspopup="true" aria-expanded={open ? 'true' : undefined} onClick={handleClick}>
+            <Button sx={{ color: textColor, minWidth: '0px' }} id="basic-button" aria-controls={open ? 'basic-menu' : undefined} aria-haspopup="true" aria-expanded={open ? 'true' : undefined} onClick={handleClick}>
                 <Icon variant='dots' className='dots' />
             </Button>
             <Menu sx={{
-                '& .MuiPaper-root': { backgroundColor: darkMode ? '#333333' : '#FAFAFA', color: darkMode ? '#FAFAFA' : '#000000' }, '& .MuiMenuItem-root': {
-                    transition: 'background-color 0.3s', '&:hover': { backgroundColor: darkMode ? '#09090b' : '', }
+                '& .MuiPaper-root': { backgroundColor: colorBg, color: textColor }, '& .MuiMenuItem-root': {
+                    transition: 'background-color 0.3s', '&:hover': { backgroundColor: hoverBg }
                 }
             }} id="basic-menu" anchorEl={anchorEl} open={open} onClose={handleClose} MenuListProps={{ 'aria-labelledby': 'basic-button', }}>
                 <MenuItem onClick={handleClose} >
-                    <Button sx={{ color: darkMode ? '#FAFAFA' : 'black', minWidth: '0px', padding: '0', textTransform: 'none', fontSize: '16px', gap: '5px' }} onClick={() => setIsEditing(true)}>
+                    <Button sx={{ color: textColor, minWidth: '0px', padding: '0', textTransform: 'none', fontSize: '16px', gap: '5px' }} onClick={() => setIsEditing(true)}>
                         <Icon variant='edit' />
                         Edit group
                     </Button>
                 </MenuItem>
                 <MenuItem onClick={handleClose}>
-                    <Button sx={{ color: darkMode ? '#FAFAFA' : 'black', minWidth: '0px', padding: '0', textTransform: 'none', fontSize: '16px', gap: '5px' }} onClick={onDelete} >
+                    <Button sx={{ color: textColor, minWidth: '0px', padding: '0', textTransform: 'none', fontSize: '16px', gap: '5px' }} onClick={onDelete} >
                         <Icon variant='delete' id="deleteGroup" />
                         Delete group
                     </Button>

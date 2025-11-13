@@ -5,9 +5,17 @@
 }
 
 :root {
+    --color: #252424;
+    --bg-color: #f8f7f7;
+    --secondary-bg-color: #f0f0f0;
+    --border-color: #c1c1c1;
+    --placeholder-color: #0000008a;
+}
+
+body.dark {
+    --color: #FAFAFA;
+    --bg-color: #09090b;
+    --secondary-bg-color: #333333;
     --border-color: #b3b3b5;
-    --bg-dark-mode: #09090b;
-    --secondary-bg-dark-mode: #333333;
-    --color-dark-mode: #FAFAFA;
-    --border-color-dark-mode: #27272a;
+    --placeholder-color: #b3b3b5;
 }

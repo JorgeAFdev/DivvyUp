@@ -4,12 +4,8 @@
     border: 1px solid var(--border-color);
     border-radius: 10px;
     min-width: 70px;
-}
-
-.cardDark {
-    background-color: var(--bg-dark-mode);
-    color: var(--color-dark-mode);
-    border: 1px solid var(--border-color-dark-mode);
+    background-color: var(--bg-color);
+    color: var(--color);
 }
 
 .name {

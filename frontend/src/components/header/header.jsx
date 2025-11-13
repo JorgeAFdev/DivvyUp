@@ -12,27 +12,27 @@ const Header = () => {
 
     if (!token) {
         return (
-            <header className={`${styles.header} ${darkMode ? styles.headerDark : ''}`}>
+            <header className={styles.header}>
                 <Link to="/">
                     <img src="/assets/logo.png" alt="Logo DivvyUp" className={styles.logo} />
                 </Link>
                 <nav className={styles.nav}>
+                    <Link to="/login" className={styles.navItem} >Login</Link>
+                    <Link to="/register" className={styles.navItem} >Register</Link>
                     <Icon handleClick={() => toggleDarkMode()} variant={darkMode ? 'light' : 'dark'} className='theme' />
-                    <Link to="/login" className={`${styles.navItem} ${darkMode ? styles.navItemDark : ''}`}>Login</Link>
-                    <Link to="/register" className={`${styles.navItem} ${darkMode ? styles.navItemDark : ''}`}>Register</Link>
                 </nav>
             </header>
         );
     }
 
     return (
-        <header className={`${styles.header} ${darkMode ? styles.headerDark : ''}`}>
+        <header className={styles.header}>
             <Link to="/">
                 <img src="/assets/logo.png" alt="Logo DivvyUp" className={styles.logo} />
             </Link>
             <nav className={styles.nav}>
-                <Link to="/groups" className={`${styles.navItem} ${darkMode ? styles.navItemDark : ''}`}>Groups</Link>
-                <Link to="/my-expenses" className={`${styles.navItem} ${darkMode ? styles.navItemDark : ''}`}>Expenses</Link>
+                <Link to="/groups" className={styles.navItem} >Groups</Link>
+                <Link to="/my-expenses" className={styles.navItem} >Expenses</Link>
             </nav>
             <div className={styles.right}>
                 <Icon handleClick={() => toggleDarkMode()} variant={darkMode ? 'light' : 'dark'} className='theme' />

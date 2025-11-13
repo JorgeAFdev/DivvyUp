@@ -3,12 +3,8 @@
     margin: 0 auto;
     padding: 20px;
     border-radius: 8px;
-    background-color: #f9f9f9;
-}
-
-.formDark {
-    background-color: var(--secondary-bg-dark-mode);
-    color: var(--color-dark-mode);
+    background-color: var(--secondary-bg-color);
+    color: var(--color);
 }
 
 .top {
@@ -42,16 +38,14 @@
     margin-bottom: 5px;
     border: 1px solid #ccc;
     border-radius: 4px;
+    background-color: var(--secondary-bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--color);
 }
 
-.inputDark {
-    background-color: var(--secondary-bg-dark-mode);
-    border: 1px solid #626261;
-    color: var(--color-dark-mode);
-}
 
-.inputDark::placeholder {
-    color: #626261;
+.input::placeholder {
+    color: var(--placeholder-color);
 }
 
 .errorInput {
@@ -72,12 +66,9 @@
 .select {
     height: 40px;
     border-radius: 10px;
-}
-
-.selectDark {
-    background-color: var(--secondary-bg-dark-mode);
-    border: 1px solid #626261;
-    color: var(--color-dark-mode);
+    background-color: var(--secondary-bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--color);
 }
 
 .participants {

@@ -1,19 +1,13 @@
 .expense {
     padding: 15px;
-    background-color: #f0f0f0;
-    /* background-color: rgb(36, 36, 36); */
     border-radius: 10px;
+    color: var(--color);
     border: 1px solid var(--border-color);
+    /* background-color: var(--secondary-bg-color); */
     /* height: 60px;
     overflow: hidden;
     transition: height .3s;
     interpolate-size: allow-keywords; */
-}
-
-.expenseDark {
-    background-color: var(--bg-dark-mode);
-    color: var(--color-dark-mode);
-    border: 1px solid var(--border-color-dark-mode);
 }
 
 /* .expense:hover {

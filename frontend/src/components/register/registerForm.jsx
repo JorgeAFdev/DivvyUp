@@ -5,11 +5,9 @@ import styles from './registerForm.module.css';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../context/userContextAuth';
 import { toast } from 'react-toastify';
-import { useDarkMode } from '../../context/darkModeContext';
 
 const RegisterForm = () => {
     const queryClient = useQueryClient();
-    const {darkMode} = useDarkMode();
     const { register, handleSubmit, watch, formState: { errors } } = useForm();
 
     const createUser = async (data) => {
@@ -25,7 +23,7 @@ const RegisterForm = () => {
                     'Content-Type': 'multipart/form-data',
                 },
             });
-            
+
             return response.data;
         } catch (error) {
             const errorMessage = error.response?.data?.error || 'Registration failed. Please try again.';
@@ -51,63 +49,67 @@ const RegisterForm = () => {
     const profilePicture = watch('profilePicture');
 
     return (
-        <form className={`${styles.registerContainer} ${darkMode ? styles.registerContainerDark : ''}`} onSubmit={handleSubmit(onSubmit)}>
+        <form className={styles.registerContainer} onSubmit={handleSubmit(onSubmit)}>
             <h2 className={styles.registerTitle}>Register</h2>
 
-            <label className={`${styles.registerLabel} ${darkMode ? styles.registerLabelDark : ''}`}>
-                Name:
-                <input
-                    className={`${styles.registerInput} ${darkMode ? styles.registerInputDark : ''}`}
-                    type="text"
-                    placeholder="Enter your name.."
-                    {...register('name', {
-                        required: 'Name is required',
-                        maxLength: { value: 20, message: 'Name is too long' },
-                    })}
-                />
-                {errors.name && <p className={styles.registerErrorMessage}>{errors.name.message}</p>}
+            <label className={styles.registerLabel}>
+                Name
             </label>
 
-            <label 
-            className={`${styles.registerLabel} ${darkMode ? styles.registerLabelDark : ''}`}>
-                Email:
-                <input
-                    className={`${styles.registerInput} ${darkMode ? styles.registerInputDark : ''}`}
-                    type="text"
-                    placeholder="example@example.com"
-                    {...register('email', {
-                        pattern: { value: /^\S+@\S+$/i, message: 'Invalid email format' },
-                    })}
-                />
+            <input
+                className={styles.registerInput}
+                type="text"
+                placeholder="Enter your name.."
+                {...register('name', {
+                    required: 'Name is required',
+                    maxLength: { value: 20, message: 'Name is too long' },
+                })}
+            />
+            {errors.name && <p className={styles.registerErrorMessage}>{errors.name.message}</p>}
+
+            <label
+                className={styles.registerLabel}>
+                Email
             </label>
 
-            <label 
-                className={`${styles.registerLabel} ${darkMode ? styles.registerLabelDark : ''}`}>
-                Password:
-                <input
-                    className={`${styles.registerInput} ${darkMode ? styles.registerInputDark : ''}`}
-                    type="password"
-                    placeholder="********"
-                    {...register('password', {
-                        minLength: { value: 8, message: 'Password is too short' },
-                        required: true,
-                    })}
-                />
-                {errors.password && <p className={styles.registerErrorMessage}>{errors.password.message}</p>}
+            <input
+                className={styles.registerInput}
+                type="text"
+                placeholder="example@example.com"
+                {...register('email', {
+                    pattern: { value: /^\S+@\S+$/i, message: 'Invalid email format' },
+                })}
+            />
+
+            <label
+                className={styles.registerLabel}>
+                Password
             </label>
 
-            <label className={`${styles.registerLabel} ${darkMode ? styles.registerLabelDark : ''}`}>
-                Profile Picture:
-                <input
-                     className={`${styles.registerInputFile} ${darkMode ? styles.registerInputFileDark : ''}`}
-                    type="file"
-                    {...register('profilePicture', {
-                        required: 'Profile picture is required',
-                        validate: (value) => value.length > 0 || 'You must select an image',
-                    })}
-                />
-                {errors.profilePicture && <p className={styles.registerErrorMessage}>{errors.profilePicture.message}</p>}
+            <input
+                className={styles.registerInput}
+                type="password"
+                placeholder="********"
+                {...register('password', {
+                    minLength: { value: 8, message: 'Password is too short' },
+                    required: true,
+                })}
+            />
+            {errors.password && <p className={styles.registerErrorMessage}>{errors.password.message}</p>}
+
+            <label className={styles.registerLabel}>
+                Profile Picture
             </label>
+
+            <input
+                className={styles.registerInputFile}
+                type="file"
+                {...register('profilePicture', {
+                    required: 'Profile picture is required',
+                    validate: (value) => value.length > 0 || 'You must select an image',
+                })}
+            />
+            {errors.profilePicture && <p className={styles.registerErrorMessage}>{errors.profilePicture.message}</p>}
 
             <button type="submit" className={styles.registerSubmitButton}>Register</button>
 
@@ -115,7 +117,7 @@ const RegisterForm = () => {
                 {profilePicture?.[0] ? (
                     <img className={styles.registerPreviewImage} src={URL.createObjectURL(profilePicture[0])} alt="Preview" />
                 ) : (
-                    'No image selected'
+                    ''
                 )}
             </p>
         </form>

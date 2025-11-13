@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Avatar, Menu, MenuItem, IconButton } from '@mui/material';
+import { Avatar, Menu, MenuItem, IconButton, useTheme } from '@mui/material';
 import Logout from '../logout/logout';
 import { getUserSession } from '../../utils/localStorage';
-import { useDarkMode } from '../../context/darkModeContext';
 
 const UserMenu = ({ forceUpdate }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const isMenuOpen = Boolean(anchorEl);
 
-  const { darkMode } = useDarkMode();
+  const theme = useTheme();
+  const textColor = theme.palette.text.primary;
+  const colorBg = theme.palette.background.color;
+  const hoverBg = theme.palette.action.hover;
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -23,15 +25,15 @@ const UserMenu = ({ forceUpdate }) => {
   return (
     <div>
       <IconButton onClick={handleMenuOpen} style={{ padding: 0 }}>
-        <Avatar src={profilePicture} alt="profile Picture" sx={{ backgroundColor: 'white' }} />
+        <Avatar src={profilePicture} alt="profile Picture" sx={{ backgroundColor: colorBg }} />
       </IconButton>
       <Menu
         anchorEl={anchorEl}
         open={isMenuOpen}
         onClose={handleMenuClose}
         sx={{
-          '& .MuiPaper-root': { backgroundColor: darkMode ? '#333333' : '#FAFAFA', color: darkMode ? '#FAFAFA' : '#000000' }, '& .MuiMenuItem-root': {
-            transition: 'background-color 0.3s', '&:hover': { backgroundColor: darkMode ? '#09090b' : '', }
+          '& .MuiPaper-root': { backgroundColor: colorBg, color: textColor }, '& .MuiMenuItem-root': {
+            transition: 'background-color 0.3s', '&:hover': { backgroundColor: hoverBg }
           }
         }}
       >

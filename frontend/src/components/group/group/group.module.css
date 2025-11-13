@@ -1,11 +1,11 @@
 .group {
     padding: 15px;
-    background-color: rgb(240, 240, 240);
-    /* background-color: rgb(36, 36, 36); */
     border-radius: 10px;
     border: 1px solid var(--border-color);
     width: 100%;
     cursor: pointer;
+    /* background-color: var(--secondary-bg-color); */
+    color: var(--color);
     /* height: 60px;
     overflow: hidden;
     transition: height .3s;
@@ -13,12 +13,6 @@
     /* -webkit-box-shadow: 0px 0px 8px 3px rgba(138, 134, 138, 0.75);
     -moz-box-shadow: 0px 0px 8px 3px rgba(138, 134, 138, 0.75);
     box-shadow: 0px 0px 8px 3px rgba(138, 134, 138, 0.75); */
-}
-
-.groupDark {
-    background-color: var(--bg-dark-mode);
-    color: var(--color-dark-mode);
-    border: 1px solid var(--border-color-dark-mode);
 }
 
 /* .group:hover {

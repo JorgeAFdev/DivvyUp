@@ -2,10 +2,8 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import styles from "./expenseform.module.css";
 import { IoCloseOutline } from "react-icons/io5";
-import { useDarkMode } from "../../../context/darkModeContext";
 
 const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers }) => {
-    const { darkMode } = useDarkMode();
     const {
         register,
         handleSubmit,
@@ -27,7 +25,7 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
     };
 
     return (
-        <form onSubmit={handleSubmit(handleFormSubmit)} className={`${styles.form} ${darkMode ? styles.formDark : ''}`}>
+        <form onSubmit={handleSubmit(handleFormSubmit)} className={styles.form}>
             <div className={styles.top}>
                 <h2>{title}</h2>
                 <IoCloseOutline className={styles.btn} onClick={onClose} />
@@ -45,7 +43,7 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
                             required: "Description is required",
                             maxLength: { value: 30, message: 'description is to large' },
                         })}
-                        className={`${styles.input} ${errors.description ? styles.errorInput : ""} ${darkMode ? styles.inputDark : ''}`}
+                        className={`${styles.input} ${errors.description ? styles.errorInput : ""}`}
                     />
                     {errors.description && (
                         <span className={styles.errorText}>{errors.description.message}</span>
@@ -67,7 +65,7 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
                                 message: "Enter a valid amount (e.g., 20 or 75.40)",
                             },
                         })}
-                        className={`${styles.input} ${errors.totalAmount ? styles.errorInput : ""} ${darkMode ? styles.inputDark : ''}`}
+                        className={`${styles.input} ${errors.totalAmount ? styles.errorInput : ""}`}
                     />
                     {errors.totalAmount && (
                         <span className={styles.errorText}>{errors.totalAmount.message}</span>
@@ -80,7 +78,7 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
                         {...register("paidBy", { required: "Please select a payer" })}
                         id="select-payer"
                         defaultValue=""
-                        className={`${styles.select} ${darkMode ? styles.selectDark : ''}`}
+                        className={styles.select}
                     >
                         <option value="" disabled>--Please choose an option--</option>
                         {groupMembers.map(member => (

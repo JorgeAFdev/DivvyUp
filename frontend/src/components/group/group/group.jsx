@@ -3,7 +3,6 @@ import styles from './group.module.css'
 import { deleteGroup, updateGroup } from '../../../utils/groupApi';
 import { toast } from 'react-toastify';
 import GroupActions from '../groupActions/groupActions';
-import { useDarkMode } from '../../../context/darkModeContext';
 import { useAuth } from '../../../context/userContextAuth';
 import { useNavigate } from 'react-router-dom';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
@@ -14,7 +13,6 @@ const Group = ({ group, setGroups }) => {
     const [isEditing, setIsEditing] = useState(false);
 
     const navigate = useNavigate();
-    const { darkMode } = useDarkMode();
     const { token } = useAuth();
     const { showConfirmationToast } = useConfirmationToast();
 
@@ -52,7 +50,7 @@ const Group = ({ group, setGroups }) => {
         }
     };
     return (
-        <div className={`${styles.group} ${darkMode ? styles.groupDark : ''}`} id={`group-card-${group._id}`} onClick={() => navigate(`/groups/${group._id}/expenses`)}>
+        <div className={styles.group} id={`group-card-${group._id}`} onClick={() => navigate(`/groups/${group._id}/expenses`)}>
             <li className={styles.listItem}>
                 <div className={styles.row} >
                     <div className={styles.left}>

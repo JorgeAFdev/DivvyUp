@@ -7,10 +7,6 @@
     border-radius: 10px;
     margin-bottom: 10px;
     border: 1px solid var(--border-color);
-}
-
-.debtDark {
-    background-color: var(--bg-dark-mode);
-    color: var(--color-dark-mode);
-    border: 1px solid var(--border-color-dark-mode);
+    background-color: var(--bg-color);
+    color: var(--color);
 }
