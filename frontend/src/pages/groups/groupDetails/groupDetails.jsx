@@ -7,7 +7,6 @@ import ExpenseList from '../../../components/expense/expenseList/expenseList';
 import CreateExpense from '../../../components/expense/createExpense/createExpense';
 import BalanceList from '../../../components/balance/balanceList/balanceList';
 import DebtsList from '../../../components/debts/debtsList';
-import { useDarkMode } from '../../../context/darkModeContext';
 
 
 const GroupDetails = () => {
@@ -16,7 +15,6 @@ const GroupDetails = () => {
 
     const { groupId } = useParams();
     const { token } = useAuth();
-    const { darkMode } = useDarkMode();
 
     const { data, isLoading, isError, error } = useQuery(['groupDetails', groupId], () => getGroupDetails(groupId, token), {
         onError: (error) => {
@@ -25,11 +23,11 @@ const GroupDetails = () => {
     });
 
     if (isLoading) {
-        return <div className={darkMode ? styles.text : ''}>Loading group details...</div>;
+        return <div className={styles.text}>Loading group details...</div>;
     }
 
     if (isError) {
-        return <div className={darkMode ? styles.text : ''}>Error loading data: {error.response?.data?.error || error}</div>;
+        return <div className={styles.text}>Error loading data: {error.response?.data?.error || error}</div>;
     }
 
     const refreshGroupDetails = () => {
