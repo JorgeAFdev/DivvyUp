@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Modal from "../modal/modal";
-import UserEditForm from "./userEditFrom";
+import UserEditForm from "./userEditForm";
 import styles from "./userEditForm.module.css"; // Import CSS Module
 
 const UserEdit = ({ user }) => {

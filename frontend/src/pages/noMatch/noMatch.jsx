@@ -1,6 +1,6 @@
 
 
-const Groups = () => {
+const NoMatch = () => {
 
     return (
         <div style={{ textAlign: 'center', marginTop: '10vh' }}>
@@ -23,4 +23,4 @@ const Groups = () => {
     )
 };
 
-export default Groups;
+export default NoMatch;

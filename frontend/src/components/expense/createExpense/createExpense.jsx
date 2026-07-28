@@ -8,7 +8,7 @@ import ExpenseForm from "../expenseForm/expenseForm";
 import { toast } from "react-toastify";
 import { useAuth } from "../../../context/userContextAuth";
 
-const CrateExpense = ({ refreshGroupDetails }) => {
+const CreateExpense = ({ refreshGroupDetails }) => {
     const [groupInfo, setGroupInfo] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const openModal = () => setIsModalOpen(true);
@@ -50,4 +50,4 @@ const CrateExpense = ({ refreshGroupDetails }) => {
     )
 }
 
-export default CrateExpense;
+export default CreateExpense;
