@@ -10,36 +10,42 @@ const Router = express.Router();
 // REGISTER
 Router.post('/register', upload.single('profilePicture'), async (req, res) => {
     try {
+        console.time('register user');
         const { email, name, password } = req.body;
         let profilePicture = '';
 
-        console.log(email, name, password, req.file);
-
         if (!email) {
-            return res.status(400).json({ error:  'Email not received' });
+            return res.status(400).json({ error: 'Email not received' });
         }
 
         if (!password) {
-            return res.status(400).json({ error:  'Password not received' });
+            return res.status(400).json({ error: 'Password not received' });
         }
 
+        console.time('query user')
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ error: 'Email already registered'  });
+            return res.status(400).json({ error: 'Email already registered' });
         }
+        console.timeEnd('query user')
 
+
+        console.time('upload image to Cloudinary');
         // Si hay un archivo de imagen, lo subimos a Cloudinary
         if (req.file) {
             const result = await uploadToCloudinary(req.file.buffer); // Usamos el buffer de la imagen
-            console.log('Imagen result:', result);
             profilePicture = result; // Guarda la URL segura de Cloudinary
         }
+        console.timeEnd('upload image to Cloudinary');
+
 
         const newUser = new User({ email, name, password, profilePicture });
         const createdUser = await newUser.save();
 
         // Enviar correo de bienvenida
-        sendEmail(email, 'Welcome to DivvyUp', `Thank you ${name} for registering with DivvyUp!`);
+        // sendEmail(email, 'Welcome to DivvyUp', `Thank you ${name} for registering with DivvyUp!`);
+
+        console.timeEnd('register user');
 
         return res.status(200).json({
             token: await createdUser.generateJWT(),
@@ -68,13 +74,13 @@ Router.post('/login', async (req, res) => {
         const foundUser = await User.findOne({ email });
 
         if (!foundUser) {
-            return res.status(400).json({ error:  'User not found, please Register' });
+            return res.status(400).json({ error: 'User not found, please Register' });
         }
 
         // Compara la contraseña
         const isMatch = await foundUser.comparePassword(password);
         if (!isMatch) {
-            return res.status(400).json({ error:  'Invalid Password' });
+            return res.status(400).json({ error: 'Invalid Password' });
         }
 
         return res.status(200).json({

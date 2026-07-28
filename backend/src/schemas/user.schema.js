@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 
-const secret = process.env.jwt_secret; 
+const secret = process.env.jwt_secret;
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -27,16 +27,14 @@ const userSchema = new mongoose.Schema({
         type: String, // Guardará una URL o ruta de la imagen
         default: '', // Opcional: Valor por defecto en caso de no incluir imagen
     },
-    }, 
-    { timestamps:true}
+},
+    { timestamps: true }
 );
 
 userSchema.pre('save', async function (next) {
     if (this.isModified('password')) {
-        console.log(this.password);
         const salt = await bcrypt.genSalt(10);
         this.password = await bcrypt.hash(this.password, salt);
-        console.log(this.password);
     }
     next()
 });
@@ -55,10 +53,10 @@ userSchema.methods.generateJWT = function () {
         id: this._id,
         name: this.name,
         email: this.email
-    } 
-    return jwt.sign(payload,secret, {
-        
-        });
+    }
+    return jwt.sign(payload, secret, {
+
+    });
 };
 
 
