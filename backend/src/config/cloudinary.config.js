@@ -20,7 +20,7 @@ const uploadToCloudinary = async (fileBuffer) => {
           console.error('Error subiendo la imagen a Cloudinary:', error);
           return reject(new Error('Error subiendo la imagen'));
         }
-       
+
         resolve(result.secure_url);
       }
     );

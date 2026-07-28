@@ -1,5 +1,5 @@
 const User = require('../schemas/user.schema');
-const uploadToCloudinary = require('../config/cluodinary.config');
+const uploadToCloudinary = require('../config/cloudinary.config');
 
 // Crear un nuevo usuario
 exports.createUser = async (req, res) => {

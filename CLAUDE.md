@@ -96,7 +96,7 @@ Styling is CSS Modules (`foo.module.css` beside `foo.jsx`) plus MUI. `context/da
 
 `routers/router.js` mounts `/group` twice (expense routes and group routes both live under it), plus `/user`, `/auth`, `/payment`. Validation helpers (`validateUser`, `validateGroupExists`) live in `middlewares/index.js`, but most validation is still inline in controllers — `notes.txt` tracks moving it out.
 
-Profile images: multer with `memoryStorage()` → `config/cluodinary.config.js` (filename typo is intentional/load-bearing) → `uploadToCloudinary(buffer)` returns the secure URL stored on `user.profilePicture`.
+Profile images: multer with `memoryStorage()` → `config/cloudinary.config.js` → `uploadToCloudinary(buffer)` returns the secure URL stored on `user.profilePicture`.
 
 ## Testing notes
 

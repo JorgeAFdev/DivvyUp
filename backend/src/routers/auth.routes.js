@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../schemas/user.schema');
 const sendEmail = require('../services/sendgrid');
 const upload = require('../config/multer.config'); // Middleware de multer
-const uploadToCloudinary = require('../config/cluodinary.config'); // Función para subir a Cloudinary
+const uploadToCloudinary = require('../config/cloudinary.config'); // Función para subir a Cloudinary
 
 const Router = express.Router();
 
