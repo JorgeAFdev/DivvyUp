@@ -1,0 +1,12 @@
+packages:
+  - backend
+  - frontend
+
+allowBuilds:
+  '@swc/core': true
+  cypress: true
+  esbuild: true
+  mongodb-memory-server: true
+  unrs-resolver: true
+
+minimumReleaseAge: 4320

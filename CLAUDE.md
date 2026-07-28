@@ -4,38 +4,47 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-DivvyUp is a group expense-splitting app (Splitwise-like). npm-workspaces monorepo driven by Turborepo 1.x:
+DivvyUp is a group expense-splitting app (Splitwise-like). pnpm-workspaces monorepo driven by Turborepo 2.x:
 `backend/` (Express + Mongoose + Socket.IO, CommonJS) and `frontend/` (React 18 + Vite, ESM).
+
+**Package manager is pnpm** — pinned via `packageManager` in the root `package.json`. Never run `npm install`; it would recreate `package-lock.json` and fight the pnpm lockfile. Workspace members are declared in `pnpm-workspace.yaml`, not in a `workspaces` field.
 
 ## Commands
 
 Run from the repo root unless noted:
 
 ```bash
-npm install              # installs both workspaces
-npm run dev              # turbo: frontend (:3000) + backend (:3001)
-npm run start:frontend   # frontend only
-npm run start:backend    # backend only
+pnpm install             # installs both workspaces
+pnpm dev                 # turbo: frontend (:3000) + backend (:3001)
+pnpm start:frontend      # frontend only
+pnpm start:backend       # backend only
+pnpm audit --prod        # what actually ships; dev-only findings are noise
 docker compose up mongo  # local MongoDB on host port 27035
 ```
 
 Backend (`cd backend`):
 ```bash
-npm test                            # NODE_ENV=test jest --coverage --runInBand
-npx cross-env NODE_ENV=test npx jest src/tests/group.test.js   # single file
-npx cross-env NODE_ENV=test npx jest -t "get groups by group Id"  # single test
+pnpm test                                                       # NODE_ENV=test jest --coverage --runInBand
+pnpm exec cross-env NODE_ENV=test pnpm exec jest src/tests/group.test.js   # single file
+pnpm exec cross-env NODE_ENV=test pnpm exec jest -t "get groups by group Id"  # single test
 ```
 
 Frontend (`cd frontend`):
 ```bash
-npm run build            # vite build -> dist/
-npm test                 # jest (jsdom + babel-jest), *.test.jsx colocated with components
-npx jest src/components/header/header.test.jsx
-npm run cy:open / cy:run # Cypress e2e against http://localhost:3000 (app must be running)
-npm run storybook        # :6006
+pnpm build               # vite build -> dist/
+pnpm test                # jest (jsdom + babel-jest), *.test.jsx colocated with components
+pnpm exec jest src/components/header/header.test.jsx
+pnpm cy:open / cy:run    # Cypress e2e against http://localhost:3000 (app must be running)
+pnpm storybook           # :6006
 ```
 
-There is no lint script and no eslint config file, despite eslint deps in the root `package.json` and a `lint` task in `turbo.json`. Don't run `npm run lint`.
+There is no lint script and no eslint config file, despite eslint deps in the root `package.json` and a `lint` task in `turbo.json`. Don't run `pnpm lint`.
+
+### pnpm settings that will bite you
+
+- `.npmrc` sets `ignore-scripts=true`. A dependency needing a postinstall (native bindings, downloaded binaries) must be listed under `allowBuilds` in `pnpm-workspace.yaml` or it installs silently broken. Currently allowed: `@swc/core`, `esbuild`, `cypress`, `mongodb-memory-server`, `unrs-resolver`.
+- `minimumReleaseAge: 4320` (3 days) blocks just-published versions as supply-chain protection, so a brand-new release will not resolve.
+- pnpm's `node_modules` is strict: importing a package that is not declared in that workspace's `package.json` fails, even if some other package depends on it. npm's flat hoisting used to hide this.
 
 ## Environment
 
@@ -91,10 +100,15 @@ Profile images: multer with `memoryStorage()` → `config/cluodinary.config.js` 
 
 ## Testing notes
 
-- Backend tests use `mongodb-memory-server`: `connectDB()` in `mongo/connection/index.js` swaps to an in-memory URI whenever `NODE_ENV === 'test'`, so tests must set that env var (the `npm test` script does). `--runInBand` is required — the tests share one DB.
-- Frontend jest maps CSS imports to `identity-obj-proxy`, **which is not installed**, and `jest.setup.js` imports `@testing-library/jest-dom/extend-expect`, a path removed in jest-dom v6 (v6 is installed). Both need fixing before any frontend jest test that imports a CSS module can run; the two existing `.test.jsx` files are entirely commented out.
+- Backend tests use `mongodb-memory-server`: `connectDB()` in `mongo/connection/index.js` swaps to an in-memory URI whenever `NODE_ENV === 'test'`, so tests must set that env var (the `pnpm test` script does). `--runInBand` is required — the tests share one DB. The `mongodb-memory-server` import is deliberately **lazy**, inside the `NODE_ENV === 'test'` branch: it is a devDependency and is absent from the production image, so a top-level require crashes the container at boot.
+- Any backend test hitting a route needs an `Authorization: Bearer` header — almost every route carries `jwtMiddleware`. `group.test.js` sets `process.env.jwt_secret` *before* its requires, because both `security/jwt.js` and `user.schema.js` capture the secret at import time.
+- The two frontend `.test.jsx` files are entirely commented out, so `pnpm test` in `frontend/` passes vacuously.
 - `vitest.workspace.js` wires the Storybook test addon (Vitest + Playwright/chromium) separately from the jest setup — two independent frontend test runners coexist.
 
 ## Deployment
 
-Push to `main` triggers `.github/workflows/prod-deploy.yaml`: builds `backend/Dockerfile`, pushes to `ghcr.io/divvyup-app/splitwise:latest`, redeploys the Koyeb service `wandering-nert/splitwise`. Frontend has **no CI** — per `notes.txt` it's `npm run build` with production env vars, then the `dist/` folder is uploaded to Netlify manually.
+Push to `main` triggers `.github/workflows/prod-deploy.yaml`: builds `backend/Dockerfile`, pushes to `ghcr.io/divvyup-app/splitwise:latest`, redeploys the Koyeb service `wandering-nert/splitwise`. It is path-filtered to `backend/**` plus the root manifests and lockfile, so docs-only merges no longer cycle production.
+
+**The Docker build context is the repo root, not `backend/`** (`docker build . --file backend/Dockerfile`). pnpm needs `pnpm-lock.yaml` and `pnpm-workspace.yaml` to install deterministically, and both live at the root. The image installs with `--prod --filter=@monorepo/backend...`, so anything the backend requires at runtime must be a real `dependency` — a devDependency imported at module top level will crash the container.
+
+Frontend has **no CI** — per `notes.txt` it's `pnpm build` with production env vars, then the `dist/` folder is uploaded to Netlify manually. The Netlify GitHub checks on PRs are a dead integration and always fail; ignore them.

@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/.env
+**/.turbo
+.git
+.github
+.claude
+.vscode
+frontend/cypress
+frontend/.storybook
+screenshots
+**/*.md
+notes.txt
