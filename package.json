@@ -1,14 +1,12 @@
 {
   "name": "root",
   "private": true,
-  "workspaces": [
-    "backend",
-    "frontend"
-  ],
+  "packageManager": "pnpm@11.0.0",
   "scripts": {
-    "start:frontend": "dotenv -- turbo run dev --scope='frontend'",
-    "start:backend": "dotenv -- turbo run dev --scope='backend'",
-    "dev": "dotenv -- turbo run dev "
+    "start:frontend": "dotenv -- turbo run dev --filter=@monorepo/frontend",
+    "start:backend": "dotenv -- turbo run dev --filter=@monorepo/backend",
+    "dev": "dotenv -- turbo run dev ",
+    "test": "turbo run test"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
@@ -22,6 +20,6 @@
     "eslint-plugin-promise": "^7.2.1",
     "eslint-plugin-react": "^7.37.3",
     "prettier": "^3.4.2",
-    "turbo": "^1.13.3"
+    "turbo": "^2.5.8"
   }
 }
