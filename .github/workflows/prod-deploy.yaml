@@ -44,4 +44,4 @@ jobs:
           github_token: '${{ secrets.GITHUB_TOKEN }}'
 
       - name: Deploy to Koyeb
-        run: koyeb service redeploy wandering-nert/splitwise
+        run: koyeb service redeploy wandering-nert/splitwise --wait
