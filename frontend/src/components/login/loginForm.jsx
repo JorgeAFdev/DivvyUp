@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form';
 import api from '../../utils/axios';
 import { setStorageObject } from '../../utils/localStorage';
 import styles from './loginForm.module.css';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/userContextAuth';
 import { toast } from 'react-toastify';
 
