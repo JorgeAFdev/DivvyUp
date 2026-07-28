@@ -48,3 +48,34 @@
 
 - Lo mínimo para tapar el agujero es un `<Route index element={...} />` dentro del layout. Redirigir a `/groups` si hay token y a `/login` si no es de una línea, y sirve mientras no exista landing.
 - Para la landing de verdad: qué cuenta (el proyecto ya tiene capturas y copy en el `README.md` que se pueden reaprovechar), y si debe redirigir a `/groups` cuando el usuario ya está logueado.
+
+## 4. `pnpm test` del frontend está en rojo
+
+**Estado actual (verificado):**
+
+- `cd frontend && pnpm test` sale con código 1: **2 suites fallidas, 0 tests ejecutados**. El error de las dos es el mismo: `Your test suite must contain at least one test.`
+- La causa son los dos únicos ficheros de test, `src/components/header/header.test.jsx` y `src/components/icon/icon.test.jsx`. Son plantillas con **todo el contenido comentado**, y encima importan `./Header` y `./Button`, ficheros que no existen (son `header.jsx` e `icon.jsx`).
+- El backend sí pasa (2/2), así que esto es solo del workspace de frontend.
+
+**A decidir:**
+
+- `Icon` (`src/components/icon/icon.jsx`) es presentacional puro: recibe `variant`, `className`, `handleClick` y devuelve un icono de `react-icons`. Se testea sin providers, en unas seis líneas. Buen primer test real.
+- `Header` es más caro: necesita `MemoryRouter` más `AuthProvider` y `DarkModeContextProvider`. Ojo con la rama de usuario logueado, porque renderiza `Notifications`, que abre un socket y hace `getUserSession()`; sin sesión en `localStorage` eso revienta al desestructurar. Testear primero la rama sin token, que no monta `Notifications`, es lo barato.
+- Salida rápida si no se quiere escribir tests ahora: borrar las dos plantillas. Deja `pnpm test` en verde de forma honesta en vez de con una suite rota.
+- No usar `--passWithNoTests` para taparlo: enmascara el día que un fichero de test deje de ejecutarse por error.
+
+## 5. Migrar react-query v3 a TanStack Query v5
+
+**Estado actual (verificado):**
+
+- `react-query` v3 lleva años sin mantenimiento. Es la **única fuente de vulnerabilidades que queda en producción**: arrastra `brace-expansion` (HIGH) por la cadena `react-query → broadcast-channel → rimraf → glob → minimatch`.
+- Bloquea además la subida a React 19: los peer deps de v3 llegan hasta React 18.
+- Superficie real: **5 ficheros**. `App.jsx`, `pages/groups/groupDetails/groupDetails.jsx`, `components/user/userEditForm.jsx`, `components/register/registerForm.jsx`, `components/userExpenses/userExpenses.jsx`. En total 4 `useQuery`, 4 `useMutation`, 8 `useQueryClient`, 3 `invalidateQueries`.
+
+**A tener en cuenta al migrar:**
+
+- Cambia el paquete: `react-query` pasa a `@tanstack/react-query`.
+- La API pasa de posicional a objeto. Hoy: `useQuery(['groupDetails', groupId], () => getGroupDetails(...), { ... })`. En v5: `useQuery({ queryKey: [...], queryFn: ... })`.
+- **`onError` y `onSuccess` desaparecen de `useQuery`** en v5 (siguen existiendo en `useMutation`). Esto afecta directamente a `groupDetails.jsx:19-23`, que usa `onError` para hacer `navigate('/groups')` cuando falla la carga. Hay que reescribir esa redirección leyendo `isError` en el render o en un efecto.
+- `isLoading` pasa a llamarse `isPending` en las mutaciones.
+- `invalidateQueries` también pasa a firma de objeto: `invalidateQueries({ queryKey: [...] })`.
