@@ -111,4 +111,13 @@ Push to `main` triggers `.github/workflows/prod-deploy.yaml`: builds `backend/Do
 
 **The Docker build context is the repo root, not `backend/`** (`docker build . --file backend/Dockerfile`). pnpm needs `pnpm-lock.yaml` and `pnpm-workspace.yaml` to install deterministically, and both live at the root. The image installs with `--prod --filter=@monorepo/backend...`, so anything the backend requires at runtime must be a real `dependency` — a devDependency imported at module top level will crash the container.
 
-Frontend has **no CI** — per `notes.txt` it's `pnpm build` with production env vars, then the `dist/` folder is uploaded to Netlify manually. Netlify's GitHub access was revoked in July 2026, so its three always-failing PR checks are gone: a red check on a PR now means something real.
+Frontend deploys on **Cloudflare Pages** (project `divvyup`, live at `https://divvyup-8wi.pages.dev`), connected to the GitHub repo — no workflow file, the config lives in the Pages dashboard:
+
+- Root directory is the **repo root**, not `frontend/`: Pages picks the package manager from the lockfile it finds there, and `pnpm-lock.yaml` + `pnpm-workspace.yaml` are at the root (same reason as the Docker build context).
+- Build command `pnpm install --frozen-lockfile --filter @monorepo/frontend && pnpm --filter @monorepo/frontend build`, output `frontend/dist`.
+- Build env vars: `VITE_API_URL`, `VITE_SOCKET_URL` (Vite inlines them at build time, so they must be build vars), `NODE_VERSION` (mandatory — `packageManager: pnpm@11.0.0` needs Node >= 22.13, newer than the default image), `SKIP_DEPENDENCY_INSTALL=1` (the filtered install is done by the build command; without this Pages also runs an unfiltered `pnpm install` that pulls the backend's 122 MB `mongodb-memory-server` binary) and `CYPRESS_INSTALL_BINARY=0`.
+- Pages serves `index.html` for unmatched routes on its own, so the SPA needs no `_redirects` file.
+
+Netlify is gone: its GitHub access was revoked in July 2026, so the three always-failing PR checks no longer appear — a red check on a PR now means something real.
+
+**`CLIENT_URL` on Koyeb is the Socket.IO CORS origin** and is compared exactly (`socket/socket.server.js`), so it must be the Pages production origin with no trailing slash. Preview deployments get their own subdomain and will not pass that check.

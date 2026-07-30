@@ -37,7 +37,7 @@ With DivvyUp, you can create groups, add expenses with multiple participants, an
 - **npm (package management)**
 
 ### Deployment
-- 🌐 Frontend: [Netlify](https://www.netlify.com/)
+- 🌐 Frontend: [Cloudflare Pages](https://pages.cloudflare.com/)
 - 🌐 Backend: [Koyeb](https://www.koyeb.com/)
 - 🛢️ Database: [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
 
@@ -157,7 +157,7 @@ splitwise/
 
 ## 🌐 Live Demo
 
-You can try the project live here: [https://divvy-up-app.netlify.app/](https://divvy-up-app.netlify.app/) 
+You can try the project live here: [https://divvyup-8wi.pages.dev/](https://divvyup-8wi.pages.dev/) 
 
 ---
 
