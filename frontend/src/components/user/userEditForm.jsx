@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../utils/axios"; // Usa axios desde api.js
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/userContextAuth";
@@ -48,7 +48,8 @@ const UserEditForm = ({ user, onClose }) => {
     };
 
     // React Query Mutation para manejar la actualización
-    const mutation = useMutation(updateUser, {
+    const mutation = useMutation({
+        mutationFn: updateUser,
         onSuccess: (updatedUser) => {
             // Obtener sesión actual y actualizarla con los nuevos datos
             const session = JSON.parse(localStorage.getItem("user-session")) || {};
@@ -56,7 +57,7 @@ const UserEditForm = ({ user, onClose }) => {
             localStorage.setItem("user-session", JSON.stringify(session));
 
             // Actualizar la caché de React Query
-            queryClient.setQueryData("users", (oldData) => {
+            queryClient.setQueryData(["users"], (oldData) => {
                 if (!oldData) return [updatedUser.user];
                 return oldData.map((u) => (u.id === updatedUser.user.id ? updatedUser.user : u));
             });
@@ -142,8 +143,8 @@ const UserEditForm = ({ user, onClose }) => {
                 )}
             </div>
 
-            <button type="submit" className={styles.button} disabled={mutation.isLoading}>
-                {mutation.isLoading ? "Guardando..." : "Guardar cambios"}
+            <button type="submit" className={styles.button} disabled={mutation.isPending}>
+                {mutation.isPending ? "Guardando..." : "Guardar cambios"}
             </button>
         </form>
     );
