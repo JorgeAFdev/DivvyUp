@@ -64,23 +64,7 @@
 - Salida rápida si no se quiere escribir tests ahora: borrar las dos plantillas. Deja `pnpm test` en verde de forma honesta en vez de con una suite rota.
 - No usar `--passWithNoTests` para taparlo: enmascara el día que un fichero de test deje de ejecutarse por error.
 
-## 5. Migrar react-query v3 a TanStack Query v5
-
-**Estado actual (verificado):**
-
-- `react-query` v3 lleva años sin mantenimiento. Es la **única fuente de vulnerabilidades que queda en producción**: arrastra `brace-expansion` (HIGH) por la cadena `react-query → broadcast-channel → rimraf → glob → minimatch`.
-- Bloquea además la subida a React 19: los peer deps de v3 llegan hasta React 18.
-- Superficie real: **5 ficheros**. `App.jsx`, `pages/groups/groupDetails/groupDetails.jsx`, `components/user/userEditForm.jsx`, `components/register/registerForm.jsx`, `components/userExpenses/userExpenses.jsx`. En total 4 `useQuery`, 4 `useMutation`, 8 `useQueryClient`, 3 `invalidateQueries`.
-
-**A tener en cuenta al migrar:**
-
-- Cambia el paquete: `react-query` pasa a `@tanstack/react-query`.
-- La API pasa de posicional a objeto. Hoy: `useQuery(['groupDetails', groupId], () => getGroupDetails(...), { ... })`. En v5: `useQuery({ queryKey: [...], queryFn: ... })`.
-- **`onError` y `onSuccess` desaparecen de `useQuery`** en v5 (siguen existiendo en `useMutation`). Esto afecta directamente a `groupDetails.jsx:19-23`, que usa `onError` para hacer `navigate('/groups')` cuando falla la carga. Hay que reescribir esa redirección leyendo `isError` en el render o en un efecto.
-- `isLoading` pasa a llamarse `isPending` en las mutaciones.
-- `invalidateQueries` también pasa a firma de objeto: `invalidateQueries({ queryKey: [...] })`.
-
-## 6. Auth con Better Auth (login/register con Google y demás proveedores)
+## 5. Auth con Better Auth (login/register con Google y demás proveedores)
 
 Sustituir el auth artesanal por [Better Auth](https://better-auth.com) para tener login social (Google, y GitHub/Apple si interesa) sin escribir el flujo OAuth a mano. Se solapa con el punto 1: si se hace esto, **no tiene sentido montar antes el esquema access + refresh token**, porque Better Auth ya trae sesiones con cookie `httpOnly` y rotación. Decidir primero cuál de los dos caminos se toma.
 
