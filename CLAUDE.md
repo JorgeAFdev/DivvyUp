@@ -111,4 +111,4 @@ Push to `main` triggers `.github/workflows/prod-deploy.yaml`: builds `backend/Do
 
 **The Docker build context is the repo root, not `backend/`** (`docker build . --file backend/Dockerfile`). pnpm needs `pnpm-lock.yaml` and `pnpm-workspace.yaml` to install deterministically, and both live at the root. The image installs with `--prod --filter=@monorepo/backend...`, so anything the backend requires at runtime must be a real `dependency` — a devDependency imported at module top level will crash the container.
 
-Frontend has **no CI** — per `notes.txt` it's `pnpm build` with production env vars, then the `dist/` folder is uploaded to Netlify manually. The Netlify GitHub checks on PRs are a dead integration and always fail; ignore them.
+Frontend has **no CI** — per `notes.txt` it's `pnpm build` with production env vars, then the `dist/` folder is uploaded to Netlify manually. Netlify's GitHub access was revoked in July 2026, so its three always-failing PR checks are gone: a red check on a PR now means something real.
