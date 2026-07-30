@@ -91,3 +91,29 @@ Sustituir el auth artesanal por [Better Auth](https://better-auth.com) para tene
 - **Tests**: `bootstrapApp()` monta el router en `/` y no conecta BD. Better Auth sí necesita una BD real, así que los tests de rutas autenticadas tendrían que crear sesiones contra `mongodb-memory-server` en vez de firmar un JWT a mano.
 - **Instalación**: `minimumReleaseAge: 4320` en `pnpm-workspace.yaml` bloquea versiones publicadas hace menos de 3 días — Better Auth publica a menudo, así que puede no resolver la última. Y tiene que ir en `dependencies` del backend, no en dev, o el contenedor (`--prod`) se cae al arrancar.
 - Confirmar contra la doc de la versión que se instale que el import de CommonJS funciona sin transpilar; el paquete es TypeScript/ESM-first.
+
+## 6. Sacar las queries de los componentes a hooks
+
+Que cada fichero tenga una responsabilidad: el componente pinta, el hook trae los datos. Hoy la capa de datos está repartida entre los propios componentes en tres estilos distintos.
+
+**Estado actual (verificado):**
+
+- Conviven **tres patrones** para hacer lo mismo:
+  1. `useQuery`/`useMutation` escritos dentro del componente: `groupDetails.jsx:21`, `userExpenses.jsx:17`, `registerForm.jsx:36`, `userEditForm.jsx:51`. Son los **únicos 4 ficheros** que usan react-query.
+  2. `useEffect` + `useState` + `await` de la función de `utils/*Api.js`, con el estado subido al padre: `groupList.jsx:8-21` (recibe `groups` y `setGroups` por props), `createExpense.jsx:20-30`, `createGroup.jsx:21`.
+  3. Mutaciones a pelo en el handler, parcheando a mano el array del padre: `group.jsx:28` y `:46` (`setGroups(prev => prev.map(...) / .filter(...)`), `expense.jsx:21` y `:39`, `debt.jsx:21`.
+- `src/hooks/` ya existe pero solo tiene `useConfirmationToast.jsx`. No hay ni un hook de datos.
+- `registerForm.jsx:3`, `userEditForm.jsx:4` y `loginForm.jsx:17` llaman a `api` (la instancia de axios) directamente y se saltan `utils/*Api.js`, así que ni siquiera hay una única capa de acceso por recurso.
+- Las claves de caché están sueltas como strings en cada componente: `['groupDetails', groupId]`, `['myExpenses']`, `['users']`. `registerForm.jsx:40` invalida `['users']`, clave que **nadie consulta** — invalidación muerta.
+- `refreshGroupDetails` se define en `groupDetails.jsx:41` solo para llamar a `invalidateQueries`, y baja por props hasta las hojas (`expenseList` → `expense`, `debtsList` → `debt`, `createExpense`).
+- Cada componente repite `const { token } = useAuth()` y se lo pasa a mano a la llamada, porque no hay interceptor de axios.
+- `@tanstack/react-query` es **v5** (`frontend/package.json:20`), API de objetos.
+
+**A decidir:**
+
+- Un fichero de hooks por recurso (`hooks/useGroups.js`, `useGroupDetails.js`, `useExpenses.js`, `usePayments.js`) exponiendo `useGroups()`, `useCreateGroup()`, `useDeleteGroup()`… y que el hook coja el token de `useAuth()` por dentro, para que los componentes dejen de pasarlo.
+- Centralizar las claves de caché (`hooks/queryKeys.js` o una factoría por recurso) para que las invalidaciones no se desincronicen de las queries.
+- Migrar los patrones 2 y 3 se lleva por delante el prop drilling: `setGroups` y `refreshGroupDetails` desaparecen si cada hook invalida su propia clave. Eso cambia la firma de varios componentes (`GroupList` se queda sin props), no es solo mover código.
+- ¿Dónde quedan los toasts y el `navigate`? Hoy están dentro de los handlers. Lo limpio es que el hook devuelva estado y el componente decida qué pintar, no que el hook reciba `onSuccess`/`onError` con UI dentro.
+- Orden barato → caro: primero extraer los 4 que ya usan react-query (mover código, sin cambio de comportamiento), después migrar los manuales.
+- Sin red de seguridad: el `pnpm test` del frontend está roto (punto 4) y en Cypress solo hay `cypress/e2e/create-group.cy.js`, que además entra en `/groups` sin loguearse. Conviene arreglar al menos ese spec antes de tocar, o el refactor se valida a mano.
