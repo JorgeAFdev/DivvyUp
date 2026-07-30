@@ -6,6 +6,12 @@
       "sourceType": "autoskills-registry",
       "computedHash": "bffe3d08cfe92ebad63699f74ce29e35c19850ebfbf474c1463183cfe34d6a09"
     },
+    "caveman": {
+      "source": "juliusbrussee/caveman",
+      "sourceType": "github",
+      "skillPath": "skills/caveman/SKILL.md",
+      "computedHash": "d18cdf73a5f5c496d681a43a6846336b110223bdffa6817b8992529c57f1a815"
+    },
     "caveman-commit": {
       "source": "juliusbrussee/caveman",
       "sourceType": "github",
