@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/userContextAuth";
 import { getAllUserExpenses } from "../../utils/expenseApi";
@@ -14,7 +14,11 @@ const UserExpenses = () => {
 
     const { token } = useAuth();
 
-    const { data, isLoading, isError, error } = useQuery(['myExpenses'], () => getAllUserExpenses(token), { retry: 0 });
+    const { data, isLoading, isError, error } = useQuery({
+        queryKey: ['myExpenses'],
+        queryFn: () => getAllUserExpenses(token),
+        retry: 0,
+    });
 
     if (isLoading) {
         return <div className={styles.text}>Loading your expenses...</div>;
@@ -29,7 +33,7 @@ const UserExpenses = () => {
     }
 
     const refreshExpenses = () => {
-        queryClient.invalidateQueries(['myExpenses']);
+        queryClient.invalidateQueries({ queryKey: ['myExpenses'] });
     };
 
     return (

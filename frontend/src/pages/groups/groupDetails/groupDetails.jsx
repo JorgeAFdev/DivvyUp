@@ -1,4 +1,6 @@
-import { useQuery, useQueryClient } from 'react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
 import { useAuth } from '../../../context/userContextAuth';
 import { getGroupDetails } from '../../../utils/groupApi';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -16,11 +18,17 @@ const GroupDetails = () => {
     const { groupId } = useParams();
     const { token } = useAuth();
 
-    const { data, isLoading, isError, error } = useQuery(['groupDetails', groupId], () => getGroupDetails(groupId, token), {
-        onError: (error) => {
-            navigate('/groups')
-        },
+    const { data, isLoading, isError, error } = useQuery({
+        queryKey: ['groupDetails', groupId],
+        queryFn: () => getGroupDetails(groupId, token),
     });
+
+    useEffect(() => {
+        if (isError) {
+            toast.error(error.response?.data?.error || 'Could not load group');
+            navigate('/groups');
+        }
+    }, [isError, error, navigate]);
 
     if (isLoading) {
         return <div className={styles.text}>Loading group details...</div>;
@@ -31,7 +39,7 @@ const GroupDetails = () => {
     }
 
     const refreshGroupDetails = () => {
-        queryClient.invalidateQueries(['groupDetails', groupId]);
+        queryClient.invalidateQueries({ queryKey: ['groupDetails', groupId] });
     };
 
     return (

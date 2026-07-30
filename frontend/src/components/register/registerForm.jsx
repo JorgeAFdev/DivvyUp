@@ -1,5 +1,5 @@
 import { useForm } from 'react-hook-form';
-import { useMutation, useQueryClient } from 'react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../utils/axios';
 import styles from './registerForm.module.css';
 import { useNavigate } from 'react-router-dom';
@@ -33,10 +33,11 @@ const RegisterForm = () => {
 
     const { login } = useAuth();
     const navigate = useNavigate();
-    const mutation = useMutation(createUser, {
+    const mutation = useMutation({
+        mutationFn: createUser,
         onSuccess: (userData) => {
             login(userData);
-            queryClient.invalidateQueries('users');
+            queryClient.invalidateQueries({ queryKey: ['users'] });
             toast.success('Registration successful 🎉');
             navigate('/groups');
         }

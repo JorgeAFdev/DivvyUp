@@ -6,7 +6,7 @@ import Groups from "./pages/groups/groups";
 import GroupDetails from "./pages/groups/groupDetails/groupDetails";
 import MyExpenses from "./pages/user/expenses/myExpenses";
 import NoMatch from "./pages/noMatch/noMatch";
-import { QueryClient, QueryClientProvider } from "react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import User from "./pages/user/userProfile/user";
 import RegisterForm from "./components/register/registerForm";
 import Login from "./components/login/loginForm";
