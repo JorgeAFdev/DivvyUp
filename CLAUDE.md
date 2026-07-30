@@ -88,7 +88,9 @@ Frontend stores `{token, user}` as JSON in `localStorage` under the key `user-se
 
 ### Frontend data layer
 
-`utils/axios.js` creates a single axios instance from `VITE_API_URL`. There is **no auth interceptor** — every call passes `authHeaders(token)` explicitly. Endpoints are grouped per resource in `utils/{group,expense,payment}Api.js`; components consume them through react-query **v3** (`useQuery`/`useMutation` with the v3 positional API, not v4/v5 object syntax).
+`utils/axios.js` creates a single axios instance from `VITE_API_URL`. There is **no auth interceptor** — every call passes `authHeaders(token)` explicitly. Endpoints are grouped per resource in `utils/{group,expense,payment}Api.js`.
+
+Data fetching is `@tanstack/react-query` **v5** — object syntax only (`useQuery({ queryKey, queryFn })`, `useMutation({ mutationFn })`, `invalidateQueries({ queryKey })`); the old `react-query` package and its positional API are gone. The `QueryClientProvider` is set up in `App.jsx`. Note that adoption is partial: only `groupDetails.jsx`, `userExpenses.jsx`, `registerForm.jsx` and `userEditForm.jsx` use it, and every query lives inline in the component — the rest still fetch with `useEffect` + `useState` and lift state to the parent (`groupList.jsx` takes `groups`/`setGroups` as props). `TODO.md` §6 tracks moving all of it into per-resource hooks; new code should go through react-query, and preferably through a hook in `src/hooks/`.
 
 Styling is CSS Modules (`foo.module.css` beside `foo.jsx`) plus MUI. `context/darkModeContext.jsx` still exists, but recent commits deliberately removed per-component `useDarkMode` usage in favor of the MUI theme (`useTheme`) — follow that direction in new components.
 
