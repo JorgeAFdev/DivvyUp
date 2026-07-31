@@ -15,7 +15,7 @@ const setUpGroup = async () => {
             name: "GroupName",
             description: "GroupDescription",
             members: [
-                { user: `${userData._id.toString()}` }
+                { name: userData.name, user: `${userData._id.toString()}` }
             ]
         }
     )

@@ -364,14 +364,14 @@ Se marca cada paso al completarlo. Una fase no se da por cerrada hasta que sus t
 
 ### Fase 1 — PR A: modelo y motor · rama `feat/miembros-invitados`
 
-- [ ] 2. `group.schema.js`: `inviteCode` (único, `crypto.randomBytes(16).toString('base64url')` en
+- [x] 2. `group.schema.js`: `inviteCode` (único, `crypto.randomBytes(16).toString('base64url')` en
       `pre('validate')`), `members: [{ name, user }]`, `balance: [{ member, amount }]`
-- [ ] 3. `updateBalance()` indexa por `_id` de miembro y pierde **todos** sus `populate`
-- [ ] 4. `generateDebts()` crea los pagos con `from: debtor.member` / `to: creditor.member`
-- [ ] 5. `expense.schema.js`: `paidBy: ObjectId` sin ref, `participants: [{ member, amountOwed }]`
-- [ ] 6. `payment.schema.js`: `from` y `to` a `ObjectId` sin ref
-- [ ] 7. Nuevo `backend/src/utils/members.js` con `memberOf()` y `hydrateMembers()`
-- [ ] 8. Tests del motor con ids de miembro
+- [x] 3. `updateBalance()` indexa por `_id` de miembro y pierde **todos** sus `populate`
+- [x] 4. `generateDebts()` crea los pagos con `from: debtor.member` / `to: creditor.member`
+- [x] 5. `expense.schema.js`: `paidBy: ObjectId` sin ref, `participants: [{ member, amountOwed }]`
+- [x] 6. `payment.schema.js`: `from` y `to` a `ObjectId` sin ref
+- [x] 7. Nuevo `backend/src/utils/members.js` con `memberOf()` y `hydrateMembers()`
+- [x] 8. Tests del motor con ids de miembro (`backend/src/tests/engine.test.js`)
 
 ### Fase 2 — PR B: controladores de grupo
 
