@@ -19,6 +19,7 @@
 **Suelto, del mismo repaso:**
 
 - `secret` se lee a nivel de módulo (`user.schema.js:6`), igual que en `security/jwt.js`. Si el módulo se carga antes de `dotenv.config()`, el secreto es `undefined` y `jwt.sign` peta. Ya obliga a un workaround en `backend/src/tests/group.test.js`.
+- **`GET /group/:groupId/groupDetails` devuelve el hash bcrypt de todos los miembros.** `getGroupDetails` hace `.populate('members.user')` **sin proyección** (`group.controller.js:219`) y `password` no lleva `select: false` en `user.schema.js`, así que cualquier miembro de un grupo recibe el hash y el email del resto en cada carga del detalle. Lo tapa la rama `feat/miembros-invitados`, que proyecta `name email profilePicture`; hasta que se mergee sigue vivo en producción. La defensa de verdad es `select: false` en el campo más `.select('+password')` en el login de `auth.routes.js`, que es el único sitio que necesita el hash.
 - **No hay validación de fuerza de contraseña en ningún sitio.** `auth.routes.js` sólo comprueba que `email` y `password` vengan en el body, así que hoy se puede registrar una cuenta con la contraseña `a`. El único regex que existía (`validatePassword`, 8 caracteres con mayúscula, minúscula y dígito) vivía en `middlewares/index.js`, colgado de `POST /user/create` — una ruta sin auth que el front nunca llamó y que se borró junto con el fichero. Si se reengancha, sale de ahí: `git show HEAD~1:backend/src/middlewares/index.js`.
 
 ## 2. Miembros de grupo que no son usuarios registrados
