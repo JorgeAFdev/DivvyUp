@@ -177,8 +177,6 @@ const getExpensesByGroupId = async (req, res) => {
 
         const expenses = await Expense.find({ group: groupId });
 
-        if (expenses.length <= 0) { return res.status(404).json({ error: "Expenses not found for this group" }) }
-
         res.status(200).json(expenseResponse(group, expenses));
     } catch (error) {
         console.log(error);
@@ -198,7 +196,7 @@ const getExpensesByUserId = async (req, res) => {
         // to the member id they own in each of their groups first.
         const groups = await Group.find({ "members.user": userId }).populate("members.user", MEMBER_FIELDS);
         if (groups.length === 0) {
-            return res.status(404).json({ error: "Expenses not found for this user" });
+            return res.status(200).json([]);
         }
 
         const expenses = await Expense.find({
@@ -210,8 +208,6 @@ const getExpensesByUserId = async (req, res) => {
                 ];
             }),
         });
-
-        if (expenses.length <= 0) { return res.status(404).json({ error: "Expenses not found for this user" }) }
 
         const groupedExpenses = groups
             .map((group) => ({

@@ -18,6 +18,10 @@ const pay = async (req, res) => {
       return res.status(404).json({ error: "Payment not found" });
     }
 
+    if (payment.status === "paid") {
+      return res.status(409).json({ error: "This debt is already settled" });
+    }
+
     const group = await Group.findById(payment.group).populate('members.user', MEMBER_FIELDS);
     if (!group) {
       return res.status(404).json({ error: "Group not found" });

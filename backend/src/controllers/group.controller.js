@@ -173,9 +173,7 @@ const getUserGroups = async (req, res) => {
     }
 
     const groups = await Group.find({ "members.user": userId }).populate("members.user", MEMBER_FIELDS);
-    if (groups.length === 0) {
-      return res.status(404).json({ error: "Groups not found" });
-    }
+
     res.status(200).json(groups);
   } catch (error) {
     console.error(error);
