@@ -1,7 +1,7 @@
 const notificationTypes = {
     GROUP_CREATED: 'GROUP_CREATED',
     EXPENSE_CREATED: 'EXPENSE_CREATED',
-    EXPENSE_SETTLED: 'DEBT_SETTLED'
+    DEBT_SETTLED: 'DEBT_SETTLED'
 };
 
 const sendNotificationToUser = (io, userId, type, message, data = {}) => {

@@ -1,3 +1,7 @@
+// What a linked member's account exposes. Never widen it without checking
+// that the password hash is not in the projection.
+const MEMBER_FIELDS = 'name email profilePicture';
+
 const idOf = (value) => (value && value._id ? value._id : value);
 
 const toPlain = (doc) =>
@@ -40,4 +44,9 @@ const hydrateMembers = (group, target, paths) => {
   return Array.isArray(target) ? target.map(hydrate) : hydrate(target);
 };
 
-module.exports = { memberOf, membersById, hydrateMembers };
+const linkedUserIds = (group, memberIds) =>
+  group.members
+    .filter((m) => m.user && memberIds.some((id) => m._id.equals(id)))
+    .map((m) => idOf(m.user).toString());
+
+module.exports = { MEMBER_FIELDS, idOf, memberOf, membersById, hydrateMembers, linkedUserIds };
