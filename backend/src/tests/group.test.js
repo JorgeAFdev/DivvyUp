@@ -283,8 +283,10 @@ describe("GET /group/user", () => {
         expect(response.body[0].inviteCode).toBe(group.inviteCode);
     });
 
-    it("404s for someone who is in no group, until they join one", async () => {
-        expect((await get("/group/user", anaToken)).status).toBe(404);
+    it("returns an empty list, not a 404, until the user joins one", async () => {
+        const empty = await get("/group/user", anaToken);
+        expect(empty.status).toBe(200);
+        expect(empty.body).toEqual([]);
 
         const [, , anaId] = idsOf(group);
         await post(`/group/join/${group.inviteCode}`, anaToken, { memberId: anaId });
@@ -292,6 +294,19 @@ describe("GET /group/user", () => {
         const response = await get("/group/user", anaToken);
         expect(response.status).toBe(200);
         expect(response.body).toHaveLength(1);
+    });
+
+    it("never exposes a member's email", async () => {
+        const [, , anaId] = idsOf(group);
+        await post(`/group/join/${group.inviteCode}`, anaToken, { memberId: anaId });
+
+        const response = await get("/group/user", jorgeToken);
+        const linked = response.body[0].members.filter((m) => m.user);
+
+        expect(linked).toHaveLength(2);
+        expect(linked.every((m) => m.user.email === undefined)).toBe(true);
+        expect(linked.every((m) => m.user.password === undefined)).toBe(true);
+        expect(linked[0].user.name).toBe("Jorge");
     });
 });
 

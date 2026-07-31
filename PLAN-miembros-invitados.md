@@ -117,6 +117,22 @@ tiene cuenta no verá el grupo en su app hasta que pulse el enlace**. Con los mi
 piso cada mes es fricción repetida. Se acepta a cambio de un único camino de resolución y de que
 desaparezca toda la clase de error "ese email no existe".
 
+### Ajustes de contrato cerrados el 31-07-2026
+
+Salieron de la revisión de los PRs A, B y C, antes de escribir el front:
+
+- **El nombre que se pinta es siempre `member.name`**, nunca `member.user.name`. El nombre pertenece
+  al grupo y cualquier miembro puede editarlo; la cuenta enlazada sólo aporta el avatar. Si mandara
+  el de la cuenta, cambiarse el nombre en el perfil se lo cambiaría a todo el mundo en todos sus
+  grupos.
+- **Lista vacía es `200 []`, no 404.** Afecta a `getUserGroups`, `getExpensesByUserId` y
+  `getExpensesByGroupId`. Recién registrado, y también nada más crear un grupo sin gastos, la app
+  recibía 404 de algo que simplemente no existe todavía.
+- **`MEMBER_FIELDS` es `'name profilePicture'`**: fuera el email. El formulario de miembros es sólo
+  nombre, así que el front ya no necesita correos de nadie.
+- **Liquidar un pago ya `paid` es 409.** Dos clics seguidos mandaban dos PATCH y llegaban dos
+  notificaciones al acreedor.
+
 ### Baja de un miembro con gastos → 409
 
 Si el miembro aparece como `paidBy` o participante de algún gasto, el PUT falla con 409 y el

@@ -216,6 +216,13 @@ describe("GET /group/:groupId/expenses", () => {
         expect(response.body[0].participants.map((p) => p.member.name)).toEqual(["Jorge", "Mamá", "Ana"]);
     });
 
+    it("returns an empty list for a group with no expenses", async () => {
+        const response = await get(`/group/${group._id}/expenses`, jorgeToken);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([]);
+    });
+
     it("rejects someone who is not a member", async () => {
         const response = await get(`/group/${group._id}/expenses`, anaToken);
 
@@ -284,13 +291,15 @@ describe("GET /user/expenses", () => {
 
         const response = await get("/user/expenses", jorgeToken);
 
-        expect(response.status).toBe(404);
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([]);
     });
 
-    it("404s for a user who is in no group", async () => {
+    it("returns an empty list for a user who is in no group", async () => {
         const response = await get("/user/expenses", anaToken);
 
-        expect(response.status).toBe(404);
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([]);
     });
 });
 
@@ -374,5 +383,16 @@ describe("PATCH /payment/:paymentId", () => {
         const response = await patch(`/payment/${debt._id}`, anaToken);
 
         expect(response.status).toBe(403);
+    });
+
+    it("refuses to settle the same debt twice", async () => {
+        const debt = await debtOf(mamaId);
+        await patch(`/payment/${debt._id}`, jorgeToken);
+        emitted = [];
+
+        const response = await patch(`/payment/${debt._id}`, jorgeToken);
+
+        expect(response.status).toBe(409);
+        expect(emitted).toHaveLength(0);
     });
 });

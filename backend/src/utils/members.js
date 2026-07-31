@@ -1,6 +1,6 @@
 // What a linked member's account exposes. Never widen it without checking
 // that the password hash is not in the projection.
-const MEMBER_FIELDS = 'name email profilePicture';
+const MEMBER_FIELDS = 'name profilePicture';
 
 const idOf = (value) => (value && value._id ? value._id : value);
 
