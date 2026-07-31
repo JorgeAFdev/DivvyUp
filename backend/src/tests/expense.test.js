@@ -2,6 +2,7 @@
 // capture process.env.jwt_secret at import time.
 process.env.jwt_secret = process.env.jwt_secret || "test-secret";
 
+const Decimal = require("decimal.js");
 const supertest = require("supertest");
 const { bootstrapApp } = require("../bootstrap");
 const app = bootstrapApp();
@@ -99,6 +100,25 @@ describe("POST /group/:groupId/expenses", () => {
 
         expect(emitted.map((e) => e.room)).toEqual([`user:${ana._id.toString()}`]);
         expect(emitted[0].payload.type).toBe("EXPENSE_CREATED");
+    });
+
+    it("hands out the leftover cents so the balance still nets to zero", async () => {
+        const response = await post(`/group/${group._id}/expenses`, jorgeToken, {
+            description: "Café",
+            totalAmount: 10,
+            paidBy: jorgeId,
+            participants: [jorgeId, mamaId, anaId],
+        });
+
+        expect(response.body.participants.map((p) => p.amountOwed)).toEqual([3.34, 3.33, 3.33]);
+
+        await reload();
+        const amounts = group.balance.map((b) => b.amount);
+        expect(amounts).toEqual([6.66, -3.33, -3.33]);
+        expect(new Decimal(0).plus(amounts[0]).plus(amounts[1]).plus(amounts[2]).toNumber()).toBe(0);
+
+        const debts = await Payment.find({ group: group._id, status: "pending" });
+        expect(debts.map((d) => d.amount)).toEqual([3.33, 3.33]);
     });
 
     it("rejects a payer who is not a member of the group", async () => {
