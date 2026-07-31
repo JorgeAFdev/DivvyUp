@@ -97,6 +97,9 @@ const updateGroup = async (req, res) => {
       if (!currentById.has(entry._id.toString())) {
         return res.status(400).json({ error: "One or more members do not belong to this group" });
       }
+      if (keptIds.has(entry._id.toString())) {
+        return res.status(400).json({ error: "Duplicate members are not allowed" });
+      }
       keptIds.add(entry._id.toString());
     }
 

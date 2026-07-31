@@ -206,6 +206,24 @@ describe("PUT /group/:groupId", () => {
         expect(response.body.error).toContain("Mamá");
     });
 
+    it("refuses the same _id twice, which would split one member in two", async () => {
+        const [jorgeId, mamaId] = idsOf(group);
+
+        const response = await put(`/group/${group._id}`, jorgeToken, {
+            ...groupBody,
+            members: [
+                { _id: jorgeId, name: "Jorge" },
+                { _id: mamaId, name: "Mamá" },
+                { _id: mamaId, name: "Mamá bis" },
+            ],
+        });
+
+        expect(response.status).toBe(400);
+
+        const untouched = await Group.findById(group._id);
+        expect(untouched.members).toHaveLength(3);
+    });
+
     it("refuses to let you remove yourself", async () => {
         const [, mamaId, anaId] = idsOf(group);
 
