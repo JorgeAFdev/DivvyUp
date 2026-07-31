@@ -23,19 +23,11 @@
 
 ## 2. Miembros de grupo que no son usuarios registrados
 
-**Estado actual (verificado):**
+**Decidido y planificado al detalle en [PLAN-miembros-invitados.md](PLAN-miembros-invitados.md).**
 
-- `createGroup` y `updateGroup` exigen que **todos** los miembros existan ya como `User`: si algún email no resuelve, devuelven 400 `'One or more members do not exist'` (`backend/src/controllers/group.controller.js:29` y `:106`).
-- `Group.members[]` solo admite `ObjectId` con `ref: 'User'` (`backend/src/schemas/group.schema.js`). No hay forma de representar a alguien sin cuenta.
-- `pay` exige dos cosas (`backend/src/controllers/payments.controller.js:27-37`): ser miembro del grupo, y ser el `from` o el `to` del pago.
-
-**A decidir:**
-
-- El modelo tiene que dejar de asumir que un miembro es un `User`. Opción: `members[]` pasa a `{ user?: ObjectId, name?, email?, status: 'registered' | 'invited' | 'guest' }`. Afecta a `updateBalance()` y `generateDebts()`, que hoy indexan el balance por `user._id`.
-- **Invitado con cuenta futura**: se le invita por email, al registrarse se enlaza su `User` con las participaciones que ya tenía. Hay que decidir qué pasa si se registra con un email distinto al de la invitación.
-- **Invitado permanente (sin cuenta)**: alguien tiene que poder liquidar deudas en su nombre. ¿Quién? Lo natural es que sea el creador del grupo o cualquier miembro registrado — pero eso relaja justo la restricción de `pay`, así que hay que decidirlo explícitamente y no dejarlo caer por omisión.
-- Ojo con la seguridad: si se relaja `pay` para invitados, que la excepción cubra **solo** pagos donde el `from` o el `to` sea un invitado, no cualquier pago del grupo.
-- Los emails de invitación pueden ir por SendGrid, que ya está integrado (`backend/src/services/sendgrid.js`), aunque el envío de bienvenida está comentado ahora mismo en `auth.routes.js`.
+En una línea: un miembro pasa a ser un nombre (`members[]` con `_id` propio como identidad, `user`
+opcional), así que con una sola cuenta se lleva el grupo entero, y quien quiera se une después por
+el enlace compartible del grupo eligiéndose de la lista.
 
 ## 3. Landing page
 
