@@ -359,7 +359,7 @@ Se marca cada paso al completarlo. Una fase no se da por cerrada hasta que sus t
 
 ### Fase 0 — PR aparte, directo a `main`
 
-- [ ] 1. Borrar de `backend/src/routers/user.routes.js` las 5 rutas muertas y sin auth:
+- [x] 1. Borrar de `backend/src/routers/user.routes.js` las 5 rutas muertas y sin auth:
       `POST /create`, `GET /`, `GET /me`, `GET /:id`, `DELETE /:id`. Los controladores se quedan.
 
 ### Fase 1 — PR A: modelo y motor · rama `feat/miembros-invitados`
