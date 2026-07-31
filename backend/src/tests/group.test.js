@@ -306,9 +306,15 @@ describe("GET /group/:groupId/groupDetails", () => {
         expect(response.body.inviteCode).toBe(group.inviteCode);
         expect(response.body.members).toHaveLength(3);
         expect(response.body.expenses).toHaveLength(1);
-        expect(response.body.expenses[0].paidBy).toBe(jorgeId);
+        expect(response.body.expenses[0].paidBy.name).toBe("Jorge");
+        expect(response.body.expenses[0].participants[0].member.name).toBe("Jorge");
         expect(response.body.debts).toHaveLength(2);
-        expect(response.body.balance.find((b) => b.member === mamaId).amount).toBe(-10);
+        expect(response.body.debts[0].to.name).toBe("Jorge");
+
+        const mama = response.body.balance.find((b) => b.member._id === mamaId);
+        expect(mama.amount).toBe(-10);
+        expect(mama.member.name).toBe("Mamá");
+        expect(mama.member.user).toBeNull();
     });
 
     it("rejects someone who is not a member", async () => {

@@ -3,9 +3,8 @@ const Group = require("../schemas/group.schema");
 const Payment = require("../schemas/payment.schema");
 const User = require("../schemas/user.schema");
 const mongoose = require("mongoose");
-const { memberOf } = require("../utils/members");
+const { MEMBER_FIELDS, memberOf, hydrateMembers } = require("../utils/members");
 
-const MEMBER_FIELDS = "name email profilePicture";
 
 const cleanName = (name) => (typeof name === "string" ? name.trim() : "");
 
@@ -262,9 +261,9 @@ const getGroupDetails = async (req, res) => {
     res.status(200).json({
       inviteCode: group.inviteCode,
       members: group.members,
-      expenses,
-      balance: group.balance,
-      debts,
+      expenses: hydrateMembers(group, expenses, ["paidBy", "participants.member"]),
+      balance: hydrateMembers(group, group.balance, ["member"]),
+      debts: hydrateMembers(group, debts, ["from", "to"]),
     });
   } catch (error) {
     console.log(error)

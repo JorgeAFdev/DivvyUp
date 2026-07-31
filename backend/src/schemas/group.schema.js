@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const Decimal = require('decimal.js');
 const mongoose = require('mongoose');
 const Expense = require('./expense.schema');
 const Payment = require('./payment.schema');
@@ -50,9 +51,7 @@ const GroupSchema = new mongoose.Schema(
   }
 );
 
-function roundToTwoDecimals(num) {
-  return (Math.round(num * 100) / 100);
-}
+const toStoredAmount = (amount) => amount.toDecimalPlaces(2).toNumber();
 
 GroupSchema.statics.newInviteCode = function () {
   return crypto.randomBytes(16).toString('base64url');
@@ -76,7 +75,7 @@ GroupSchema.methods.updateBalance = async function () {
   const balance = {};
   const entryFor = (memberId) => {
     const key = memberId.toString();
-    balance[key] = balance[key] ?? { member: memberId, amount: 0 };
+    balance[key] = balance[key] ?? { member: memberId, amount: new Decimal(0) };
     return balance[key];
   };
 
@@ -85,27 +84,30 @@ GroupSchema.methods.updateBalance = async function () {
   expenses.forEach((expense) => {
     const { paidBy, participants, totalAmount } = expense;
     const payer = entryFor(paidBy);
-    payer.amount = roundToTwoDecimals(payer.amount + totalAmount);
+    payer.amount = payer.amount.plus(totalAmount);
 
     participants.forEach((participant) => {
       const { member, amountOwed } = participant;
       const debtor = entryFor(member);
-      debtor.amount = roundToTwoDecimals(debtor.amount - amountOwed);
+      debtor.amount = debtor.amount.minus(amountOwed);
     });
   });
 
   completedPayments.forEach((payment) => {
     const { from, to, amount } = payment;
     if (balance[from]) {
-      balance[from].amount = roundToTwoDecimals(balance[from].amount + amount);
+      balance[from].amount = balance[from].amount.plus(amount);
     }
 
     if (balance[to]) {
-      balance[to].amount = roundToTwoDecimals(balance[to].amount - amount);
+      balance[to].amount = balance[to].amount.minus(amount);
     }
   });
 
-  this.balance = Object.values(balance);
+  this.balance = Object.values(balance).map(({ member, amount }) => ({
+    member,
+    amount: toStoredAmount(amount),
+  }));
   await this.save();
   return this.balance;
 }
@@ -116,32 +118,31 @@ GroupSchema.methods.generateDebts = async function () {
     status: 'pending'
   });
 
-  const balanceCopy = this.balance.map(({ member, amount }) => ({ member, amount }));
+  const balanceCopy = this.balance.map(({ member, amount }) => ({ member, amount: new Decimal(amount) }));
   let debts = [];
-  let debtors = balanceCopy.filter(person => person.amount < 0);
-  let creditors = balanceCopy.filter(person => person.amount > 0);
+  let debtors = balanceCopy.filter(person => person.amount.lessThan(0));
+  let creditors = balanceCopy.filter(person => person.amount.greaterThan(0));
 
   for (let debtor of debtors) {
     for (let creditor of creditors) {
-      if (debtor.amount === 0) break;
+      if (debtor.amount.isZero()) break;
 
-      let amountToPay = Math.min(Math.abs(debtor.amount), creditor.amount);
-      amountToPay = roundToTwoDecimals(amountToPay);
+      const amountToPay = Decimal.min(debtor.amount.abs(), creditor.amount);
 
-      if (amountToPay > 0) {
+      if (amountToPay.greaterThan(0)) {
         const newPayment = await Payment.create({
           group: this._id,
           from: debtor.member,
           to: creditor.member,
-          amount: amountToPay,
+          amount: toStoredAmount(amountToPay),
           status: 'pending'
         });
         debts.push(newPayment);
       }
 
 
-      debtor.amount = roundToTwoDecimals(debtor.amount + amountToPay);
-      creditor.amount = roundToTwoDecimals(creditor.amount - amountToPay);
+      debtor.amount = debtor.amount.plus(amountToPay);
+      creditor.amount = creditor.amount.minus(amountToPay);
     }
   }
 

@@ -389,13 +389,14 @@ Se marca cada paso al completarlo. Una fase no se da por cerrada hasta que sus t
 
 ### Fase 3 — PR C: gastos, pagos e hidratación
 
-- [ ] 18. `expense.controller.js`: `paidBy` y `participants` como ids de miembro validados contra
+- [x] 18. `expense.controller.js`: `paidBy` y `participants` como ids de miembro validados contra
       `group.members`; fuera `User.findById(paidBy)` y `User.find({ _id: { $in: … } })`
-- [ ] 19. `getExpensesByUserId` rehecho: grupos del usuario → su `_id` de miembro → consulta
-- [ ] 20. `pay` con la excepción sin-cuenta→sin-cuenta
-- [ ] 21. `hydrateMembers` aplicado en los ~6 endpoints que hoy usan `populate`
-- [ ] 22. Notificaciones sólo a miembros con `user` enlazado
-- [ ] 23. Tests de gastos y pagos
+- [x] 19. `getExpensesByUserId` rehecho: grupos del usuario → su `_id` de miembro → consulta
+- [x] 20. `pay` con la excepción sin-cuenta→sin-cuenta
+- [x] 21. `hydrateMembers` aplicado en los ~6 endpoints que hoy usan `populate`
+- [x] 22. Notificaciones sólo a miembros con `user` enlazado; de paso, `notificationTypes` pasa a
+      exportar `DEBT_SETTLED`, que es la clave que `payments.controller.js` lee
+- [x] 23. Tests de gastos y pagos (`backend/src/tests/expense.test.js`)
 
 ### Fase 4 — PR D: frontend
 
