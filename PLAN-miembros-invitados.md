@@ -375,17 +375,17 @@ Se marca cada paso al completarlo. Una fase no se da por cerrada hasta que sus t
 
 ### Fase 2 — PR B: controladores de grupo
 
-- [ ] 9. `createGroup` recibe `members: [{ name }]`, añade al creador desde el JWT, rechaza
+- [x] 9. `createGroup` recibe `members: [{ name }]`, añade al creador desde el JWT, rechaza
       nombres duplicados
-- [ ] 10. `updateGroup` con `_id` opcional por miembro; **409** al dar de baja a alguien con gastos
-- [ ] 11. `inviteCode` en los payloads de `getGroupById`, `getUserGroups` y `getGroupDetails`
-- [ ] 12. `GET /group/join/:inviteCode` → grupo y **sólo** miembros con `user == null`
-- [ ] 13. `POST /group/join/:inviteCode` con `{ memberId }` o `{ name }`; 409 si el miembro ya está
+- [x] 10. `updateGroup` con `_id` opcional por miembro; **409** al dar de baja a alguien con gastos
+- [x] 11. `inviteCode` en los payloads de `getGroupById`, `getUserGroups` y `getGroupDetails`
+- [x] 12. `GET /group/join/:inviteCode` → grupo y **sólo** miembros con `user == null`
+- [x] 13. `POST /group/join/:inviteCode` con `{ memberId }` o `{ name }`; 409 si el miembro ya está
       enlazado o si quien llama ya es miembro
-- [ ] 14. `POST /group/:groupId/invite-code/regenerate`
-- [ ] 15. Rutas registradas en `group.routes.js`
-- [ ] 16. `deleteGroup` borra también los `Payment` del grupo
-- [ ] 17. Tests de los controladores de grupo y del flujo de unirse
+- [x] 14. `POST /group/:groupId/invite-code/regenerate`
+- [x] 15. Rutas registradas en `group.routes.js`
+- [x] 16. `deleteGroup` borra también los `Payment` del grupo
+- [x] 17. Tests de los controladores de grupo y del flujo de unirse
 
 ### Fase 3 — PR C: gastos, pagos e hidratación
 
