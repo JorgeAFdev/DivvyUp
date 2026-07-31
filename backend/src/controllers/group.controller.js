@@ -108,22 +108,33 @@ const updateGroup = async (req, res) => {
     const removed = group.members.filter((member) => !keptIds.has(member._id.toString()));
     if (removed.length > 0) {
       const removedIds = removed.map((member) => member._id);
-      const expenses = await Expense.find({
-        group: groupId,
-        $or: [{ paidBy: { $in: removedIds } }, { "participants.member": { $in: removedIds } }],
-      });
+      const [expenses, settledPayments] = await Promise.all([
+        Expense.find({
+          group: groupId,
+          $or: [{ paidBy: { $in: removedIds } }, { "participants.member": { $in: removedIds } }],
+        }),
+        Payment.find({
+          group: groupId,
+          status: "paid",
+          $or: [{ from: { $in: removedIds } }, { to: { $in: removedIds } }],
+        }),
+      ]);
 
-      const blocking = removed.filter((member) =>
-        expenses.some(
-          (expense) =>
-            expense.paidBy.equals(member._id) ||
-            expense.participants.some((participant) => participant.member.equals(member._id)),
-        ),
+      const blocking = removed.filter(
+        (member) =>
+          expenses.some(
+            (expense) =>
+              expense.paidBy.equals(member._id) ||
+              expense.participants.some((participant) => participant.member.equals(member._id)),
+          ) ||
+          settledPayments.some(
+            (payment) => payment.from.equals(member._id) || payment.to.equals(member._id),
+          ),
       );
 
       if (blocking.length > 0) {
         return res.status(409).json({
-          error: `These members have expenses and cannot be removed: ${blocking.map((member) => member.name).join(", ")}`,
+          error: `These members have expenses or settled debts and cannot be removed: ${blocking.map((member) => member.name).join(", ")}`,
         });
       }
     }

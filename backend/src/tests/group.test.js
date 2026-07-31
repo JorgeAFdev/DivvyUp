@@ -187,6 +187,25 @@ describe("PUT /group/:groupId", () => {
         expect(await Payment.find({ group: group._id, status: "pending" })).toHaveLength(1);
     });
 
+    it("refuses to remove a member who settled a debt, even with no expenses left", async () => {
+        const expense = await Expense.create(dinnerFor(group));
+        const [jorgeId, mamaId, anaId] = idsOf(group);
+
+        await Payment.findOneAndUpdate(
+            { group: group._id, from: mamaId, to: jorgeId, status: "pending" },
+            { status: "paid", paidAt: new Date() },
+        );
+        await Expense.findOneAndDelete({ _id: expense._id });
+
+        const response = await put(`/group/${group._id}`, jorgeToken, {
+            ...groupBody,
+            members: [{ _id: jorgeId, name: "Jorge" }, { _id: anaId, name: "Ana" }],
+        });
+
+        expect(response.status).toBe(409);
+        expect(response.body.error).toContain("Mamá");
+    });
+
     it("refuses to let you remove yourself", async () => {
         const [, mamaId, anaId] = idsOf(group);
 
