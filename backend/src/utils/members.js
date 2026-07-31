@@ -22,7 +22,7 @@ const hydrateMembers = (group, target, paths) => {
   const member = (id) => (id ? byId.get(id.toString()) ?? null : null);
 
   const hydrate = (doc) => {
-    const plain = toPlain(doc);
+    const plain = { ...toPlain(doc) };
 
     paths.forEach((path) => {
       const [field, subField] = path.split('.');

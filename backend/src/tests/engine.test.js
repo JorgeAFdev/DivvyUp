@@ -246,5 +246,14 @@ describe("Group engine", () => {
 
             expect(hydrateMembers(group, orphan, ["member"]).member).toBeNull();
         });
+
+        it("does not touch the object it was given", async () => {
+            const entry = { member: group.members[0]._id, amount: 5 };
+
+            const hydrated = hydrateMembers(group, entry, ["member"]);
+
+            expect(hydrated.member.name).toBe("Jorge");
+            expect(entry.member).toBe(group.members[0]._id);
+        });
     });
 });
