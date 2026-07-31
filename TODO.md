@@ -19,7 +19,7 @@
 **Suelto, del mismo repaso:**
 
 - `secret` se lee a nivel de módulo (`user.schema.js:6`), igual que en `security/jwt.js`. Si el módulo se carga antes de `dotenv.config()`, el secreto es `undefined` y `jwt.sign` peta. Ya obliga a un workaround en `backend/src/tests/group.test.js`.
-- La validación de contraseña en registro está en `middlewares/index.js` (`validatePassword`) pero `auth.routes.js` **no la usa**: registra sin comprobar fuerza de contraseña.
+- **No hay validación de fuerza de contraseña en ningún sitio.** `auth.routes.js` sólo comprueba que `email` y `password` vengan en el body, así que hoy se puede registrar una cuenta con la contraseña `a`. El único regex que existía (`validatePassword`, 8 caracteres con mayúscula, minúscula y dígito) vivía en `middlewares/index.js`, colgado de `POST /user/create` — una ruta sin auth que el front nunca llamó y que se borró junto con el fichero. Si se reengancha, sale de ahí: `git show HEAD~1:backend/src/middlewares/index.js`.
 
 ## 2. Miembros de grupo que no son usuarios registrados
 
