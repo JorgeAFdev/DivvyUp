@@ -1,0 +1,121 @@
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Button } from '@mui/material';
+import { toast } from 'react-toastify';
+import { useAuth } from '../../context/userContextAuth';
+import { getGroupByInviteCode, joinGroup } from '../../utils/groupApi';
+import styles from './join.module.css';
+
+const Join = () => {
+    const { inviteCode } = useParams();
+    const { token } = useAuth();
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
+
+    const [newName, setNewName] = useState('');
+    const [isNaming, setIsNaming] = useState(false);
+
+    const { data: group, isLoading, isError, error } = useQuery({
+        queryKey: ['invite', inviteCode],
+        queryFn: () => getGroupByInviteCode(inviteCode, token),
+        retry: 0,
+    });
+
+    const mutation = useMutation({
+        mutationFn: (body) => joinGroup(inviteCode, body, token),
+        onSuccess: (joined) => {
+            queryClient.invalidateQueries({ queryKey: ['groupDetails', joined._id] });
+            toast.success(`You are now part of ${joined.name}`);
+            navigate(`/groups/${joined._id}/expenses`);
+        },
+        onError: (mutationError) => {
+            toast.error(mutationError.response?.data?.error || 'Could not join this group');
+        },
+    });
+
+    if (isLoading) {
+        return <p className={styles.text}>Loading invite...</p>;
+    }
+
+    if (isError) {
+        return (
+            <div className={styles.card}>
+                <h2 className={styles.title}>This invite link is not valid</h2>
+                <p className={styles.text}>
+                    {error.response?.data?.error || 'Ask whoever shared it for the current link.'}
+                </p>
+                <Button variant="contained" onClick={() => navigate('/groups')}>Go to my groups</Button>
+            </div>
+        );
+    }
+
+    if (group.alreadyMember) {
+        return (
+            <div className={styles.card}>
+                <h2 className={styles.title}>You are already in {group.name}</h2>
+                <Button variant="contained" onClick={() => navigate(`/groups/${group._id}/expenses`)}>
+                    Open the group
+                </Button>
+            </div>
+        );
+    }
+
+    return (
+        <div className={styles.card}>
+            <h2 className={styles.title}>Join {group.name}</h2>
+            <p className={styles.text}>{group.description}</p>
+
+            {group.members.length > 0 ? (
+                <>
+                    <p className={styles.label}>Which one is you?</p>
+                    <ul className={styles.members}>
+                        {group.members.map((member) => (
+                            <li key={member._id}>
+                                <button
+                                    type="button"
+                                    className={styles.member}
+                                    disabled={mutation.isPending}
+                                    onClick={() => mutation.mutate({ memberId: member._id })}
+                                    id={`claim-${member._id}`}
+                                >
+                                    {member.name}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </>
+            ) : (
+                <p className={styles.text}>Everyone on the list has an account already.</p>
+            )}
+
+            {isNaming ? (
+                <form
+                    className={styles.newMember}
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        mutation.mutate({ name: newName });
+                    }}
+                >
+                    <input
+                        className={styles.input}
+                        placeholder="Your name"
+                        value={newName}
+                        onChange={(event) => setNewName(event.target.value)}
+                        autoFocus
+                        id="new-member-name"
+                    />
+                    <Button type="submit" variant="contained" disabled={!newName.trim() || mutation.isPending}>
+                        Join
+                    </Button>
+                </form>
+            ) : (
+                <button type="button" className={styles.link} onClick={() => setIsNaming(true)} id="not-on-the-list">
+                    I am not on the list
+                </button>
+            )}
+        </div>
+    );
+};
+
+export default Join;

@@ -2,15 +2,17 @@ import { useForm } from 'react-hook-form';
 import api from '../../utils/axios';
 import { setStorageObject } from '../../utils/localStorage';
 import styles from './loginForm.module.css';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/userContextAuth';
 import { toast } from 'react-toastify';
+import { nextDestination } from '../../utils/nextDestination';
 
 
 const Login = ({ forceUpdate }) => {
   const { register, handleSubmit, formState: { errors } } = useForm({});
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { search } = useLocation();
 
   const onSubmit = async (data) => {
     try {
@@ -19,7 +21,7 @@ const Login = ({ forceUpdate }) => {
       if (response?.data.token) {
         login(response.data);
         toast.success('Login successfully 🎉');
-        navigate('/groups');
+        navigate(nextDestination(search));
       }
     } catch (error) {
       toast.error(error.response?.data?.error || 'Login failed. Please try again.');
@@ -56,6 +58,10 @@ const Login = ({ forceUpdate }) => {
       {errors.password && <p className={styles.loginError}>{errors.password.message}</p>}
 
       <input type="submit" value="Login" className={styles.loginSubmitBtn} />
+
+      <p className={styles.loginSwitch}>
+        No account yet? <Link to={`/register${search}`}>Register</Link>
+      </p>
     </form>
   );
 };
