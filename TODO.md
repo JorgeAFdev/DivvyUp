@@ -84,7 +84,45 @@ Sustituir el auth artesanal por [Better Auth](https://better-auth.com) para tene
 - **Instalación**: `minimumReleaseAge: 4320` en `pnpm-workspace.yaml` bloquea versiones publicadas hace menos de 3 días — Better Auth publica a menudo, así que puede no resolver la última. Y tiene que ir en `dependencies` del backend, no en dev, o el contenedor (`--prod`) se cae al arrancar.
 - Confirmar contra la doc de la versión que se instale que el import de CommonJS funciona sin transpilar; el paquete es TypeScript/ESM-first.
 
-## 6. Sacar las queries de los componentes a hooks
+## 6. La foto de perfil no debería ser obligatoria
+
+Hoy no puedes registrarte sin subir una imagen. Debería ser opcional en el registro y quedar como
+algo que el usuario añade después editando su perfil, si quiere.
+
+**Estado actual (verificado):**
+
+- El único sitio donde es obligatoria es el front: `registerForm.jsx:110-113` registra el input con
+  `required: 'Profile picture is required'` **y** un `validate` que exige `value.length > 0`. El
+  backend ya la trata como opcional (`auth.routes.js:15` arranca con `profilePicture = ''` y solo
+  sube a Cloudinary `if (req.file)`), y el esquema tiene `default: ''` (`user.schema.js:26-29`).
+- Quitar el `required` no basta: `registerForm.jsx:20` hace `formData.append('profilePicture', data.profilePicture[0])`
+  sin comprobar nada, así que sin fichero manda el string `"undefined"` en el multipart. Hay que
+  meter el `append` dentro de un `if`, como ya hace `userEditForm.jsx:31`.
+- El fallback cuando no hay imagen es `https://via.placeholder.com/150`, en `userMenu.jsx:24` y
+  `user.jsx:17`. Es un servicio externo de terceros que además está caído desde 2024, así que hoy
+  un usuario sin foto ve un icono roto. En `group.jsx:67` y `expense.jsx:57` se pasa
+  `member.user?.profilePicture` (posiblemente `''`) directamente al `Avatar` de MUI, que en ese caso
+  ya cae solo a su fallback.
+- **Bug aparte, del mismo repaso:** `user.controller.js:13-14`, al editar el perfil sin subir
+  fichero, asigna `profilePicture = req.jwtPayload.profilePicture`. El payload del JWT es
+  `{id, name, email}` (`user.schema.js:52-56`), así que eso es `undefined` y el `findByIdAndUpdate`
+  **borra la foto que el usuario ya tenía** cada vez que cambia solo el nombre o el email. Lo
+  correcto es no incluir el campo en el `$set` cuando no viene fichero.
+
+**A decidir:**
+
+- Avatar por defecto con la inicial del nombre. El `Avatar` de MUI ya lo hace nativo: sin `src`,
+  renderiza sus children, así que `<Avatar>{user.name[0].toUpperCase()}</Avatar>` cubre el caso sin
+  añadir dependencias. Conviene derivar el color de fondo del nombre (hash → hue) para que cada
+  usuario tenga el suyo y sean distinguibles en la lista de miembros de un grupo.
+- Encaja con el punto 5: si se hace el auth con Better Auth, el login social ya devuelve la foto del
+  proveedor (`user.image` de Google/GitHub) y se puede usar automáticamente, sin pedirle nada al
+  usuario. Con lo cual el registro se queda sin campo de imagen: o viene del proveedor, o es la
+  inicial, o el usuario la sube luego desde su perfil.
+- Ese avatar por inicial sirve también para los miembros invitados del punto 2, que por definición no
+  tienen `user` ni foto — hoy caen todos en el mismo `Avatar` vacío y son indistinguibles.
+
+## 7. Sacar las queries de los componentes a hooks
 
 Que cada fichero tenga una responsabilidad: el componente pinta, el hook trae los datos. Hoy la capa de datos está repartida entre los propios componentes en tres estilos distintos.
 
