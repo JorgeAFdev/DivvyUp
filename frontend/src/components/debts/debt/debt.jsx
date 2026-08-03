@@ -22,7 +22,10 @@ const Debt = ({ debt, refreshGroupDetails }) => {
             toast.success('Debt marked as paid');
             refreshGroupDetails();
         } catch (error) {
-            toast.error(error.response.data.error || 'Something went wrong');
+            toast.error(error.response?.data?.error || 'Something went wrong');
+            if (error.response?.status === 409) {
+                refreshGroupDetails();
+            }
         }
     };
 
