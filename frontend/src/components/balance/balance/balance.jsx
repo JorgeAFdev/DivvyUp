@@ -5,7 +5,7 @@ const Balance = ({ balance }) => {
         <>
             <div className={styles.card}>
                 <div className={styles.name}>
-                    <p>{balance?.user.name}</p>
+                    <p>{balance?.member?.name}</p>
                 </div>
                 <span className={styles.dashed}></span>
                 <div className={styles.amount}>

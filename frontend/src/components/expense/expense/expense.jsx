@@ -7,6 +7,7 @@ import { useAuth } from '../../../context/userContextAuth';
 import { Avatar } from '@mui/material';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 import { Tooltip } from 'react-tooltip';
+import { initialsOf } from '../../../utils/members';
 
 const Expense = ({ expense, refreshGroupDetails }) => {
     const [isEditing, setIsEditing] = useState(false);
@@ -14,7 +15,7 @@ const Expense = ({ expense, refreshGroupDetails }) => {
     const { token } = useAuth();
     const { showConfirmationToast } = useConfirmationToast();
 
-    const groupMembers = expense.group.members.map((member) => member.user);
+    const groupMembers = expense.group.members;
 
     const handleEditExpense = async (data) => {
         try {
@@ -23,7 +24,7 @@ const Expense = ({ expense, refreshGroupDetails }) => {
             refreshGroupDetails();
             toast.success('Expense succesfully edited');
         } catch (error) {
-            toast.error(error.response.data.error || 'there was an error editing the expense');
+            toast.error(error.response?.data?.error || 'there was an error editing the expense');
         }
     }
 
@@ -40,7 +41,7 @@ const Expense = ({ expense, refreshGroupDetails }) => {
             refreshGroupDetails();
             toast.success('Expense succesfully deleted');
         } catch (error) {
-            toast.error(error.response.data.error || 'there was an error deleting the expense');
+            toast.error(error.response?.data?.error || 'there was an error deleting the expense');
         }
     };
 
@@ -52,7 +53,14 @@ const Expense = ({ expense, refreshGroupDetails }) => {
                         <p><strong>{expense.description}</strong></p>
                         <div className={styles.paidBy}>
                             <p>Paid by</p>
-                            <Avatar src={expense.paidBy.profilePicture} alt={`Profile picture of ${expense.paidBy.name}`} data-tooltip-id={expense.paidBy._id} sx={{ backgroundColor: 'white' }} />
+                            <Avatar
+                                src={expense.paidBy.user?.profilePicture}
+                                alt={`Profile picture of ${expense.paidBy.name}`}
+                                data-tooltip-id={expense.paidBy._id}
+                                sx={{ backgroundColor: 'white', color: '#3c8ccd', fontSize: '0.9rem' }}
+                            >
+                                {initialsOf(expense.paidBy.name)}
+                            </Avatar>
                             <Tooltip id={expense.paidBy._id} content={expense.paidBy.name} />
                         </div>
                     </div>
