@@ -98,3 +98,8 @@
   border-color: #007bff;
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
 }
+.registerSwitch {
+    margin-top: 12px;
+    font-size: 0.875rem;
+    text-align: center;
+}

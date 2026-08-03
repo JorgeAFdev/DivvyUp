@@ -26,10 +26,10 @@ const CreateExpense = ({ refreshGroupDetails }) => {
             const data = await getGroupById(groupId, token);
             setGroupInfo(data);
         } catch (error) {
-            console.log(error.response.data.error)
+            console.log(error.response?.data?.error)
         }
     }
-    const groupMembers = groupInfo?.members?.map((member) => member.user)
+    const groupMembers = groupInfo?.members ?? [];
 
     const handleCreateExpense = async (data) => {
         try {
@@ -38,7 +38,7 @@ const CreateExpense = ({ refreshGroupDetails }) => {
             closeModal();
             toast.success("Expense successfully created");
         } catch (error) {
-            toast.error(error.response.data.error);
+            toast.error(error.response?.data?.error || 'there was an error creating the expense');
         }
     }
 

@@ -25,11 +25,11 @@ const UserExpenses = () => {
     }
 
     if (isError) {
-        if (error.response.status === 404) {
-            return <div className={styles.text}>You don't have any expenses</div>;
-        } else {
-            toast.error(error?.response?.data.error || 'Something went wrong')
-        }
+        toast.error(error?.response?.data?.error || 'Something went wrong')
+    }
+
+    if (data?.length === 0) {
+        return <div className={styles.text}>You don't have any expenses</div>;
     }
 
     const refreshExpenses = () => {

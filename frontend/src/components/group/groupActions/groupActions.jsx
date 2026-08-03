@@ -6,8 +6,13 @@ import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { useTheme } from '@mui/material';
+import { toast } from 'react-toastify';
+import { useAuth } from '../../../context/userContextAuth';
+import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
+import { regenerateInviteCode } from '../../../utils/groupApi';
+import { inviteLinkFor } from '../../../utils/members';
 
-const GroupActions = ({ group, groupMembers, editGroup, isEditing, setIsEditing, onDelete }) => {
+const GroupActions = ({ group, myMemberId, setGroups, editGroup, isEditing, setIsEditing, onDelete }) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const open = Boolean(anchorEl);
     const handleClick = (event) => {
@@ -17,10 +22,50 @@ const GroupActions = ({ group, groupMembers, editGroup, isEditing, setIsEditing,
         setAnchorEl(null);
     };
 
+    const { token } = useAuth();
+    const { showConfirmationToast } = useConfirmationToast();
+
     const theme = useTheme();
     const textColor = theme.palette.text.primary;
     const colorBg = theme.palette.background.color;
     const hoverBg = theme.palette.action.hover;
+
+    const menuItemStyle = { color: textColor, minWidth: '0px', padding: '0', textTransform: 'none', fontSize: '16px', gap: '5px' };
+
+    const shareInviteLink = async () => {
+        const url = inviteLinkFor(group.inviteCode);
+
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: group.name, text: `Join ${group.name} on DivvyUp`, url });
+                return;
+            } catch (error) {
+                if (error.name === 'AbortError') { return; }
+            }
+        }
+
+        try {
+            await navigator.clipboard.writeText(url);
+            toast.success('Invite link copied');
+        } catch {
+            toast.info(url, { autoClose: false });
+        }
+    };
+
+    const resetInviteLink = () => {
+        showConfirmationToast({
+            message: 'Anyone holding the current link will no longer be able to join. Continue?',
+            onConfirm: async () => {
+                try {
+                    const { inviteCode } = await regenerateInviteCode(group._id, token);
+                    setGroups((prevGroups) => prevGroups.map((g) => (g._id === group._id ? { ...g, inviteCode } : g)));
+                    toast.success('New invite link ready to share');
+                } catch (error) {
+                    toast.error(error.response?.data?.error || 'there was an error resetting the link');
+                }
+            },
+        });
+    };
 
     return (
         <>
@@ -33,19 +78,42 @@ const GroupActions = ({ group, groupMembers, editGroup, isEditing, setIsEditing,
                 }
             }} id="basic-menu" anchorEl={anchorEl} open={open} onClose={handleClose} MenuListProps={{ 'aria-labelledby': 'basic-button', }}>
                 <MenuItem onClick={handleClose} >
-                    <Button sx={{ color: textColor, minWidth: '0px', padding: '0', textTransform: 'none', fontSize: '16px', gap: '5px' }} onClick={() => setIsEditing(true)}>
+                    <Button sx={menuItemStyle} onClick={() => setIsEditing(true)}>
                         <Icon variant='edit' />
                         Edit group
                     </Button>
                 </MenuItem>
                 <MenuItem onClick={handleClose}>
-                    <Button sx={{ color: textColor, minWidth: '0px', padding: '0', textTransform: 'none', fontSize: '16px', gap: '5px' }} onClick={onDelete} >
+                    <Button sx={menuItemStyle} onClick={shareInviteLink} id="share-invite-link">
+                        <Icon variant='share' />
+                        Share invite link
+                    </Button>
+                </MenuItem>
+                <MenuItem onClick={handleClose}>
+                    <Button sx={menuItemStyle} onClick={resetInviteLink} id="reset-invite-link">
+                        <Icon variant='refresh' />
+                        Reset invite link
+                    </Button>
+                </MenuItem>
+                <MenuItem onClick={handleClose}>
+                    <Button sx={menuItemStyle} onClick={onDelete} >
                         <Icon variant='delete' id="deleteGroup" />
                         Delete group
                     </Button>
                 </MenuItem>
             </Menu>
-            {isEditing && <Modal><GroupForm title='Edit group' onClose={() => setIsEditing(false)} onSubmit={editGroup} groupMembers={groupMembers} defaultValues={group} /></Modal>}
+            {isEditing && (
+                <Modal>
+                    <GroupForm
+                        title='Edit group'
+                        onClose={() => setIsEditing(false)}
+                        onSubmit={editGroup}
+                        groupMembers={group.members}
+                        lockedMemberId={myMemberId}
+                        defaultValues={group}
+                    />
+                </Modal>
+            )}
         </>
     )
 }

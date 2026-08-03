@@ -98,7 +98,7 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
                         <div className={styles.participant} key={member._id}>
                             <input
                                 type="checkbox"
-                                defaultChecked={defaultValues.participants ? defaultValues.participants.some((p) => p.user._id === member._id) : true}
+                                defaultChecked={defaultValues.participants ? defaultValues.participants.some((p) => p.member._id === member._id) : true}
                                 value={member._id}
                                 id={`participant-${member._id}`}
                                 {...register('participants', { required: 'At least one participant must be selected' })} />

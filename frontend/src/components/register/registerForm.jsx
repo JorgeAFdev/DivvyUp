@@ -2,9 +2,10 @@ import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../utils/axios';
 import styles from './registerForm.module.css';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/userContextAuth';
 import { toast } from 'react-toastify';
+import { nextDestination } from '../../utils/nextDestination';
 
 const RegisterForm = () => {
     const queryClient = useQueryClient();
@@ -33,13 +34,14 @@ const RegisterForm = () => {
 
     const { login } = useAuth();
     const navigate = useNavigate();
+    const { search } = useLocation();
     const mutation = useMutation({
         mutationFn: createUser,
         onSuccess: (userData) => {
             login(userData);
             queryClient.invalidateQueries({ queryKey: ['users'] });
             toast.success('Registration successful 🎉');
-            navigate('/groups');
+            navigate(nextDestination(search));
         }
     });
 
@@ -113,6 +115,10 @@ const RegisterForm = () => {
             {errors.profilePicture && <p className={styles.registerErrorMessage}>{errors.profilePicture.message}</p>}
 
             <button type="submit" className={styles.registerSubmitButton}>Register</button>
+
+            <p className={styles.registerSwitch}>
+                Already have an account? <Link to={`/login${search}`}>Login</Link>
+            </p>
 
             <p>
                 {profilePicture?.[0] ? (

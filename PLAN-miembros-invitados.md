@@ -416,19 +416,32 @@ Se marca cada paso al completarlo. Una fase no se da por cerrada hasta que sus t
 
 ### Fase 4 — PR D: frontend
 
-- [ ] 24. `groupForm.jsx` con filas de nombre, sin email; los existentes llevan su `_id`
-- [ ] 25. `createGroup.jsx` sin `getUserSession()` ni el `...data.members.push({ email })`
-- [ ] 26. `group.jsx` pasa `group.members` tal cual; avatares con iniciales si `user` es `null`
-- [ ] 27. `expenseForm.jsx`: sólo el `defaultChecked` (`p.user._id` → `p.member._id`)
-- [ ] 28. `balance.jsx` → `balance.member.name`; `expense.jsx` por miembro (`debt.jsx` no cambia)
-- [ ] 29. Pantalla `/join/:inviteCode` + ruta en `App.jsx`, con login que conserva destino
-- [ ] 30. Compartir enlace (copiar + `navigator.share`), regenerarlo, distintivo de "sin cuenta"
+- [x] 24. `groupForm.jsx` con filas de nombre, sin email; los existentes llevan su `_id`. Tu propia
+      fila no lleva botón de quitar, porque el backend rechaza que te borres y sólo se salía cancelando
+- [x] 25. `createGroup.jsx` sin `getUserSession()` ni el `...data.members.push({ email })`
+- [x] 26. `group.jsx` pasa `group.members` tal cual; avatares con iniciales si `user` es `null`
+- [x] 27. `expenseForm.jsx`: sólo el `defaultChecked` (`p.user._id` → `p.member._id`)
+- [x] 28. `balance.jsx` → `balance.member.name`; `expense.jsx` por miembro (`debt.jsx` sólo refresca
+      cuando `pay` responde 409). `userExpenses.jsx` deja de tratar el 404 como lista vacía
+- [x] 29. Pantalla `/join/:inviteCode` + ruta en `App.jsx`, con login que conserva destino:
+      `components/auth/requireAuth.jsx` en **todas** las rutas privadas y `utils/nextDestination.js`,
+      que sólo acepta rutas del propio sitio para que `?next=` no sea un redirector abierto. Los
+      enlaces entre login y registro arrastran el destino
+- [x] 30. Compartir enlace (copiar + `navigator.share`), regenerarlo, distintivo de "sin cuenta"
+
+Verificado con `frontend/cypress/e2e/smoke-miembros.cy.js` contra la app real (2/2): grupo creado por
+nombres, gasto pagado por un miembro sin cuenta que sale acreedor, una segunda cuenta uniéndose por
+el enlace y heredando el historial, y el visitante sin sesión redirigido a `/login?next=…`.
 
 ### Fase 5 — cierre
 
-- [ ] 31. Merge de `feat/miembros-invitados` a `main`
-- [ ] 32. **Vaciar `groups`, `expenses` y `payments` en Koyeb** (`users` no se toca)
-- [ ] 33. Repaso extremo a extremo en producción: crear grupo por nombres, gasto pagado por un
+- [ ] 31. Review de `feat/miembros-invitados` entera, con los cuatro PRs ya dentro. Es la última
+      oportunidad de leerla como una sola pieza: el merge a `main` ya no tiene vuelta atrás barata,
+      porque arrastra el vaciado de la base
+- [ ] 32. Merge de `feat/miembros-invitados` a `main`
+- [ ] 33. **Vaciar `groups`, `expenses` y `payments` en Koyeb** (`users` no se toca). Ojo: ahí siguen
+      los dos usuarios de prueba que dejó el Cypress del paso 30
+- [ ] 34. Repaso extremo a extremo en producción: crear grupo por nombres, gasto pagado por un
       miembro sin cuenta, unirse por el enlace desde otra cuenta, regenerar el código
 
 ## Descartado
