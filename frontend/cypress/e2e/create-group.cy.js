@@ -8,9 +8,9 @@ describe('create group', () => {
     cy.get('#create-group-btn').click();
     cy.get('#name').type('group-expemple');
     cy.get('#description').type('BBQ');
-    cy.get('#email-0').type('biescass9@gmail.com');
+    cy.get('#member-0').type('Mamá');
     cy.get('#add-member').click();
-    cy.get('#email-1').type('jorge@gmail.com');
+    cy.get('#member-1').type('Luis');
     cy.get('#submit-btn').click();
     cy.wait('@createGroup').then((intercept) => { cy.wrap(intercept.response?.body._id).as('groupId') })
     cy.get('@groupId').then((groupId) => { cy.get(`#group-card-${groupId}`).find('#deleteGroup').first().click() })
