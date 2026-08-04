@@ -1,8 +1,7 @@
 import React from 'react';
 import { getUserSession } from '../../../utils/localStorage';
-import { Avatar } from '@mui/material';
 import styles from './user.module.css';
-import { initialsOf } from '../../../utils/members';
+import MemberAvatar from '../../../components/avatar/memberAvatar';
 import UserEdit from '../../../components/user/userEdit';
 
 const User = () => {
@@ -14,14 +13,13 @@ const User = () => {
 
     return (
         <div className={styles.userContainer}>
-            <Avatar
+            <MemberAvatar
+                name={user.name}
+                src={user.profilePicture}
+                size={150}
                 className={styles.profileImage}
-                src={user.profilePicture || undefined}
-                alt="Foto de perfil"
-                sx={{ width: 150, height: 150, margin: '0 auto', fontSize: '3rem' }}
-            >
-                {initialsOf(user.name)}
-            </Avatar>
+                sx={{ margin: '0 auto' }}
+            />
             <h1 className={styles.text}>{user.name}</h1>
             <p className={styles.text}><strong>Email:</strong> {user.email}</p>
             <UserEdit user={user} />

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Avatar, Menu, MenuItem, IconButton, useTheme } from '@mui/material';
+import { Menu, MenuItem, IconButton, useTheme } from '@mui/material';
 import Logout from '../logout/logout';
 import { getUserSession } from '../../utils/localStorage';
-import { initialsOf } from '../../utils/members';
+import MemberAvatar from '../avatar/memberAvatar';
 
 const UserMenu = ({ forceUpdate }) => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -25,9 +25,7 @@ const UserMenu = ({ forceUpdate }) => {
   return (
     <div>
       <IconButton onClick={handleMenuOpen} style={{ padding: 0 }}>
-        <Avatar src={user.profilePicture || undefined} alt="profile Picture" sx={{ backgroundColor: colorBg, color: textColor }}>
-          {initialsOf(user.name)}
-        </Avatar>
+        <MemberAvatar name={user.name} src={user.profilePicture} />
       </IconButton>
       <Menu
         anchorEl={anchorEl}
