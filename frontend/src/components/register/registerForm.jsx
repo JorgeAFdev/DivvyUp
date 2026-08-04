@@ -88,7 +88,7 @@ const RegisterForm = () => {
 
             <label
                 className={styles.registerLabel}>
-                Password
+                Password <span className={styles.registerOptional}>(8+ characters, with a lowercase letter, an uppercase letter and a number)</span>
             </label>
 
             <input
@@ -96,8 +96,11 @@ const RegisterForm = () => {
                 type="password"
                 placeholder="********"
                 {...register('password', {
-                    minLength: { value: 8, message: 'Password is too short' },
-                    required: true,
+                    required: 'Password is required',
+                    pattern: {
+                        value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/,
+                        message: 'Password must be at least 8 characters long and contain a lowercase letter, an uppercase letter and a number',
+                    },
                 })}
             />
             {errors.password && <p className={styles.registerErrorMessage}>{errors.password.message}</p>}
