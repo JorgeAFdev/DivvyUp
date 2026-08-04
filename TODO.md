@@ -99,8 +99,8 @@ algo que el usuario añade después editando su perfil, si quiere.
   sin comprobar nada, así que sin fichero manda el string `"undefined"` en el multipart. Hay que
   meter el `append` dentro de un `if`, como ya hace `userEditForm.jsx:31`.
 - El fallback cuando no hay imagen es `https://via.placeholder.com/150`, en `userMenu.jsx:24` y
-  `user.jsx:17`. Es un servicio externo de terceros que además está caído desde 2024, así que hoy
-  un usuario sin foto ve un icono roto. En `group.jsx:67` y `expense.jsx:57` se pasa
+  `user.jsx:17`. Es un servicio externo de terceros que ya no responde, así que hoy un usuario sin
+  foto ve un icono roto — detallado aparte en el **punto 8**. En `group.jsx:67` y `expense.jsx:57` se pasa
   `member.user?.profilePicture` (posiblemente `''`) directamente al `Avatar` de MUI, que en ese caso
   ya cae solo a su fallback.
 - **Bug aparte, del mismo repaso:** `user.controller.js:13-14`, al editar el perfil sin subir
@@ -147,3 +147,86 @@ Que cada fichero tenga una responsabilidad: el componente pinta, el hook trae lo
 - ¿Dónde quedan los toasts y el `navigate`? Hoy están dentro de los handlers. Lo limpio es que el hook devuelva estado y el componente decida qué pintar, no que el hook reciba `onSuccess`/`onError` con UI dentro.
 - Orden barato → caro: primero extraer los 4 que ya usan react-query (mover código, sin cambio de comportamiento), después migrar los manuales.
 - Sin red de seguridad: el `pnpm test` del frontend está roto (punto 4) y en Cypress solo hay `cypress/e2e/create-group.cy.js`, que además entra en `/groups` sin loguearse. Conviene arreglar al menos ese spec antes de tocar, o el refactor se valida a mano.
+
+## 8. El avatar por defecto apunta a un servicio de terceros caído
+
+Va en su propia rama: no toca nada del contrato de miembros, pero se ve nada más entrar con un
+usuario sin foto.
+
+**Estado actual (verificado):**
+
+- La petición a `https://via.placeholder.com/150` falla con `net::ERR_CONNECTION_CLOSED`. No es un
+  404 del recurso: la conexión se cierra sin devolver nada, el host ya no sirve.
+- Dos usos, los dos como fallback de `profilePicture` vacío:
+  - `frontend/src/components/user/userMenu.jsx:24` — la URL acaba en el `src` de un `<Avatar>` de MUI.
+  - `frontend/src/pages/user/userProfile/user.jsx:17` — `<img>` pelado, sin fallback: se queda el
+    icono de imagen rota del navegador.
+- Se dispara siempre que `user.profilePicture` es `''`. Hasta ahora casi ningún usuario caía ahí
+  porque todos se habían registrado con imagen; en cuanto la foto sea opcional en el registro
+  (punto 6) pasa a ser el caso normal, y ya lo es para las cuentas que crea el e2e.
+- El resto de sitios que pintan avatares no dependen del servicio: `group.jsx:67` y `expense.jsx:57`
+  pasan `member.user?.profilePicture` directo al `Avatar`, que cae solo a su fallback, y
+  `userEditForm.jsx:135` solo renderiza el `<img>` si hay foto.
+
+**A decidir:**
+
+- `userMenu.jsx` es sustitución directa: `<Avatar src={user.profilePicture || undefined}>` con la
+  inicial como children. Sin `src`, MUI renderiza los children — ni petición de red ni dependencia
+  nueva.
+- `user.jsx` usa un `<img>` con estilo propio (`user.module.css`), así que hay que elegir: pasarlo
+  también a `Avatar` (las dos vistas quedan iguales y el tamaño se va a `sx`), o dejar el `<img>` con
+  un asset local. Para lo segundo, en `public/assets/` solo está `logo.png` y no existe `src/assets/`,
+  o sea que habría que crear el SVG.
+- Es el mismo avatar por inicial que pide el punto 6 y que necesitan los miembros invitados del
+  punto 2, que por definición no tienen `user` ni foto. Mejor un único `components/user/userAvatar.jsx`
+  compartido que resolverlo por separado en cada sitio.
+- Si se hace antes que el punto 6, el resultado no se nota en producción hasta que haya usuarios sin
+  foto; aun así es la dependencia externa que hay que quitar primero, porque el punto 6 la multiplica.
+
+## 9. El header no colapsa en móvil
+
+Que por debajo del breakpoint el header se quede en logo + botón de menú, y que dentro del
+desplegable vayan los dos links de navegación, el toggle de tema y la cuenta.
+
+**Estado actual (verificado):**
+
+- `frontend/src/components/header/header.jsx` renderiza dos variantes. Sin token: logo + `Login` +
+  `Register` + toggle de tema. Con token: logo, `<nav>` con `Groups` y `Expenses`, y un `<div>`
+  derecho con el toggle, `<Notifications />` y `<UserMenu />`.
+- `header.module.css` no tiene **ninguna** regla que reorganice el header en pantallas pequeñas:
+  `.header` es un flex con `justify-content: space-between` y `width: min(90%, 120rem)`, sin
+  `flex-wrap`. Los tres bloques se siguen repartiendo la misma fila por estrecha que sea.
+- La única media query del fichero está dentro de `.nav` y va **al revés** de lo que hace falta:
+  aplica `margin-left` y `gap: 20px` solo `@media (min-width: 768px)`, así que justo en móvil los dos
+  links quedan pegados sin separación.
+- El ancho mínimo lo fija sobre todo `.navItem`, con `padding: 10px 20px` por link, más el logo
+  (`max-width: 80px`) y el avatar de `UserMenu`.
+- `<Notifications />` devuelve `null` (`notifications.jsx`), así que no ocupa ancho: no es el que
+  estorba, y puede quedarse montado donde está.
+- El toggle sale de `useDarkMode()` del `darkModeContext`. Es de los pocos sitios que quedan usando
+  ese contexto, cuando la dirección del proyecto es leer el tema de MUI (`useTheme`).
+- `Icon` (`icon/icon.jsx`) mapea un `variant` a un icono de `react-icons`; **no hay variante de
+  hamburguesa**, hay que añadirla al `iconsByVariant` en vez de importar el icono suelto en el header.
+- MUI 6 está disponible y `UserMenu` ya usa `Menu` + `Avatar` + `IconButton`, así que hay precedente
+  para `Drawer` o `useMediaQuery` sin añadir dependencias.
+
+**A decidir:**
+
+- Breakpoint: el CSS ya usa 768px a mano. O se mantiene ese número en el módulo, o se pasa a
+  `theme.breakpoints.down('md')` con `useMediaQuery` — pero entonces la decisión de qué se ve vive en
+  JS y no en el CSS, y conviene que no esté en los dos sitios a la vez.
+- `Drawer` lateral de MUI frente a un `Menu` desplegable bajo el botón. El `Menu` es lo más parecido
+  a lo que ya hace `UserMenu`; el `Drawer` va mejor si luego se añaden más entradas.
+- La cuenta dentro del colapso: o se reutiliza `<UserMenu />` tal cual (queda un menú dentro de otro
+  menú, que es incómodo en táctil), o se aplanan sus items (`Profile` y `Logout`) como entradas
+  directas del desplegable y `UserMenu` se queda solo para escritorio.
+- La variante sin token también se rompe: son dos links más el toggle. Puede compartir el mismo
+  desplegable cambiando solo su contenido, o dejarse tal cual si se decide que tres elementos caben.
+- Accesibilidad, que hoy no existe en el header: el botón tiene que ser un `<button>` real con
+  `aria-label`, `aria-expanded` y `aria-controls`, cerrarse con `Escape` y al navegar a otra ruta.
+  `Icon` renderiza el SVG con un `onClick` encima, sin foco ni rol, así que el botón lo tiene que
+  envolver (`IconButton` de MUI ya lo resuelve).
+- Sin red de seguridad: `header.test.jsx` es una de las dos plantillas comentadas del punto 4 y
+  encima importa `./Header`, que no existe. Si se va a tocar el header, es el momento de escribir ese
+  test de verdad — ojo con la rama con token, que monta `Notifications` y necesita sesión en
+  `localStorage`.

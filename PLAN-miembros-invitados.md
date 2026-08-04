@@ -238,6 +238,42 @@ historial, así que no le roba deudas a nadie — a diferencia de elegir uno exi
 que alguien con el enlace infle el grupo con miembros de más, y son miembros sin gastos que
 cualquier miembro puede quitar.
 
+### Quien llega sin sesión aterriza en un login mudo
+
+Entra en esta rama: el enlace es la puerta de entrada de la feature, y hoy la mitad de la gente que
+lo abre no tiene cuenta todavía.
+
+**Estado actual (verificado):** `/join/:inviteCode` va envuelta en `RequireAuth` (`App.jsx:33`), que
+redirige a `/login?next=/join/<code>` con `replace`. El destino se conserva y el salto entre login y
+registro lo arrastra (`loginForm.jsx:63`, `registerForm.jsx:120`), así que el mecanismo funciona —
+es lo que valida el smoke de Cypress. Lo que falta es el **contexto**: la pantalla de login es la de
+siempre, sin una palabra sobre el grupo. Quien abre el enlace desde WhatsApp sin cuenta ve un
+formulario de login que no ha pedido, no sabe que venía de una invitación ni que tiene que
+registrarse para continuar, y lo normal es que cierre la pestaña.
+
+**A decidir:**
+
+- **Lo mínimo, sin tocar backend:** el `?next=` ya dice que el destino era `/join/…`, así que la
+  pantalla de login/registro puede pintar un aviso ("te han invitado a un grupo; inicia sesión o crea
+  una cuenta para unirte"). Cero llamadas nuevas y cero cambios de contrato, pero **no puede decir el
+  nombre del grupo**.
+- **Con el nombre del grupo hay que abrir un endpoint.** `GET /group/join/:inviteCode` lleva
+  `jwtMiddleware` (`group.routes.js:9`), así que sin sesión no se puede leer nada del grupo. Haría
+  falta una variante pública que devuelva **sólo el nombre**, nunca la lista de miembros. El
+  `inviteCode` ya es el secreto (22 caracteres de `crypto.randomBytes(16)`), así que quien lo tiene
+  podría unirse de todas formas; pero servirlo sin auth deja mirar el nombre de un grupo sin dejar
+  rastro de ninguna cuenta. Es una decisión explícita, no un detalle de implementación.
+- **Que `/join/:inviteCode` salga de `RequireAuth`** y sea la propia pantalla la que, sin token,
+  explique qué es esto y ofrezca *Entrar* / *Crear cuenta* con el `?next=` ya puesto. Es lo más
+  amigable, porque el visitante nunca es expulsado del enlace, pero mete en un componente la vista
+  con sesión y la vista sin ella. Si se elige esto, `RequireAuth` sigue haciendo falta para el resto
+  de rutas privadas.
+- **Enlace caducado:** un aviso que afirme "te han invitado" miente si el código fue regenerado. Sin
+  llamada previa el error sólo aparece después de logarse, al cargar `/join`; con endpoint público se
+  puede avisar antes. Otro motivo para decidir primero lo del endpoint.
+- **Alcance:** es UI y copy sobre un flujo que ya funciona. Nada de tokens por persona ni de correos
+  — eso sigue descartado más abajo.
+
 ## Camino de lectura: hidratación en el backend
 
 Un helper construye el `Map` de miembros una vez por petición y deja las respuestas con el
@@ -355,17 +391,25 @@ lo mismo.
 
 ## Vaciado de la base
 
-No hay script de migración: los grupos que hay son de prueba. Tras el merge a `main` se borran
-`groups`, `expenses` y `payments` en Koyeb. **`users` no se toca** — no cambia de forma.
+No hay script de migración: los grupos que hay son de prueba. Se borran `groups`, `expenses` y
+`payments` en Koyeb **antes de mergear**, no después. **`users` no se toca** — no cambia de forma.
+
+El orden importa y estaba al revés hasta la review del 04-08-2026. El push a `main` toca
+`backend/**`, así que **dispara el despliegue de Koyeb solo**: si la base aún tiene documentos
+viejos, el código nuevo se encuentra gastos con `participants.user` en vez de `.member`, y
+`entryFor(undefined)` revienta en *cada* recálculo de balance; los grupos viejos no tienen
+`members[].name`, que ahora es obligatorio, ni `inviteCode`, así que con dos o más el índice único
+ni siquiera se puede construir. Vaciando primero, lo peor que pasa son unos minutos con el código
+viejo sobre una base vacía: no ves grupos, y nada falla.
 
 Es obligatorio y no puede quedarse a medias: un gasto viejo guarda un `_id` de usuario donde el
 código nuevo espera un `_id` de miembro, y **los dos son `ObjectId` válidos**, así que no falla —
 devuelve datos silenciosamente incorrectos. Eso es peor que un error.
 
-Al mergear, el push toca `backend/**` y `frontend/**`, así que dispara Koyeb y Cloudflare Pages
-**en paralelo**: hay unos minutos de descoordinación inevitable, más el vaciado. `CLIENT_URL` en
-Koyeb tiene que seguir siendo el origen de producción de Pages sin barra final (se compara
-literalmente en `socket/socket.server.js`) y ahora también construye el enlace de invitación.
+El push toca también `frontend/**`, así que Cloudflare Pages sale **en paralelo** con Koyeb: hay
+unos minutos de descoordinación inevitable. `CLIENT_URL` en Koyeb tiene que seguir siendo el origen
+de producción de Pages sin barra final (se compara literalmente en `socket/socket.server.js`) y
+ahora también construye el enlace de invitación.
 
 ## Estado de ejecución
 
@@ -433,15 +477,46 @@ Verificado con `frontend/cypress/e2e/smoke-miembros.cy.js` contra la app real (2
 nombres, gasto pagado por un miembro sin cuenta que sale acreedor, una segunda cuenta uniéndose por
 el enlace y heredando el historial, y el visitante sin sesión redirigido a `/login?next=…`.
 
+### Fase 4b — aterrizaje del enlace para quien no tiene sesión
+
+- [ ] 31. Decidir si se abre una variante **sin auth** de `GET /group/join/:inviteCode` que devuelva
+      sólo `name`. De eso depende si el aviso puede nombrar el grupo y si el enlace caducado se
+      detecta antes o después de logarse
+- [ ] 32. Pantalla de aterrizaje: quien abre `/join/:inviteCode` sin token ve qué es y qué tiene que
+      hacer, con *Entrar* y *Crear cuenta* llevando el `?next=` ya puesto, en vez del login pelado
+- [ ] 33. Cypress: visitante sin sesión abre el enlace → ve la explicación → se registra desde ahí →
+      cae en `/join/:inviteCode` y reclama su miembro, sin volver a pegar el enlace
+
+### Fase 4c — lo que la review dejó para después
+
+Los cuatro hallazgos que no bloqueaban: ninguno afecta a la corrección de los datos, y por eso no
+entraron en el paso 39. Van antes del cierre porque son de código ya escrito y el 37 conviene
+hacerlo antes de que el payload crezca en producción.
+
+- [ ] 34. `userExpenses.jsx`: el `toast.error` sale del render a un `useEffect`, como ya lo hace
+      `groupDetails.jsx`. Hoy es un efecto secundario en el render, así que React avisa y el toast se
+      repite en cada uno
+- [ ] 35. `createExpense.jsx` recibe los miembros por props en vez de pedir `getGroupById`, porque
+      `getGroupDetails` ya los devuelve y son exactamente los mismos
+- [ ] 36. `MEMBER_PATHS` a `utils/members.js`: `group.controller.js` lo inlinea mientras
+      `expense.controller.js` tiene la constante
+- [ ] 37. `expenseResponse` deja de empotrar el grupo entero —miembros incluidos— en cada gasto. Con
+      50 gastos y 8 miembros esa lista viaja 50 veces. Arrastra `expense.jsx`, que lee
+      `expense.group.members` y `expense.group._id`, así que hay que pasarle ambos por props
+
 ### Fase 5 — cierre
 
-- [ ] 31. Review de `feat/miembros-invitados` entera, con los cuatro PRs ya dentro. Es la última
+- [x] 38. Review de `feat/miembros-invitados` entera, con los cuatro PRs ya dentro. Es la última
       oportunidad de leerla como una sola pieza: el merge a `main` ya no tiene vuelta atrás barata,
       porque arrastra el vaciado de la base
-- [ ] 32. Merge de `feat/miembros-invitados` a `main`
-- [ ] 33. **Vaciar `groups`, `expenses` y `payments` en Koyeb** (`users` no se toca). Ojo: ahí siguen
-      los dos usuarios de prueba que dejó el Cypress del paso 30
-- [ ] 34. Repaso extremo a extremo en producción: crear grupo por nombres, gasto pagado por un
+- [x] 39. Corregir los hallazgos que bloquean: reparto con más de 2 decimales, `participants` que no
+      es lista, grupo que se queda en un miembro, participante repetido, nombre de miembro sin tope,
+      nombre del creador sin `trim`, deudas regeneradas al renombrar, pago `cancelled` reactivable,
+      cuenta borrada en `getExpensesByUserId`, y el botón de quitar miembro al crear grupo
+- [ ] 40. **Vaciar `groups`, `expenses` y `payments` en Koyeb, antes del merge** (`users` no se
+      toca). Ojo: ahí siguen los dos usuarios de prueba que dejó el Cypress del paso 30
+- [ ] 41. Merge de `feat/miembros-invitados` a `main`
+- [ ] 42. Repaso extremo a extremo en producción: crear grupo por nombres, gasto pagado por un
       miembro sin cuenta, unirse por el enlace desde otra cuenta, regenerar el código
 
 ## Descartado

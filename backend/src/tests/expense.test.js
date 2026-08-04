@@ -121,6 +121,53 @@ describe("POST /group/:groupId/expenses", () => {
         expect(debts.map((d) => d.amount)).toEqual([3.33, 3.33]);
     });
 
+    it("rejects an amount with more than two decimals", async () => {
+        const response = await post(`/group/${group._id}/expenses`, jorgeToken, {
+            description: "Café",
+            totalAmount: 10.001,
+            paidBy: jorgeId,
+            participants: [jorgeId, mamaId, anaId],
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Total amount cannot have more than 2 decimals");
+    });
+
+    it("rejects an amount that is not a number", async () => {
+        const response = await post(`/group/${group._id}/expenses`, jorgeToken, {
+            description: "Café",
+            totalAmount: "gratis",
+            paidBy: jorgeId,
+            participants: [jorgeId],
+        });
+
+        expect(response.status).toBe(400);
+    });
+
+    it("rejects participants that are not a list", async () => {
+        const response = await post(`/group/${group._id}/expenses`, jorgeToken, {
+            description: "Cena",
+            totalAmount: 10,
+            paidBy: jorgeId,
+            participants: true,
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Participants must be a list of members");
+    });
+
+    it("rejects the same participant twice, which would double their share", async () => {
+        const response = await post(`/group/${group._id}/expenses`, jorgeToken, {
+            description: "Cena",
+            totalAmount: 30,
+            paidBy: jorgeId,
+            participants: [mamaId, mamaId, anaId],
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Duplicate participants are not allowed");
+    });
+
     it("rejects a payer who is not a member of the group", async () => {
         const other = await post("/group", anaToken, {
             name: "Otro",
@@ -295,6 +342,18 @@ describe("GET /user/expenses", () => {
         expect(response.body).toEqual([]);
     });
 
+    it("survives a group whose member points at a deleted account", async () => {
+        const ghost = await User.create({ name: "Ghost", email: "ghost@user.com", password: "Password1" });
+        const ghostToken = ghost.generateJWT();
+        await post("/group", ghostToken, { name: "Fantasma", description: "x", members: [{ name: "Otro" }] });
+        await User.findByIdAndDelete(ghost._id);
+
+        const response = await get("/user/expenses", ghostToken);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([]);
+    });
+
     it("returns an empty list for a user who is in no group", async () => {
         const response = await get("/user/expenses", anaToken);
 
@@ -383,6 +442,15 @@ describe("PATCH /payment/:paymentId", () => {
         const response = await patch(`/payment/${debt._id}`, anaToken);
 
         expect(response.status).toBe(403);
+    });
+
+    it("refuses to settle a cancelled debt", async () => {
+        const debt = await debtOf(mamaId);
+        await Payment.findByIdAndUpdate(debt._id, { status: "cancelled" });
+
+        const response = await patch(`/payment/${debt._id}`, jorgeToken);
+
+        expect(response.status).toBe(409);
     });
 
     it("refuses to settle the same debt twice", async () => {

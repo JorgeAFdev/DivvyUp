@@ -25,17 +25,33 @@ const expenseResponse = (group, expenses) => {
 const validateExpense = ({ group, paidBy, participants, totalAmount }) => {
     const memberIds = new Set(group.members.map((member) => member._id.toString()));
 
+    // A single checkbox makes react-hook-form send a boolean instead of a list,
+    // and .some() on a boolean is a 500.
+    if (!Array.isArray(participants)) {
+        return "Participants must be a list of members";
+    }
+    if (new Set(participants.map(String)).size !== participants.length) {
+        return "Duplicate participants are not allowed";
+    }
     if (!memberIds.has(String(paidBy))) {
         return "Payer is not part of the group";
     }
     if (participants.some((participant) => !memberIds.has(String(participant)))) {
         return "One or more participants are not part of the group";
     }
+    if (!Number.isFinite(Number(totalAmount))) {
+        return "Total amount must be a number";
+    }
     if (totalAmount <= 0) {
         return "Total amount must be greater than 0";
     }
     if (totalAmount >= 1000000) {
         return "Total amount must be less than 1,000,000";
+    }
+    // Money has no thousandths, and a third decimal breaks the even split: the
+    // leftover stops being a whole number of cents and gets handed out twice.
+    if (new Decimal(totalAmount).decimalPlaces() > 2) {
+        return "Total amount cannot have more than 2 decimals";
     }
     return null;
 };
@@ -46,7 +62,7 @@ const validateExpense = ({ group, paidBy, participants, totalAmount }) => {
 const splitEvenly = (participants, totalAmount) => {
     const total = new Decimal(totalAmount);
     const share = total.dividedBy(participants.length).toDecimalPlaces(2, Decimal.ROUND_DOWN);
-    const leftoverCents = total.minus(share.times(participants.length)).times(100).toNumber();
+    const leftoverCents = total.minus(share.times(participants.length)).times(100).round().toNumber();
 
     return participants.map((member, index) => ({
         member,
@@ -194,7 +210,11 @@ const getExpensesByUserId = async (req, res) => {
 
         // The user id is no longer written on an expense: it has to be resolved
         // to the member id they own in each of their groups first.
-        const groups = await Group.find({ "members.user": userId }).populate("members.user", MEMBER_FIELDS);
+        // A group whose member no longer resolves to an account (the user was
+        // deleted straight in the database) would blow up the whole endpoint.
+        const groups = (await Group.find({ "members.user": userId }).populate("members.user", MEMBER_FIELDS))
+            .filter((group) => memberOf(group, userId));
+
         if (groups.length === 0) {
             return res.status(200).json([]);
         }
