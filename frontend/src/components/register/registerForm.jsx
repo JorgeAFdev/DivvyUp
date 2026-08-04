@@ -17,7 +17,9 @@ const RegisterForm = () => {
             formData.append('name', data.name);
             formData.append('email', data.email);
             formData.append('password', data.password);
-            formData.append('profilePicture', data.profilePicture[0]);
+            if (data.profilePicture?.[0]) {
+                formData.append('profilePicture', data.profilePicture[0]);
+            }
 
             const response = await api.post('/auth/register', formData, {
                 headers: {
@@ -101,16 +103,13 @@ const RegisterForm = () => {
             {errors.password && <p className={styles.registerErrorMessage}>{errors.password.message}</p>}
 
             <label className={styles.registerLabel}>
-                Profile Picture
+                Profile Picture <span className={styles.registerOptional}>(optional)</span>
             </label>
 
             <input
                 className={styles.registerInputFile}
                 type="file"
-                {...register('profilePicture', {
-                    required: 'Profile picture is required',
-                    validate: (value) => value.length > 0 || 'You must select an image',
-                })}
+                {...register('profilePicture')}
             />
             {errors.profilePicture && <p className={styles.registerErrorMessage}>{errors.profilePicture.message}</p>}
 

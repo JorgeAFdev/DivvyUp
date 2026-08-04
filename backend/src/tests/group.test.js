@@ -437,6 +437,32 @@ describe("GET /group/join/:inviteCode", () => {
     });
 });
 
+describe("GET /group/invite/:inviteCode", () => {
+    it("gives the group name without a session", async () => {
+        const response = await fakeRequest.get(`/group/invite/${group.inviteCode}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({ name: "Piso" });
+    });
+
+    it("never exposes the members, which is what the token protects", async () => {
+        const response = await fakeRequest.get(`/group/invite/${group.inviteCode}`);
+
+        expect(response.body.members).toBeUndefined();
+        expect(response.body._id).toBeUndefined();
+        expect(response.body.description).toBeUndefined();
+    });
+
+    it("404s on a code that was already reset", async () => {
+        const stale = group.inviteCode;
+        await post(`/group/${group._id}/invite-code/regenerate`, jorgeToken);
+
+        const response = await fakeRequest.get(`/group/invite/${stale}`);
+
+        expect(response.status).toBe(404);
+    });
+});
+
 describe("POST /group/join/:inviteCode", () => {
     it("links the chosen member and keeps their debts", async () => {
         await Expense.create(dinnerFor(group));

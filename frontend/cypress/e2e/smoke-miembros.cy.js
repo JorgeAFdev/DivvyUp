@@ -73,10 +73,12 @@ describe('members without accounts', () => {
         cy.contains('Cena').should('be.visible');
     });
 
-    it('sends an anonymous visitor to login and back to the invite', () => {
+    // The invite link has its own landing now, covered by invite-landing.cy.js.
+    // Every other private route still bounces to login keeping the destination.
+    it('sends an anonymous visitor to login and back to where they were going', () => {
         cy.clearLocalStorage();
-        cy.visit('/join/whatever-code');
-        cy.url().should('include', '/login?next=%2Fjoin%2Fwhatever-code');
+        cy.visit('/my-expenses');
+        cy.url().should('include', '/login?next=%2Fmy-expenses');
         cy.contains('No account yet?').should('be.visible');
     });
 });

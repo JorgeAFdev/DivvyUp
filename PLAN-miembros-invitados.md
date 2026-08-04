@@ -479,44 +479,52 @@ el enlace y heredando el historial, y el visitante sin sesión redirigido a `/lo
 
 ### Fase 4b — aterrizaje del enlace para quien no tiene sesión
 
-- [ ] 31. Decidir si se abre una variante **sin auth** de `GET /group/join/:inviteCode` que devuelva
-      sólo `name`. De eso depende si el aviso puede nombrar el grupo y si el enlace caducado se
-      detecta antes o después de logarse
-- [ ] 32. Pantalla de aterrizaje: quien abre `/join/:inviteCode` sin token ve qué es y qué tiene que
-      hacer, con *Entrar* y *Crear cuenta* llevando el `?next=` ya puesto, en vez del login pelado
-- [ ] 33. Cypress: visitante sin sesión abre el enlace → ve la explicación → se registra desde ahí →
-      cae en `/join/:inviteCode` y reclama su miembro, sin volver a pegar el enlace
+- [x] 31. Decidido el 04-08-2026: **ruta nueva sin auth**, `GET /group/invite/:inviteCode`, que
+      devuelve sólo `{ name }` y 404 si el código ya no vale. Handler aparte, no una condición dentro
+      del actual: la lista de miembros libres es lo único que hay que proteger de verdad, y una
+      condición compartida está a un bug de filtrarla
+- [x] 32. Pantalla de aterrizaje (`pages/join/inviteLanding.jsx`): quien abre `/join/:inviteCode` sin
+      token ve el nombre del grupo, qué es DivvyUp, y *Sign in* / *Create account* con el `?next=`
+      puesto. La ruta sale de `RequireAuth`, porque ahora decide la propia pantalla
+- [x] 33. **La foto de perfil deja de ser obligatoria al registrarse** (punto 6 del TODO), que era el
+      último obstáculo del camino que abre esta fase: el `append` sólo viaja si hay fichero —antes
+      mandaba el string `"undefined"`—, el avatar cae a la inicial del nombre, y desaparece
+      `via.placeholder.com`, que ya no responde (punto 8). De paso, `updateUser` deja de borrar la
+      foto cada vez que editas sólo el nombre
+- [x] 34. Cypress `invite-landing.cy.js`: visitante sin sesión abre el enlace → ve la explicación con
+      el nombre del grupo → se registra desde ahí sin subir foto → cae en `/join/:inviteCode` y
+      reclama su miembro, sin volver a pegar el enlace
 
 ### Fase 4c — lo que la review dejó para después
 
 Los cuatro hallazgos que no bloqueaban: ninguno afecta a la corrección de los datos, y por eso no
-entraron en el paso 39. Van antes del cierre porque son de código ya escrito y el 37 conviene
+entraron en el paso 40. Van antes del cierre porque son de código ya escrito y el 37 conviene
 hacerlo antes de que el payload crezca en producción.
 
-- [ ] 34. `userExpenses.jsx`: el `toast.error` sale del render a un `useEffect`, como ya lo hace
+- [ ] 35. `userExpenses.jsx`: el `toast.error` sale del render a un `useEffect`, como ya lo hace
       `groupDetails.jsx`. Hoy es un efecto secundario en el render, así que React avisa y el toast se
       repite en cada uno
-- [ ] 35. `createExpense.jsx` recibe los miembros por props en vez de pedir `getGroupById`, porque
+- [ ] 36. `createExpense.jsx` recibe los miembros por props en vez de pedir `getGroupById`, porque
       `getGroupDetails` ya los devuelve y son exactamente los mismos
-- [ ] 36. `MEMBER_PATHS` a `utils/members.js`: `group.controller.js` lo inlinea mientras
+- [ ] 37. `MEMBER_PATHS` a `utils/members.js`: `group.controller.js` lo inlinea mientras
       `expense.controller.js` tiene la constante
-- [ ] 37. `expenseResponse` deja de empotrar el grupo entero —miembros incluidos— en cada gasto. Con
+- [ ] 38. `expenseResponse` deja de empotrar el grupo entero —miembros incluidos— en cada gasto. Con
       50 gastos y 8 miembros esa lista viaja 50 veces. Arrastra `expense.jsx`, que lee
       `expense.group.members` y `expense.group._id`, así que hay que pasarle ambos por props
 
 ### Fase 5 — cierre
 
-- [x] 38. Review de `feat/miembros-invitados` entera, con los cuatro PRs ya dentro. Es la última
+- [x] 39. Review de `feat/miembros-invitados` entera, con los cuatro PRs ya dentro. Es la última
       oportunidad de leerla como una sola pieza: el merge a `main` ya no tiene vuelta atrás barata,
       porque arrastra el vaciado de la base
-- [x] 39. Corregir los hallazgos que bloquean: reparto con más de 2 decimales, `participants` que no
+- [x] 40. Corregir los hallazgos que bloquean: reparto con más de 2 decimales, `participants` que no
       es lista, grupo que se queda en un miembro, participante repetido, nombre de miembro sin tope,
       nombre del creador sin `trim`, deudas regeneradas al renombrar, pago `cancelled` reactivable,
       cuenta borrada en `getExpensesByUserId`, y el botón de quitar miembro al crear grupo
-- [ ] 40. **Vaciar `groups`, `expenses` y `payments` en Koyeb, antes del merge** (`users` no se
-      toca). Ojo: ahí siguen los dos usuarios de prueba que dejó el Cypress del paso 30
-- [ ] 41. Merge de `feat/miembros-invitados` a `main`
-- [ ] 42. Repaso extremo a extremo en producción: crear grupo por nombres, gasto pagado por un
+- [ ] 41. **Vaciar `groups`, `expenses` y `payments` en Koyeb, antes del merge** (`users` no se
+      toca). Ojo: ahí siguen los usuarios de prueba que dejaron los Cypress de los pasos 30 y 34
+- [ ] 42. Merge de `feat/miembros-invitados` a `main`
+- [ ] 43. Repaso extremo a extremo en producción: crear grupo por nombres, gasto pagado por un
       miembro sin cuenta, unirse por el enlace desde otra cuenta, regenerar el código
 
 ## Descartado

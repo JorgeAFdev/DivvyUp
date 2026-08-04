@@ -278,6 +278,25 @@ const getGroupDetails = async (req, res) => {
   }
 }
 
+// Public on purpose, and deliberately not the same handler as the one below:
+// the list of unclaimed members is the part that must stay behind the token,
+// and a condition inside one handler is one bug away from leaking it.
+const getInviteName = async (req, res) => {
+  try {
+    const { inviteCode } = req.params;
+
+    const group = await Group.findOne({ inviteCode }).select("name");
+    if (!group) {
+      return res.status(404).json({ error: "This invite link is no longer valid" });
+    }
+
+    res.status(200).json({ name: group.name });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error getting invite" });
+  }
+};
+
 const getGroupByInviteCode = async (req, res) => {
   try {
     const { id: userId } = req.jwtPayload;
@@ -384,6 +403,7 @@ const regenerateInviteCode = async (req, res) => {
 
 module.exports = {
   createGroup,
+  getInviteName,
   getGroupById,
   updateGroup,
   deleteGroup,
