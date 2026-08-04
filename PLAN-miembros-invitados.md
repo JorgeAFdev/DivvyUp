@@ -487,21 +487,36 @@ el enlace y heredando el historial, y el visitante sin sesión redirigido a `/lo
 - [ ] 33. Cypress: visitante sin sesión abre el enlace → ve la explicación → se registra desde ahí →
       cae en `/join/:inviteCode` y reclama su miembro, sin volver a pegar el enlace
 
+### Fase 4c — lo que la review dejó para después
+
+Los cuatro hallazgos que no bloqueaban: ninguno afecta a la corrección de los datos, y por eso no
+entraron en el paso 39. Van antes del cierre porque son de código ya escrito y el 37 conviene
+hacerlo antes de que el payload crezca en producción.
+
+- [ ] 34. `userExpenses.jsx`: el `toast.error` sale del render a un `useEffect`, como ya lo hace
+      `groupDetails.jsx`. Hoy es un efecto secundario en el render, así que React avisa y el toast se
+      repite en cada uno
+- [ ] 35. `createExpense.jsx` recibe los miembros por props en vez de pedir `getGroupById`, porque
+      `getGroupDetails` ya los devuelve y son exactamente los mismos
+- [ ] 36. `MEMBER_PATHS` a `utils/members.js`: `group.controller.js` lo inlinea mientras
+      `expense.controller.js` tiene la constante
+- [ ] 37. `expenseResponse` deja de empotrar el grupo entero —miembros incluidos— en cada gasto. Con
+      50 gastos y 8 miembros esa lista viaja 50 veces. Arrastra `expense.jsx`, que lee
+      `expense.group.members` y `expense.group._id`, así que hay que pasarle ambos por props
+
 ### Fase 5 — cierre
 
-- [x] 34. Review de `feat/miembros-invitados` entera, con los cuatro PRs ya dentro. Es la última
+- [x] 38. Review de `feat/miembros-invitados` entera, con los cuatro PRs ya dentro. Es la última
       oportunidad de leerla como una sola pieza: el merge a `main` ya no tiene vuelta atrás barata,
       porque arrastra el vaciado de la base
-- [x] 35. Corregir los hallazgos que bloquean: reparto con más de 2 decimales, `participants` que no
+- [x] 39. Corregir los hallazgos que bloquean: reparto con más de 2 decimales, `participants` que no
       es lista, grupo que se queda en un miembro, participante repetido, nombre de miembro sin tope,
       nombre del creador sin `trim`, deudas regeneradas al renombrar, pago `cancelled` reactivable,
-      cuenta borrada en `getExpensesByUserId`, y el botón de quitar miembro al crear grupo.
-      Quedan para después del merge: el `toast` en render de `userExpenses`, la petición doble de
-      `createExpense`, el grupo entero empotrado en cada gasto y `MEMBER_PATHS` duplicado
-- [ ] 36. **Vaciar `groups`, `expenses` y `payments` en Koyeb, antes del merge** (`users` no se
+      cuenta borrada en `getExpensesByUserId`, y el botón de quitar miembro al crear grupo
+- [ ] 40. **Vaciar `groups`, `expenses` y `payments` en Koyeb, antes del merge** (`users` no se
       toca). Ojo: ahí siguen los dos usuarios de prueba que dejó el Cypress del paso 30
-- [ ] 37. Merge de `feat/miembros-invitados` a `main`
-- [ ] 38. Repaso extremo a extremo en producción: crear grupo por nombres, gasto pagado por un
+- [ ] 41. Merge de `feat/miembros-invitados` a `main`
+- [ ] 42. Repaso extremo a extremo en producción: crear grupo por nombres, gasto pagado por un
       miembro sin cuenta, unirse por el enlace desde otra cuenta, regenerar el código
 
 ## Descartado
