@@ -252,6 +252,10 @@ desplegable vayan los dos links de navegación, el toggle de tema y la cuenta.
 
 ## 10. `react-router` 7.18.1 tiene un aviso de seguridad, y el parche es un major
 
+**Decidido el 04-08-2026: se hace, pero más adelante y en su propia rama.** No estamos afectados hoy
+(ver abajo), así que no es urgente y no se cuela en ningún otro PR: subir de major el router que
+gobierna todas las rutas necesita su rama, su PR y una pasada completa de Cypress.
+
 **Estado actual (verificado):**
 
 - `pnpm audit --prod`, que es lo que de verdad se despliega, devuelve **una sola** vulnerabilidad:
@@ -260,14 +264,24 @@ desplegable vayan los dos links de navegación, el toggle de tema y la cuenta.
   enseña GitHub en cada push son de dependencias de desarrollo.
 - **La exposición real aquí es prácticamente nula**: el fallo es del modo RSC y esta app no usa React
   Server Components ni el router de datos. No hay `createBrowserRouter` ni nada de `@react-router/server`.
+  Los 15 imports de `react-router-dom` que hay en `src/` son la API declarativa (`BrowserRouter` en
+  `App.jsx:2`, más `Link`, `Navigate`, `Outlet`, `useNavigate`, `useParams`, `useLocation`): ni un
+  `loader` ni una `action` en todo el front. Y las mutaciones van por axios contra Express con
+  `Authorization: Bearer` explícito, que no viaja solo en una petición cross-site, así que el vector
+  CSRF clásico tampoco aplica.
 - El parche es `>=8.3.0`, o sea **subir de major**, en la librería que gobierna todas las rutas,
   incluida `/join/:inviteCode` y el `RequireAuth` que conserva el destino.
 
-**A decidir:**
+**A tener en cuenta cuando se haga:**
 
 - No es un `pnpm update`: hay que leer la guía de migración de v7 a v8 y volver a pasar los cinco
   specs de Cypress, que son la única red que cubre el enrutado.
 - Ojo con `minimumReleaseAge: 4320` en `pnpm-workspace.yaml`: una versión publicada hace menos de
   tres días no resuelve.
-- Alternativa mientras tanto: no hacer nada y dejarlo apuntado, que es lo razonable dado que el modo
-  vulnerable no se usa. Pero conviene decidirlo a conciencia, no por inercia.
+- La ruta que más vigilar es `/join/:inviteCode` y el `RequireAuth` que conserva el destino
+  (`components/auth/requireAuth.jsx`), porque es lo último que se montó y lo que peor se ve si se
+  rompe: `useLocation` y `Navigate` con `state` son justo lo que toca una migración de router.
+- El `pnpm test` del front sigue roto (§4), así que la validación es Cypress y nada más. Si se
+  arregla el §4 antes, mejor red para este.
+- Cambia el estado del riesgo si algún día se plantea SSR o RSC en el front: en cuanto se escriba la
+  primera server action, esto pasa de aplazable a bloqueante y hay que subir antes.
