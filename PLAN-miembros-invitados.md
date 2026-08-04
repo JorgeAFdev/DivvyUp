@@ -408,8 +408,12 @@ devuelve datos silenciosamente incorrectos. Eso es peor que un error.
 
 El push toca también `frontend/**`, así que Cloudflare Pages sale **en paralelo** con Koyeb: hay
 unos minutos de descoordinación inevitable. `CLIENT_URL` en Koyeb tiene que seguir siendo el origen
-de producción de Pages sin barra final (se compara literalmente en `socket/socket.server.js`) y
-ahora también construye el enlace de invitación.
+de producción de Pages sin barra final: se compara literalmente en `socket/socket.server.js`.
+Verificado el 04-08-2026 contra el handshake del socket, que devuelve el valor configurado tal cual.
+
+El enlace de invitación **no** sale de ahí, contra lo que decía este plan: lo monta el front con
+`window.location.origin` (`utils/members.js`). O sea que el enlace lleva el origen desde el que
+estés mirando la app — uno copiado en local apunta a `localhost:3000`.
 
 ## Estado de ejecución
 
