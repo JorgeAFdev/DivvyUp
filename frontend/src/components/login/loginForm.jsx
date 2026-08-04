@@ -6,6 +6,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/userContextAuth';
 import { toast } from 'react-toastify';
 import { nextDestination } from '../../utils/nextDestination';
+import { PASSWORD_MESSAGE, PASSWORD_PATTERN } from '../../utils/validation';
 
 
 const Login = ({ forceUpdate }) => {
@@ -35,6 +36,8 @@ const Login = ({ forceUpdate }) => {
       <label htmlFor="email" className={styles.loginLabel}>Email</label>
       <input
         id="email"
+        aria-invalid={errors.email ? 'true' : 'false'}
+        aria-describedby={errors.email ? 'login-email-error' : undefined}
         {...register('email', {
           required: 'Email is required',
           pattern: { value: /^\S+@\S+$/i, message: 'Invalid email format' }
@@ -42,20 +45,22 @@ const Login = ({ forceUpdate }) => {
         placeholder="Email"
         className={styles.loginInput}
       />
-      {errors.email && <p className={styles.loginError}>{errors.email.message}</p>}
+      {errors.email && <p id="login-email-error" className={styles.loginError}>{errors.email.message}</p>}
 
       <label htmlFor="password" className={styles.loginLabel}>Password</label>
       <input
         id="password"
+        aria-invalid={errors.password ? 'true' : 'false'}
+        aria-describedby={errors.password ? 'login-password-error' : undefined}
         {...register('password', {
           required: 'Password is required',
-          minLength: { value: 8, message: 'Password must be at least 8 characters' }
+          pattern: { value: PASSWORD_PATTERN, message: PASSWORD_MESSAGE }
         })}
         placeholder="Password"
         type="password"
         className={styles.loginInput}
       />
-      {errors.password && <p className={styles.loginError}>{errors.password.message}</p>}
+      {errors.password && <p id="login-password-error" className={styles.loginError}>{errors.password.message}</p>}
 
       <input type="submit" value="Login" className={styles.loginSubmitBtn} />
 
