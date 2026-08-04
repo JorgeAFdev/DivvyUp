@@ -53,6 +53,16 @@ describe('members without accounts', () => {
             cy.contains('+20€').should('exist');
         });
 
+        // --- the same expense, seen from "my expenses" ----------------------
+        cy.visit('/my-expenses');
+        cy.contains('Piso').should('be.visible');
+        cy.contains('Cena').should('be.visible');
+        // the edit form needs the members that now travel per group, not per expense
+        cy.get('[data-type="dots"]').first().click();
+        cy.contains('Edit expense').click();
+        cy.contains('label', 'Mamá').should('be.visible');
+        cy.get('form').find('svg').first().click();
+
         // --- the second account joins through the link ----------------------
         cy.then(() => {
             return cy.request({

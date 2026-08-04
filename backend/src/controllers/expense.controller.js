@@ -2,25 +2,12 @@ const Decimal = require("decimal.js");
 const Expense = require("../schemas/expense.schema");
 const Group = require("../schemas/group.schema");
 const mongoose = require("mongoose");
-const { MEMBER_FIELDS, memberOf, hydrateMembers, linkedUserIds } = require("../utils/members");
+const { MEMBER_FIELDS, MEMBER_PATHS, memberOf, hydrateMembers, linkedUserIds } = require("../utils/members");
 const { sendNotificationToUser, notificationTypes } = require("../services/notifications");
 
-const MEMBER_PATHS = ["paidBy", "participants.member"];
 const CENT = new Decimal("0.01");
 
-const groupSummary = (group) => ({
-    _id: group._id,
-    name: group.name,
-    description: group.description,
-    members: group.members,
-});
-
-const expenseResponse = (group, expenses) => {
-    const hydrated = hydrateMembers(group, expenses, MEMBER_PATHS);
-    const withGroup = (expense) => ({ ...expense, group: groupSummary(group) });
-
-    return Array.isArray(hydrated) ? hydrated.map(withGroup) : withGroup(hydrated);
-};
+const expenseResponse = (group, expenses) => hydrateMembers(group, expenses, MEMBER_PATHS);
 
 const validateExpense = ({ group, paidBy, participants, totalAmount }) => {
     const memberIds = new Set(group.members.map((member) => member._id.toString()));
@@ -234,6 +221,7 @@ const getExpensesByUserId = async (req, res) => {
                 groupId: group._id.toString(),
                 groupName: group.name,
                 groupDescription: group.description,
+                members: group.members,
                 expenses: expenseResponse(
                     group,
                     expenses.filter((expense) => expense.group.equals(group._id)),

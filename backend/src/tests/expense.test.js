@@ -80,7 +80,8 @@ describe("POST /group/:groupId/expenses", () => {
         expect(response.body.participants).toHaveLength(3);
         expect(response.body.participants[0].member.name).toBe("Jorge");
         expect(response.body.participants[0].amountOwed).toBe(10);
-        expect(response.body.group.name).toBe("Piso");
+        // The group no longer rides along inside every expense.
+        expect(response.body.group).toBe(group._id.toString());
 
         await reload();
         const balance = group.balance.find((b) => b.member.toString() === mamaId);
@@ -324,6 +325,9 @@ describe("GET /user/expenses", () => {
 
         expect(response.status).toBe(200);
         expect(response.body.map((g) => g.groupName).sort()).toEqual(["Piso", "Viaje"]);
+        // Members travel once per group, not once per expense.
+        expect(response.body.every((g) => g.members.length > 0)).toBe(true);
+        expect(response.body.flatMap((g) => g.expenses).every((e) => e.group !== undefined && !e.group.members)).toBe(true);
         expect(response.body.every((g) => g.expenses.length === 1)).toBe(true);
         expect(response.body.flatMap((g) => g.expenses).map((e) => e.paidBy.name).sort()).toEqual(["Luis", "Mamá"]);
     });
