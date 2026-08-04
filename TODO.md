@@ -20,7 +20,22 @@
 
 - `secret` se lee a nivel de módulo (`user.schema.js:6`), igual que en `security/jwt.js`. Si el módulo se carga antes de `dotenv.config()`, el secreto es `undefined` y `jwt.sign` peta. Ya obliga a un workaround en `backend/src/tests/group.test.js`.
 - **El login ya no distingue email desconocido de contraseña incorrecta**: ambas ramas responden `Invalid credentials` (arreglado el 04-08-2026, PR #82). `POST /auth/register` sí sigue enumerando, con su `Email already registered`, y ahí la fuga es inherente: no puedes permitir dos cuentas con el mismo correo sin decirlo. Taparla de verdad pide verificación por email, que es del punto 5.
-- **`password` sigue sin `select: false`.** La fuga concreta que había —`getGroupDetails` hacía `.populate('members.user')` sin proyección y mandaba el hash bcrypt de todos los miembros en cada carga— se cerró al desplegar la tarea 2: ahora todos los `populate` llevan la proyección `MEMBER_FIELDS`, definida en un único sitio. Pero la defensa de verdad sigue pendiente: `select: false` en el campo, más `.select('+password')` en el login de `auth.routes.js`, que es el único sitio que necesita el hash. Mientras no esté, cualquier `populate` o `findOne` nuevo que se olvide de proyectar vuelve a exponerlo.
+- **`password` ya tiene `select: false` — HECHO.** El campo se declara con `select: false`
+  (`user.schema.js:21-30`) y el único sitio que pide el hash es el login, con
+  `.select('+password')` (`auth.routes.js:74`). Al hacerlo apareció una fuga viva que no estaba
+  apuntada: `updateUser` devolvía el documento entero de `findByIdAndUpdate`, así que `PATCH
+  /user/update` mandaba el hash bcrypt del propio usuario al navegador y lo escribía en los logs
+  con su `console.log`. No hizo falta tocar ese controlador: con el `select: false` desaparece de
+  los dos sitios, que es justo la diferencia entre proteger el campo y proteger cada llamada.
+  Cubierto por `src/tests/auth.test.js` (9 tests, antes no había ninguno de auth): login correcto,
+  las dos ramas de credenciales inválidas con el mismo mensaje, que ni login ni register ni
+  `PATCH /user/update` devuelven el hash, y que `select('+password')` sigue trayéndolo para que
+  `comparePassword` funcione.
+
+  Antes de esto, la primera fuga —`getGroupDetails` hacía `.populate('members.user')` sin proyección y mandaba el
+  hash bcrypt de todos los miembros en cada carga— se cerró al desplegar la tarea 2 proyectando
+  `MEMBER_FIELDS` en los diez `populate`. Esa proyección se queda como está: sigue haciendo falta
+  para no mandar el email de los miembros, pero ya no es lo único que separa el hash del cliente.
 - **No hay validación de fuerza de contraseña en ningún sitio.** `auth.routes.js` sólo comprueba que `email` y `password` vengan en el body, así que hoy se puede registrar una cuenta con la contraseña `a`. El único regex que existía (`validatePassword`, 8 caracteres con mayúscula, minúscula y dígito) vivía en `middlewares/index.js`, colgado de `POST /user/create` — una ruta sin auth que el front nunca llamó y que se borró junto con el fichero. Si se reengancha, sale de ahí: `git show HEAD~1:backend/src/middlewares/index.js`.
 
 ## 2. Miembros de grupo que no son usuarios registrados — HECHO
