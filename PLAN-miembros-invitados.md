@@ -521,8 +521,15 @@ hacerlo antes de que el payload crezca en producción.
       es lista, grupo que se queda en un miembro, participante repetido, nombre de miembro sin tope,
       nombre del creador sin `trim`, deudas regeneradas al renombrar, pago `cancelled` reactivable,
       cuenta borrada en `getExpensesByUserId`, y el botón de quitar miembro al crear grupo
-- [ ] 41. **Vaciar `groups`, `expenses` y `payments` en Koyeb, antes del merge** (`users` no se
-      toca). Ojo: ahí siguen los usuarios de prueba que dejaron los Cypress de los pasos 30 y 34
+- [x] 41. **Separar las bases, que es lo que hacía falta de verdad.** Local y Koyeb compartían
+      cluster *y* base, porque `MONGO_URL` no llevaba nombre en la ruta y Mongo usa `test` por
+      defecto: 15 de los 19 grupos de producción eran restos de mis Cypress. Ahora local va a `/test`
+      y Koyeb a `/prod`. Las dos bases quedan vacías salvo dos cuentas reutilizables
+      (`javi@divvyup.test` y `ana@divvyup.test`) para el repaso del paso 43.
+      El vaciado que pedía este paso queda hecho de sobra: **cero documentos** en las dos, así que ni
+      hay forma vieja que rompa el código nuevo ni índice único que no se pueda construir
+- [ ] 41b. **Cambiar `MONGO_URL` en el panel de Koyeb** metiendo `/prod` antes del `?`. Es lo único
+      de esta fase que no se puede hacer desde el repo
 - [ ] 42. Merge de `feat/miembros-invitados` a `main`
 - [ ] 43. Repaso extremo a extremo en producción: crear grupo por nombres, gasto pagado por un
       miembro sin cuenta, unirse por el enlace desde otra cuenta, regenerar el código

@@ -50,6 +50,10 @@ There is no lint script and no eslint config file, despite eslint deps in the ro
 
 `.env` files are per-workspace (`backend/.env`, `frontend/.env`), not at the root — see README for the full list. Backend needs `MONGO_URL`, `jwt_secret` (lowercase), `CLIENT_URL` (Socket.IO CORS origin), Cloudinary and SendGrid keys. Frontend needs `VITE_API_URL` and `VITE_SOCKET_URL`.
 
+**Local and Koyeb share the Atlas cluster but not the database.** The database is the path segment of `MONGO_URL`, before the `?`: local uses `/test`, Koyeb uses `/prod`. Leaving the path empty is what MongoDB reads as `test`, which is how running Cypress locally used to write straight into production — 15 of the 19 groups there were spec leftovers. If you add the name after the query string it silently keeps using `test`.
+
+Both databases carry the same two throwaway accounts, `javi@divvyup.test` and `ana@divvyup.test` (password in `notes.txt`), so the invite flow can be exercised end to end without registering anything. Backend jest never touches either: `connectDB()` swaps to `mongodb-memory-server` under `NODE_ENV=test`.
+
 ## Architecture
 
 ### The balance/debt engine lives in the Mongoose models, not in controllers
