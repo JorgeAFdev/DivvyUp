@@ -115,6 +115,8 @@ Frontend stores `{token, user}` as JSON in `localStorage` under the key `user-se
 
 Data fetching is `@tanstack/react-query` **v5** — object syntax only (`useQuery({ queryKey, queryFn })`, `useMutation({ mutationFn })`, `invalidateQueries({ queryKey })`); the old `react-query` package and its positional API are gone. The `QueryClientProvider` is set up in `App.jsx`. Note that adoption is partial: only `groupDetails.jsx`, `userExpenses.jsx`, `registerForm.jsx` and `userEditForm.jsx` use it, and every query lives inline in the component — the rest still fetch with `useEffect` + `useState` and lift state to the parent (`groupList.jsx` takes `groups`/`setGroups` as props). `TODO.md` §7 tracks moving all of it into per-resource hooks; new code should go through `@tanstack/react-query`, and preferably through a hook in `src/hooks/`.
 
+Every avatar in the app goes through `components/avatar/memberAvatar.jsx`: outlined, monochrome, initials from `initialsOf()` when there is no picture. It is one component on purpose. The four copies it replaced had drifted into two different colour schemes, and one of them rendered white on a white header.
+
 Styling is CSS Modules (`foo.module.css` beside `foo.jsx`) plus MUI. `context/darkModeContext.jsx` still exists, but recent commits deliberately removed per-component `useDarkMode` usage in favor of the MUI theme (`useTheme`) — follow that direction in new components.
 
 ### Backend request flow

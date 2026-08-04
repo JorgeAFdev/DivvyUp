@@ -19,6 +19,7 @@
 **Suelto, del mismo repaso:**
 
 - `secret` se lee a nivel de módulo (`user.schema.js:6`), igual que en `security/jwt.js`. Si el módulo se carga antes de `dotenv.config()`, el secreto es `undefined` y `jwt.sign` peta. Ya obliga a un workaround en `backend/src/tests/group.test.js`.
+- **El login ya no distingue email desconocido de contraseña incorrecta**: ambas ramas responden `Invalid credentials` (arreglado el 04-08-2026, PR #82). `POST /auth/register` sí sigue enumerando, con su `Email already registered`, y ahí la fuga es inherente: no puedes permitir dos cuentas con el mismo correo sin decirlo. Taparla de verdad pide verificación por email, que es del punto 5.
 - **`password` sigue sin `select: false`.** La fuga concreta que había —`getGroupDetails` hacía `.populate('members.user')` sin proyección y mandaba el hash bcrypt de todos los miembros en cada carga— se cerró al desplegar la tarea 2: ahora todos los `populate` llevan la proyección `MEMBER_FIELDS`, definida en un único sitio. Pero la defensa de verdad sigue pendiente: `select: false` en el campo, más `.select('+password')` en el login de `auth.routes.js`, que es el único sitio que necesita el hash. Mientras no esté, cualquier `populate` o `findOne` nuevo que se olvide de proyectar vuelve a exponerlo.
 - **No hay validación de fuerza de contraseña en ningún sitio.** `auth.routes.js` sólo comprueba que `email` y `password` vengan en el body, así que hoy se puede registrar una cuenta con la contraseña `a`. El único regex que existía (`validatePassword`, 8 caracteres con mayúscula, minúscula y dígito) vivía en `middlewares/index.js`, colgado de `POST /user/create` — una ruta sin auth que el front nunca llamó y que se borró junto con el fichero. Si se reengancha, sale de ahí: `git show HEAD~1:backend/src/middlewares/index.js`.
 
@@ -248,3 +249,25 @@ desplegable vayan los dos links de navegación, el toggle de tema y la cuenta.
   encima importa `./Header`, que no existe. Si se va a tocar el header, es el momento de escribir ese
   test de verdad — ojo con la rama con token, que monta `Notifications` y necesita sesión en
   `localStorage`.
+
+## 10. `react-router` 7.18.1 tiene un aviso de seguridad, y el parche es un major
+
+**Estado actual (verificado):**
+
+- `pnpm audit --prod`, que es lo que de verdad se despliega, devuelve **una sola** vulnerabilidad:
+  `react-router` >=7.12.0 <8.3.0, severidad alta, *RSC Mode CSRF Bypass*
+  ([GHSA-qwww-vcr4-c8h2](https://github.com/advisories/GHSA-qwww-vcr4-c8h2)). El resto de avisos que
+  enseña GitHub en cada push son de dependencias de desarrollo.
+- **La exposición real aquí es prácticamente nula**: el fallo es del modo RSC y esta app no usa React
+  Server Components ni el router de datos. No hay `createBrowserRouter` ni nada de `@react-router/server`.
+- El parche es `>=8.3.0`, o sea **subir de major**, en la librería que gobierna todas las rutas,
+  incluida `/join/:inviteCode` y el `RequireAuth` que conserva el destino.
+
+**A decidir:**
+
+- No es un `pnpm update`: hay que leer la guía de migración de v7 a v8 y volver a pasar los cinco
+  specs de Cypress, que son la única red que cubre el enrutado.
+- Ojo con `minimumReleaseAge: 4320` en `pnpm-workspace.yaml`: una versión publicada hace menos de
+  tres días no resuelve.
+- Alternativa mientras tanto: no hacer nada y dejarlo apuntado, que es lo razonable dado que el modo
+  vulnerable no se usa. Pero conviene decidirlo a conciencia, no por inercia.

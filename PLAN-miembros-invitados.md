@@ -1,7 +1,8 @@
 # Plan — Miembros de grupo que no son usuarios registrados
 
-Desarrollo de la tarea 2 del [TODO](TODO.md). Decisiones cerradas el 30-07-2026.
-Este fichero es la fuente de verdad del alcance: si algo no está aquí, no entra.
+**COMPLETADO Y EN PRODUCCIÓN el 04-08-2026.** Desarrollo de la tarea 2 del [TODO](TODO.md),
+decidido el 30-07-2026. Este fichero fue la fuente de verdad del alcance mientras duró, y se queda
+como registro de qué se decidió, qué se descartó y por qué.
 
 Modelo de referencia: **Tricount**. Un miembro se crea escribiendo un nombre; enlazar una cuenta
 a ese miembro es una acción posterior, opcional, y la hace la propia persona.
@@ -537,14 +538,26 @@ hacerlo antes de que el payload crezca en producción.
       backend desplegado lee `prod`. `CLIENT_URL` sigue siendo el origen de Pages sin barra final,
       comprobado contra el handshake del socket
 - [x] 42. Merge de `feat/miembros-invitados` a `main` (PR #81)
-- [~] 43. Repaso extremo a extremo en producción, con `javi@divvyup.test` y `ana@divvyup.test`:
+- [x] 43. Repaso extremo a extremo en producción, con `javi@divvyup.test` y `ana@divvyup.test`:
       - [x] el enlace de invitación se genera y funciona
-      - [ ] gasto pagado por un miembro sin cuenta → sale acreedor en el balance
-      - [ ] unirse por el enlace desde la otra cuenta heredando el historial
-      - [ ] regenerar el código invalida el enlace anterior
-      - [ ] llega una notificación por socket con las dos partes desplegadas
-      - [ ] registro subiendo foto, que es el único camino que toca Cloudinary y que los Cypress
+      - [x] gasto pagado por un miembro sin cuenta → sale acreedor en el balance
+      - [x] unirse por el enlace desde la otra cuenta heredando el historial
+      - [x] regenerar el código invalida el enlace anterior
+      - [x] llega una notificación por socket con las dos partes desplegadas
+      - [x] registro subiendo foto, que es el único camino que toca Cloudinary y que los Cypress
             evitaban a propósito
+
+**Fase 5 cerrada. La feature está en producción y verificada.**
+
+Salieron dos cosas del repaso, ya corregidas en el PR #82: el avatar de la cabecera era blanco sobre
+blanco en modo claro, porque tomaba el fondo del tema, y el login distinguía entre email desconocido
+y contraseña incorrecta, lo que confirma a un atacante si una dirección tiene cuenta aquí.
+
+Un falso positivo que conviene dejar escrito, porque volverá a parecer un bug: repartir 1600 € entre
+tres da cuotas de 533,34 / 533,33 / 533,33. No existe un reparto en céntimos donde los tres paguen
+lo mismo, así que alguien pone un céntimo más. Lo que importa es que las cuotas suman exactamente el
+total y el balance suma exactamente cero, que es justo lo que **no** pasaba antes: con tres cuotas de
+533,33 el grupo se quedaba descuadrado en un céntimo para siempre, sin ninguna deuda que liquidar.
 
 ## Descartado
 
