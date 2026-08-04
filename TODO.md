@@ -47,7 +47,7 @@ el enlace compartible del grupo eligiéndose de la lista.
 
 - `cd frontend && pnpm test` sale con código 1: **2 suites fallidas, 0 tests ejecutados**. El error de las dos es el mismo: `Your test suite must contain at least one test.`
 - La causa son los dos únicos ficheros de test, `src/components/header/header.test.jsx` y `src/components/icon/icon.test.jsx`. Son plantillas con **todo el contenido comentado**, y encima importan `./Header` y `./Button`, ficheros que no existen (son `header.jsx` e `icon.jsx`).
-- El backend sí pasa (2/2), así que esto es solo del workspace de frontend.
+- El backend sí pasa (82/82), así que esto es solo del workspace de frontend. Los specs de Cypress también, y son runner aparte: esto es el jest del front.
 
 **A decidir:**
 
@@ -84,7 +84,16 @@ Sustituir el auth artesanal por [Better Auth](https://better-auth.com) para tene
 - **Instalación**: `minimumReleaseAge: 4320` en `pnpm-workspace.yaml` bloquea versiones publicadas hace menos de 3 días — Better Auth publica a menudo, así que puede no resolver la última. Y tiene que ir en `dependencies` del backend, no en dev, o el contenedor (`--prod`) se cae al arrancar.
 - Confirmar contra la doc de la versión que se instale que el import de CommonJS funciona sin transpilar; el paquete es TypeScript/ESM-first.
 
-## 6. La foto de perfil no debería ser obligatoria
+## 6. La foto de perfil no debería ser obligatoria — HECHO
+
+**Resuelto en la Fase 4b (PR #79)**, porque era el último obstáculo del camino que abría esa fase:
+llegabas por una invitación sin cuenta y tenías que subir una imagen para poder entrar. Fuera el
+`required` y el `validate` del formulario; el `append` del multipart sólo viaja si hay fichero, que
+antes mandaba el string `"undefined"`; y el avatar cae a la inicial del nombre con `initialsOf()`.
+El bug de `updateUser` que se describe abajo también está arreglado: sólo toca `profilePicture`
+cuando llega un fichero, así que editar el nombre ya no te borra la foto.
+
+Se queda escrito lo que había, que es de donde salió el diagnóstico:
 
 Hoy no puedes registrarte sin subir una imagen. Debería ser opcional en el registro y quedar como
 algo que el usuario añade después editando su perfil, si quiere.
@@ -146,9 +155,16 @@ Que cada fichero tenga una responsabilidad: el componente pinta, el hook trae lo
 - Migrar los patrones 2 y 3 se lleva por delante el prop drilling: `setGroups` y `refreshGroupDetails` desaparecen si cada hook invalida su propia clave. Eso cambia la firma de varios componentes (`GroupList` se queda sin props), no es solo mover código.
 - ¿Dónde quedan los toasts y el `navigate`? Hoy están dentro de los handlers. Lo limpio es que el hook devuelva estado y el componente decida qué pintar, no que el hook reciba `onSuccess`/`onError` con UI dentro.
 - Orden barato → caro: primero extraer los 4 que ya usan react-query (mover código, sin cambio de comportamiento), después migrar los manuales.
-- Sin red de seguridad: el `pnpm test` del frontend está roto (punto 4) y en Cypress solo hay `cypress/e2e/create-group.cy.js`, que además entra en `/groups` sin loguearse. Conviene arreglar al menos ese spec antes de tocar, o el refactor se valida a mano.
+- Red de seguridad, a medias: el `pnpm test` del frontend sigue roto (punto 4), pero Cypress ya no. Hay **tres specs y 5 tests en verde** (`create-group`, `smoke-miembros`, `invite-landing`), todos siembran sesión, y entre ellos recorren crear grupo, meter un gasto, el balance, unirse por el enlace y `/my-expenses`. Es suficiente para validar un refactor de la capa de datos de punta a punta; lo que no cubren es nada a nivel de componente.
 
-## 8. El avatar por defecto apunta a un servicio de terceros caído
+## 8. El avatar por defecto apunta a un servicio de terceros caído — HECHO
+
+**Resuelto en la Fase 4b (PR #79)**, junto con el punto 6: no queda ninguna referencia a
+`via.placeholder.com` en el repo. `userMenu.jsx` y `user.jsx` usan el `Avatar` de MUI con la inicial
+del nombre como children, que es lo que ya hacían `group.jsx` y `expense.jsx` para los miembros sin
+cuenta.
+
+Se queda escrito lo que había:
 
 Va en su propia rama: no toca nada del contrato de miembros, pero se ve nada más entrar con un
 usuario sin foto.
