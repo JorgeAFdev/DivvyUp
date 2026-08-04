@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.post("/", jwtMiddleware, groupController.createGroup);
 router.get("/user", jwtMiddleware, groupController.getUserGroups);
+router.get("/invite/:inviteCode", groupController.getInviteName);
 router.get("/join/:inviteCode", jwtMiddleware, groupController.getGroupByInviteCode);
 router.post("/join/:inviteCode", jwtMiddleware, groupController.joinGroup);
 router.post("/:groupId/invite-code/regenerate", jwtMiddleware, groupController.regenerateInviteCode);
