@@ -3,6 +3,9 @@ import styles from "./groupform.module.css";
 import { IoCloseOutline } from "react-icons/io5";
 
 const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers, lockedMemberId }) => {
+    // An existing group cannot go down to a single member: with one participant
+    // the expense form sends a boolean instead of a list.
+    const minMembers = groupMembers ? 2 : 1;
     const {
         register,
         handleSubmit,
@@ -95,7 +98,7 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
                                     <span className={styles.tag}>no account</span>
                                 )}
                                 <div>
-                                    {field._id !== lockedMemberId && fields.length > 1 && (
+                                    {(!lockedMemberId || field._id !== lockedMemberId) && fields.length > minMembers && (
                                         <IoCloseOutline
                                             className={`${styles.btn} ${styles.redBtn}`}
                                             onClick={() => remove(index)}
