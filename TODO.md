@@ -332,3 +332,209 @@ gobierna todas las rutas necesita su rama, su PR y una pasada completa de Cypres
   arregla el §4 antes, mejor red para este.
 - Cambia el estado del riesgo si algún día se plantea SSR o RSC en el front: en cuanto se escriba la
   primera server action, esto pasa de aplazable a bloqueante y hay que subir antes.
+
+## 11. Las validaciones, a Zod y en un paquete compartido
+
+Que cada endpoint declare la forma de su entrada en un esquema y no en una escalera de `if`. Hoy la
+validación existe, pero está escrita a mano y repetida.
+
+**Decidido el 04-08-2026:**
+
+- **Una sola fuente de verdad, compartida entre backend y frontend.** No es Zod suelto en cada lado
+  repitiendo los regex: es un tercer paquete del workspace que los dos importan. Si no se comparte,
+  la tarea no vale la pena, porque lo que duele es la duplicación, no la escalera de `if`.
+- **Sólo forma de entrada.** Lo que necesita la BD (que el grupo exista, que el miembro pertenezca,
+  que los `amountOwed` sumen el total) se queda en el controlador del backend y no entra al paquete.
+- **El backend pasa a ESM** (punto 13) y **el proyecto a TypeScript** (punto 14). Las dos deshacen
+  las restricciones que hacían fea esta tarea, así que van antes.
+- **Los mensajes no se comparten: viaja un código de error** y la copy es del front (punto 15).
+
+Con eso, el orden es **13 → 14 → 15 → 11**, y el 12 cae solo por el camino. Ninguna de las cuatro
+depende de este punto, así que se pueden hacer y desplegar sueltas.
+
+**Estado actual (verificado):**
+
+- **33 `res.status(400)`** repartidos por los controladores: 16 en `group.controller.js`, 12 en
+  `expense.controller.js`, 4 en `auth.routes.js` y 1 en `payments.controller.js`. Cada uno con su
+  propio `if` y su propio texto.
+- No hay `middlewares/`: sus tres helpers murieron con las rutas que los usaban (`796040b`), así que
+  no queda ni un punto común donde enganchar nada.
+- La regla de contraseña del punto 1 vive **en dos sitios a la vez**: `registrationErrors()` en
+  `auth.routes.js` y el `pattern` de `registerForm.jsx`. Son el mismo regex copiado, y nada obliga a
+  que sigan iguales.
+- `zod` **no está instalado** en ninguno de los dos workspaces.
+- Formato de error actual: `{ error: "motivo. otro motivo" }`, motivos unidos con `. `. Zod devuelve
+  un array de issues con `path`, que es más útil para pintar el error junto a su campo pero **cambia
+  el contrato** de la API.
+
+**Las dos cosas que rompen esto, las dos comprobadas.** (La tercera, que jest no puede consumir un
+paquete ESM, se la lleva por delante el punto 13.)
+
+- **El Dockerfile no lo copiaría.** `backend/Dockerfile` copia explícitamente los manifiestos raíz,
+  `backend/package.json`, `frontend/package.json` y `backend/src`. Un `packages/contracts/` nuevo no
+  entra: el `pnpm install --frozen-lockfile` falla porque el lockfile referencia un miembro del
+  workspace que no está en la imagen, y aunque pasara, el código no estaría para requerirlo en
+  runtime. Hacen falta dos `COPY` más.
+- **El build de Cloudflare Pages tampoco.** El comando es
+  `pnpm install --frozen-lockfile --filter @monorepo/frontend`, **sin los tres puntos finales**, así
+  que selecciona sólo ese paquete y no sus dependencias del workspace. Tiene que pasar a
+  `--filter @monorepo/frontend...`, como ya hace el Dockerfile con el backend. Y vive en el panel de
+  Pages, no en el repo, así que no se ve en ningún diff.
+
+Además, `pnpm-workspace.yaml` declara `backend` y `frontend` uno a uno, no con un glob, así que el
+paquete nuevo hay que añadirlo ahí a mano.
+
+**A decidir, lo que queda:**
+
+- **Cómo se llama y dónde vive.** `packages/contracts`, `packages/validation`, `shared/`. Con TS
+  hecho (punto 14) el formato ya no es una decisión: ESM + TS compilado, como los otros dos.
+- **¿Sólo esquemas, o también los tipos de las respuestas?** Un paquete de contratos que declare
+  también la forma de lo que devuelve la API es más útil que uno de sólo validación, pero es más
+  superficie que mantener y no hace falta para cerrar la duplicación de hoy.
+- **`login` no puede usar el mismo esquema que `register`.** El registro exige la regla de fuerza;
+  el login tiene que aceptar cualquier cosa que un usuario antiguo tenga guardada, o dejas fuera a
+  las cuentas creadas antes de la regla. Son dos esquemas, no uno reutilizado.
+- Zod tiene que ir en `dependencies` del backend, no en dev, o el contenedor (`--prod`) se cae al
+  arrancar. Y ojo con `minimumReleaseAge: 4320`.
+- En el front, `react-hook-form` ya está y tiene `@hookform/resolvers/zod`, así que el formulario
+  validaría con el mismo esquema en vez de con `pattern` a mano.
+- ¿Middleware genérico (`validate(schema)` delante de cada ruta) o `schema.safeParse(req.body)` al
+  principio de cada controlador? Lo primero saca la validación del controlador del todo, pero
+  reintroduce el `middlewares/` que se borró.
+- En el front, `react-hook-form` ya está y tiene `@hookform/resolvers/zod`, así que el formulario
+  pasaría a validar con el mismo esquema en vez de con `pattern` a mano.
+- Cambiar el formato del error toca el front: hoy los componentes pintan `error` como un string.
+  O se mantiene la forma actual aplanando los issues de Zod, o se migran los consumidores.
+- Hay red de seguridad razonable: los 103 tests del backend cubren buena parte de esos 400, así que
+  el refactor se puede hacer sin adivinar. `auth.test.js` fija los del registro con el texto exacto.
+
+## 12. El código de auth vive en el router, no en un controlador
+
+`auth.routes.js` es el único router que además implementa. Rompe el patrón del resto de la API y por
+eso la validación del punto 1 acabó ahí en vez de junto a las demás.
+
+**Estado actual (verificado):**
+
+- `auth.routes.js` son **121 líneas** con los handlers de `/register` y `/login` dentro. Los otros
+  cuatro routers son de 10 a 19 líneas y sólo enganchan ruta con controlador: `expense.routes.js`
+  (11), `payment.routes.js` (10), `user.routes.js` (15), `group.routes.js` (19).
+- `controllers/` ya tiene `group`, `expense`, `payments` y `user`. **Falta `auth.controller.js`**, que
+  es el único hueco del patrón.
+- Dentro de esos handlers hay además cosas que no son de una ruta: `registrationErrors()`, los dos
+  regex, cuatro `console.time`/`console.timeEnd` de instrumentación y el `sendEmail` de bienvenida
+  comentado (`auth.routes.js:46`).
+
+**A decidir:**
+
+- Mover y ya está, o aprovechar para sacar `registrationErrors()` a donde acabe la validación del
+  punto 11. Si el 11 se hace antes, este movimiento es casi automático.
+- Los `console.time` con etiquetas fijas (`'register user'`, `'query user'`) se pisan si hay dos
+  registros a la vez. Al mover conviene decidir si se quedan, porque hoy son la única instrumentación
+  de la API.
+- `auth.test.js` (21 tests) va contra las rutas, no contra el controlador, así que cubre el
+  movimiento entero sin tocarlo. Es refactor puro: si algo se rompe, sale ahí.
+
+## 13. El backend a ESM
+
+Hoy el backend es CommonJS y el frontend ESM. Unificar los dos es lo que permite que un paquete
+compartido (punto 11) lo consuman ambos sin build dual, y es la preferencia declarada.
+
+**Estado actual (verificado):**
+
+- **99 `require()` en 28 ficheros** de `backend/src`, más sus `module.exports`. Es mecánico, pero hay
+  que pasarlo entero: no se puede migrar a medias dentro de un mismo paquete.
+- **El problema real no es el código, es jest.** El backend corre jest **sin `jest.config` y sin
+  `babel.config`**, o sea CommonJS puro sin transform. Un `export` ahí peta con
+  `SyntaxError: Unexpected token 'export'` (comprobado). ESM en jest pide
+  `--experimental-vm-modules` más `extensionsToTreatAsEsm`, o meter un transform.
+- **Los 103 tests no usan ni un mock de jest**: ni `jest.fn()`, ni `jest.mock()`, ni spies. Sólo
+  `describe`/`it`/`it.each`/`expect`/`beforeAll`/`beforeEach`/`afterAll`, supertest y la BD en
+  memoria. Todo eso es API que vitest ya cubre con el mismo nombre.
+- **vitest ya está en el repo**, como devDependency del frontend (`vitest ^3.0.8`, más
+  `vitest.workspace.js` para el addon de Storybook). No sería una dependencia nueva en el monorepo.
+- `node:22-slim` en el Dockerfile y v24.13.0 en local: los dos soportan ESM nativo de sobra.
+- Ojo con dos sitios que dependen de CommonJS por motivos que no son de estilo: el `require` **lazy**
+  de `mongodb-memory-server` dentro de `connectDB()` (es devDependency y no está en la imagen de
+  producción, por eso no puede ser un import de nivel superior) y el `secret` que `user.schema.js` y
+  `security/jwt.js` leen **en el momento del import**, que ya obliga al workaround de
+  `group.test.js`. Con ESM los imports se evalúan antes, así que ese orden hay que revisarlo.
+
+**A decidir:**
+
+- **jest con ESM, o cambiar a vitest.** Yo iría a vitest: resuelve ESM y TypeScript (punto 14) sin
+  configurar nada, ya está en el repo, y la migración es casi renombrar el script porque no hay
+  mocks. `--runInBand` pasa a ser `--no-file-parallelism` o `pool: 'forks'`, que sigue haciendo falta
+  porque los tests comparten BD.
+- El `require` lazy de `mongodb-memory-server` pasa a `await import()`, que obliga a que `connectDB()`
+  siga siendo async. Ya lo es.
+- Si se hace junto al punto 14 o antes: hacer los dos a la vez es un diff enorme; hacer ESM primero
+  y TS después son dos pasadas por los mismos 28 ficheros. No hay respuesta obvia.
+
+## 14. TypeScript
+
+**Decidido el 04-08-2026: sí.** El proyecto es lo bastante pequeño como para que la migración no sea
+tediosa, y es lo que hace que Zod (punto 11) aporte tipos y no sólo validación en runtime.
+
+**Estado actual (verificado):**
+
+- Ni `typescript` ni `tsconfig.json` en ningún workspace. Nada empezado.
+- Backend: 28 ficheros en `src/`. Frontend: JSX con `prop-types` como devDependency, que TS deja
+  obsoleto en cuanto entra.
+- El backend se despliega en Docker: con TS aparece un paso de build que hoy no existe, y el
+  `COPY backend/src ./backend/src` del Dockerfile pasa a copiar el compilado, no el fuente.
+  Alternativa sin build: dejar que el runtime ejecute TS directamente, que Node 22+ ya hace con
+  `--experimental-strip-types`, pero eso ata la imagen a esa bandera.
+- Cloudflare Pages compila el front con Vite, que ya entiende TS sin configurar nada. Ese lado es
+  gratis.
+
+**A decidir:**
+
+- **Alcance y orden.** Los tres paquetes de golpe, o backend primero (donde Zod aporta más) y front
+  después. Migrar `.jsx` a `.tsx` con MUI y react-hook-form tipados es donde está el trabajo de
+  verdad.
+- **Cuánto rigor**: `strict: true` desde el principio duele más al migrar pero es lo único que
+  justifica la tarea. `allowJs` permite convivencia fichero a fichero y hace la migración gradual.
+- El `Decimal` de decimal.js y los `ObjectId` de Mongoose son los dos puntos donde los tipos se
+  vuelven incómodos. Merece la pena mirarlos antes de comprometerse con `strict`.
+
+## 15. Contrato de errores por código, como en Cartobol
+
+Que la API deje de devolver una frase en inglés y devuelva un código estable, y que el front lo
+traduzca. Es el patrón que ya existe en Cartobol y funciona.
+
+**Cómo está en Cartobol (leído del repo):**
+
+- `backend/src/middlewares/errorHandler.js` es un middleware de error único que responde siempre
+  `{ error: { code, details } }`. Mapea lo conocido (Prisma `P2002` → `DUPLICATE_FIELD`, `P2025` →
+  `RESOURCE_NOT_FOUND`, Stripe `resource_missing` → 404) y cae a `INTERNAL_SERVER_ERROR`. Un error
+  que ya trae `status` y `code` se responde tal cual.
+- Los validadores no escriben prosa: `withMessage('VALIDATION_PASSWORD_TOO_SHORT')`, o sea el mensaje
+  **es** el código.
+- `frontend/src/utils/apiError/getApiErrorCode.js` es de una línea:
+  `err?.response?.data?.error?.code || 'INTERNAL_SERVER_ERROR'`.
+- `useApiErrorToast` traduce `errors.${code}` por i18n, con un `ERROR_NAMESPACE` que dice en qué
+  namespace vive cada código y un `err.handled` para que un caller pueda marcarlo como ya tratado.
+
+**Lo que cambia respecto a DivvyUp:**
+
+- Hoy la API devuelve `{ error: "Password must be at least 8 characters long and..." }`: prosa en
+  inglés, generada en el controlador. Todos los consumidores del front la pintan como string.
+- No hay middleware de errores: cada controlador hace su `try/catch` y su `res.status(500)`. Son
+  **33 `res.status(400)`** y sus 500 correspondientes, cada uno con su texto.
+- No hay i18n en el front. Sin él, el código tiene que resolverse contra un diccionario en alguna
+  parte igualmente, así que o entra i18next o se hace un mapa `code -> texto` a mano.
+
+**A decidir:**
+
+- **Si entra i18n o no.** El patrón de Cartobol se apoya en `react-i18next`. En DivvyUp no hay nada,
+  y montar i18n para traducir errores a un solo idioma es mucho aparato. Un mapa
+  `code -> texto` en el front da el 90% del valor (desacoplar copy de API) sin la dependencia, y deja
+  la puerta abierta.
+- **Cuánto se migra de golpe.** El contrato nuevo rompe a todos los consumidores actuales. O se migra
+  todo a la vez, o se responden código y mensaje a la vez durante una temporada.
+- **De dónde salen los códigos.** Si el paquete compartido del punto 11 exporta los esquemas de Zod,
+  lo natural es que exporte también el enum de códigos, y entonces front y back no pueden
+  desincronizarse. Ese es el argumento más fuerte para hacer el 15 después del 11 y no antes.
+- Cartobol usa express-validator y **no comparte los validadores con el front**: su fuente única son
+  los códigos, no las reglas. Aquí se quiere lo segundo también, así que este punto es la mitad del
+  patrón, no el patrón entero.
