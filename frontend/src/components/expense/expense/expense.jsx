@@ -4,10 +4,9 @@ import { deleteGroupExpense, updateGroupExpense } from '../../../utils/expenseAp
 import { toast } from 'react-toastify';
 import ExpenseActions from '../expenseActions/expenseActions';
 import { useAuth } from '../../../context/userContextAuth';
-import { Avatar } from '@mui/material';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 import { Tooltip } from 'react-tooltip';
-import { initialsOf } from '../../../utils/members';
+import MemberAvatar from '../../avatar/memberAvatar';
 
 const Expense = ({ expense, groupId, groupMembers, refreshGroupDetails }) => {
     const [isEditing, setIsEditing] = useState(false);
@@ -52,14 +51,11 @@ const Expense = ({ expense, groupId, groupMembers, refreshGroupDetails }) => {
                         <p><strong>{expense.description}</strong></p>
                         <div className={styles.paidBy}>
                             <p>Paid by</p>
-                            <Avatar
+                            <MemberAvatar
+                                name={expense.paidBy.name}
                                 src={expense.paidBy.user?.profilePicture}
-                                alt={`Profile picture of ${expense.paidBy.name}`}
                                 data-tooltip-id={expense.paidBy._id}
-                                sx={{ backgroundColor: 'white', color: '#3c8ccd', fontSize: '0.9rem' }}
-                            >
-                                {initialsOf(expense.paidBy.name)}
-                            </Avatar>
+                            />
                             <Tooltip id={expense.paidBy._id} content={expense.paidBy.name} />
                         </div>
                     </div>

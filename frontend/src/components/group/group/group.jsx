@@ -6,10 +6,9 @@ import GroupActions from '../groupActions/groupActions';
 import { useAuth } from '../../../context/userContextAuth';
 import { useNavigate } from 'react-router-dom';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
-import { Avatar } from '@mui/material';
 import { Tooltip } from 'react-tooltip';
 import { getUserSession } from '../../../utils/localStorage';
-import { initialsOf } from '../../../utils/members';
+import MemberAvatar from '../../avatar/memberAvatar';
 
 const Group = ({ group, setGroups }) => {
     const [isEditing, setIsEditing] = useState(false);
@@ -63,13 +62,11 @@ const Group = ({ group, setGroups }) => {
                         <div className={styles.avatar}>
                             {group.members.map((member) => (
                                 <div key={member._id}>
-                                    <Avatar
+                                    <MemberAvatar
+                                        name={member.name}
                                         src={member.user?.profilePicture}
                                         data-tooltip-id={member._id}
-                                        sx={{ backgroundColor: 'white', color: '#3c8ccd', fontSize: '0.9rem' }}
-                                    >
-                                        {initialsOf(member.name)}
-                                    </Avatar>
+                                    />
                                     <Tooltip id={member._id} content={member.user ? member.name : `${member.name} · no account yet`} />
                                 </div>
                             ))}
