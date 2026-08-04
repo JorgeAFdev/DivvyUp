@@ -532,11 +532,19 @@ hacerlo antes de que el payload crezca en producción.
       (`javi@divvyup.test` y `ana@divvyup.test`) para el repaso del paso 43.
       El vaciado que pedía este paso queda hecho de sobra: **cero documentos** en las dos, así que ni
       hay forma vieja que rompa el código nuevo ni índice único que no se pueda construir
-- [ ] 41b. **Cambiar `MONGO_URL` en el panel de Koyeb** metiendo `/prod` antes del `?`. Es lo único
-      de esta fase que no se puede hacer desde el repo
-- [ ] 42. Merge de `feat/miembros-invitados` a `main`
-- [ ] 43. Repaso extremo a extremo en producción: crear grupo por nombres, gasto pagado por un
-      miembro sin cuenta, unirse por el enlace desde otra cuenta, regenerar el código
+- [x] 41b. **Cambiar `MONGO_URL` en el panel de Koyeb** metiendo `/prod` antes del `?`. Verificado
+      desde fuera comparando el `_id` que devuelve el login de producción con el de cada base: el
+      backend desplegado lee `prod`. `CLIENT_URL` sigue siendo el origen de Pages sin barra final,
+      comprobado contra el handshake del socket
+- [x] 42. Merge de `feat/miembros-invitados` a `main` (PR #81)
+- [~] 43. Repaso extremo a extremo en producción, con `javi@divvyup.test` y `ana@divvyup.test`:
+      - [x] el enlace de invitación se genera y funciona
+      - [ ] gasto pagado por un miembro sin cuenta → sale acreedor en el balance
+      - [ ] unirse por el enlace desde la otra cuenta heredando el historial
+      - [ ] regenerar el código invalida el enlace anterior
+      - [ ] llega una notificación por socket con las dos partes desplegadas
+      - [ ] registro subiendo foto, que es el único camino que toca Cloudinary y que los Cypress
+            evitaban a propósito
 
 ## Descartado
 

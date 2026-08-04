@@ -56,11 +56,24 @@ Both databases carry the same two throwaway accounts, `javi@divvyup.test` and `a
 
 ## Architecture
 
+### A group member is a name, not an account
+
+`members: [{ name, user: ObjectId|null }]`, and **`members[]._id` is the identity** that `Expense.paidBy`, `Expense.participants[].member` and `Payment.from`/`to` point at. `user` is optional: a member who will never register still owns expenses, holds a balance and can be a creditor.
+
+Joining a group is one field — `members[i].user = userId` — so nothing is ever merged or rewritten, and a member keeps their whole history. Only members with `user == null` can be claimed, or the first stranger with the link would take over the creator's member.
+
+Consequences worth knowing before touching anything here:
+
+- **`populate` cannot resolve a ref that points inside another document's subdocument array.** `balance[].member`, `debt.from` and `participants[].member` therefore have no `ref` at all; the join is done by hand with `hydrateMembers(group, target, paths)` in `utils/members.js`, and `MEMBER_PATHS` is where an expense keeps its member ids. The only surviving `populate` is `members.user`, always with the `MEMBER_FIELDS` projection — widening it is how the password hash used to reach every group member.
+- **Permission checks use `memberOf(group, userId)`**, which returns the member (not a boolean) because callers need its `_id`. It never matches a member without an account.
+- `Group.inviteCode` is 16 random bytes, unique-indexed, generated in `pre('validate')`. It is the whole authentication of the join flow, so it is regenerable and never guessable. `GET /group/invite/:code` is public and answers only `{ name }`; the list of unclaimed members stays behind the token in `GET /group/join/:code`.
+- The invite URL is built in the **frontend** from `window.location.origin`, not from `CLIENT_URL`.
+
 ### The balance/debt engine lives in the Mongoose models, not in controllers
 
 `backend/src/schemas/group.schema.js` holds the core domain logic as instance methods:
 
-- `updateBalance()` — replays every `Expense` in the group (credit the payer the full amount, debit each participant their `amountOwed`), then applies `Payment`s with `status: 'paid'`. Result is persisted to `group.balance`.
+- `updateBalance()` — seeds every member at 0, replays every `Expense` in the group (credit the payer the full amount, debit each participant their `amountOwed`), then applies `Payment`s with `status: 'paid'`. Indexed by member `_id`, and it carries no `populate`: names take no part in the arithmetic. Result is persisted to `group.balance`.
 - `generateDebts()` — deletes all `status: 'pending'` Payments for the group and greedily re-derives them by matching negative balances (debtors) against positive ones (creditors).
 
 **"Debts" are not a separate collection — a debt is a `Payment` with `status: 'pending'`.** Settling one flips it to `'paid'`, which changes the balance on the next recalculation.
@@ -86,7 +99,7 @@ So request paths in tests have no `/api` prefix, and `req.app.get('socketio')` i
 
 `socket.server.js` puts each client into a room named `user:<userId>` when it emits `register`. The `io` instance is stashed with `app.set('socketio', io)` and controllers retrieve it via `req.app.get('socketio')`, then call `sendNotificationToUser(io, userId, type, message, data)` from `services/notifications.js`, which emits a `notification` event to that room. Frontend side is `components/notifications/notifications.jsx` — a render-null component that opens the socket and pipes events into react-toastify.
 
-Note: `notificationTypes` exports the key `EXPENSE_SETTLED` but `payments.controller.js` reads `notificationTypes.DEBT_SETTLED` (undefined). If you touch notification types, reconcile the two.
+Notifications only go to members with a linked `user` — `linkedUserIds()` in `utils/members.js` filters them — since emitting to a member without an account means emitting into an empty room.
 
 ### Auth
 
@@ -108,7 +121,9 @@ Styling is CSS Modules (`foo.module.css` beside `foo.jsx`) plus MUI. `context/da
 
 `routers/router.js` mounts `/group` twice (expense routes and group routes both live under it), plus `/user`, `/auth`, `/payment`. All validation is inline in the controllers — there is no `middlewares/` directory any more (its three helpers were only ever wired to routes that got deleted); `notes.txt` still tracks moving validation out.
 
-Profile images: multer with `memoryStorage()` → `config/cloudinary.config.js` → `uploadToCloudinary(buffer)` returns the secure URL stored on `user.profilePicture`.
+Profile images: multer with `memoryStorage()` → `config/cloudinary.config.js` → `uploadToCloudinary(buffer)` returns the secure URL stored on `user.profilePicture`. It is optional everywhere — registration works without one and `updateUser` only touches the field when a file arrives. With no picture the UI falls back to the name's initials (`initialsOf()`), which is also what a member without an account gets.
+
+An empty result is a `200 []`, not a 404: that goes for `getUserGroups`, `getExpensesByUserId` and `getExpensesByGroupId`.
 
 ## Testing notes
 

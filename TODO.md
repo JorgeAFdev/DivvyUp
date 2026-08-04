@@ -19,16 +19,17 @@
 **Suelto, del mismo repaso:**
 
 - `secret` se lee a nivel de módulo (`user.schema.js:6`), igual que en `security/jwt.js`. Si el módulo se carga antes de `dotenv.config()`, el secreto es `undefined` y `jwt.sign` peta. Ya obliga a un workaround en `backend/src/tests/group.test.js`.
-- **`GET /group/:groupId/groupDetails` devuelve el hash bcrypt de todos los miembros.** `getGroupDetails` hace `.populate('members.user')` **sin proyección** (`group.controller.js:219`) y `password` no lleva `select: false` en `user.schema.js`, así que cualquier miembro de un grupo recibe el hash y el email del resto en cada carga del detalle. Lo tapa la rama `feat/miembros-invitados`, que proyecta `name email profilePicture`; hasta que se mergee sigue vivo en producción. La defensa de verdad es `select: false` en el campo más `.select('+password')` en el login de `auth.routes.js`, que es el único sitio que necesita el hash.
+- **`password` sigue sin `select: false`.** La fuga concreta que había —`getGroupDetails` hacía `.populate('members.user')` sin proyección y mandaba el hash bcrypt de todos los miembros en cada carga— se cerró al desplegar la tarea 2: ahora todos los `populate` llevan la proyección `MEMBER_FIELDS`, definida en un único sitio. Pero la defensa de verdad sigue pendiente: `select: false` en el campo, más `.select('+password')` en el login de `auth.routes.js`, que es el único sitio que necesita el hash. Mientras no esté, cualquier `populate` o `findOne` nuevo que se olvide de proyectar vuelve a exponerlo.
 - **No hay validación de fuerza de contraseña en ningún sitio.** `auth.routes.js` sólo comprueba que `email` y `password` vengan en el body, así que hoy se puede registrar una cuenta con la contraseña `a`. El único regex que existía (`validatePassword`, 8 caracteres con mayúscula, minúscula y dígito) vivía en `middlewares/index.js`, colgado de `POST /user/create` — una ruta sin auth que el front nunca llamó y que se borró junto con el fichero. Si se reengancha, sale de ahí: `git show HEAD~1:backend/src/middlewares/index.js`.
 
-## 2. Miembros de grupo que no son usuarios registrados
+## 2. Miembros de grupo que no son usuarios registrados — HECHO
 
-**Decidido y planificado al detalle en [PLAN-miembros-invitados.md](PLAN-miembros-invitados.md).**
+**Desplegado el 04-08-2026** (PR #81). Un miembro es un nombre: `members[]` con `_id` propio como
+identidad y `user` opcional, así que con una sola cuenta se lleva el grupo entero y quien quiera se
+une después por el enlace, eligiéndose de la lista y heredando su historial.
 
-En una línea: un miembro pasa a ser un nombre (`members[]` con `_id` propio como identidad, `user`
-opcional), así que con una sola cuenta se lleva el grupo entero, y quien quiera se une después por
-el enlace compartible del grupo eligiéndose de la lista.
+El desarrollo completo, con las decisiones descartadas y por qué, está en
+[PLAN-miembros-invitados.md](PLAN-miembros-invitados.md).
 
 ## 3. Landing page
 
