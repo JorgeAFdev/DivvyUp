@@ -117,6 +117,22 @@ tiene cuenta no verá el grupo en su app hasta que pulse el enlace**. Con los mi
 piso cada mes es fricción repetida. Se acepta a cambio de un único camino de resolución y de que
 desaparezca toda la clase de error "ese email no existe".
 
+### Ajustes de contrato cerrados el 31-07-2026
+
+Salieron de la revisión de los PRs A, B y C, antes de escribir el front:
+
+- **El nombre que se pinta es siempre `member.name`**, nunca `member.user.name`. El nombre pertenece
+  al grupo y cualquier miembro puede editarlo; la cuenta enlazada sólo aporta el avatar. Si mandara
+  el de la cuenta, cambiarse el nombre en el perfil se lo cambiaría a todo el mundo en todos sus
+  grupos.
+- **Lista vacía es `200 []`, no 404.** Afecta a `getUserGroups`, `getExpensesByUserId` y
+  `getExpensesByGroupId`. Recién registrado, y también nada más crear un grupo sin gastos, la app
+  recibía 404 de algo que simplemente no existe todavía.
+- **`MEMBER_FIELDS` es `'name profilePicture'`**: fuera el email. El formulario de miembros es sólo
+  nombre, así que el front ya no necesita correos de nadie.
+- **Liquidar un pago ya `paid` es 409.** Dos clics seguidos mandaban dos PATCH y llegaban dos
+  notificaciones al acreedor.
+
 ### Baja de un miembro con gastos → 409
 
 Si el miembro aparece como `paidBy` o participante de algún gasto, el PUT falla con 409 y el
@@ -221,6 +237,42 @@ el nombre que quiera. Es seguro por un motivo concreto: un miembro recién cread
 historial, así que no le roba deudas a nadie — a diferencia de elegir uno existente. El riesgo es
 que alguien con el enlace infle el grupo con miembros de más, y son miembros sin gastos que
 cualquier miembro puede quitar.
+
+### Quien llega sin sesión aterriza en un login mudo
+
+Entra en esta rama: el enlace es la puerta de entrada de la feature, y hoy la mitad de la gente que
+lo abre no tiene cuenta todavía.
+
+**Estado actual (verificado):** `/join/:inviteCode` va envuelta en `RequireAuth` (`App.jsx:33`), que
+redirige a `/login?next=/join/<code>` con `replace`. El destino se conserva y el salto entre login y
+registro lo arrastra (`loginForm.jsx:63`, `registerForm.jsx:120`), así que el mecanismo funciona —
+es lo que valida el smoke de Cypress. Lo que falta es el **contexto**: la pantalla de login es la de
+siempre, sin una palabra sobre el grupo. Quien abre el enlace desde WhatsApp sin cuenta ve un
+formulario de login que no ha pedido, no sabe que venía de una invitación ni que tiene que
+registrarse para continuar, y lo normal es que cierre la pestaña.
+
+**A decidir:**
+
+- **Lo mínimo, sin tocar backend:** el `?next=` ya dice que el destino era `/join/…`, así que la
+  pantalla de login/registro puede pintar un aviso ("te han invitado a un grupo; inicia sesión o crea
+  una cuenta para unirte"). Cero llamadas nuevas y cero cambios de contrato, pero **no puede decir el
+  nombre del grupo**.
+- **Con el nombre del grupo hay que abrir un endpoint.** `GET /group/join/:inviteCode` lleva
+  `jwtMiddleware` (`group.routes.js:9`), así que sin sesión no se puede leer nada del grupo. Haría
+  falta una variante pública que devuelva **sólo el nombre**, nunca la lista de miembros. El
+  `inviteCode` ya es el secreto (22 caracteres de `crypto.randomBytes(16)`), así que quien lo tiene
+  podría unirse de todas formas; pero servirlo sin auth deja mirar el nombre de un grupo sin dejar
+  rastro de ninguna cuenta. Es una decisión explícita, no un detalle de implementación.
+- **Que `/join/:inviteCode` salga de `RequireAuth`** y sea la propia pantalla la que, sin token,
+  explique qué es esto y ofrezca *Entrar* / *Crear cuenta* con el `?next=` ya puesto. Es lo más
+  amigable, porque el visitante nunca es expulsado del enlace, pero mete en un componente la vista
+  con sesión y la vista sin ella. Si se elige esto, `RequireAuth` sigue haciendo falta para el resto
+  de rutas privadas.
+- **Enlace caducado:** un aviso que afirme "te han invitado" miente si el código fue regenerado. Sin
+  llamada previa el error sólo aparece después de logarse, al cargar `/join`; con endpoint público se
+  puede avisar antes. Otro motivo para decidir primero lo del endpoint.
+- **Alcance:** es UI y copy sobre un flujo que ya funciona. Nada de tokens por persona ni de correos
+  — eso sigue descartado más abajo.
 
 ## Camino de lectura: hidratación en el backend
 
@@ -339,17 +391,29 @@ lo mismo.
 
 ## Vaciado de la base
 
-No hay script de migración: los grupos que hay son de prueba. Tras el merge a `main` se borran
-`groups`, `expenses` y `payments` en Koyeb. **`users` no se toca** — no cambia de forma.
+No hay script de migración: los grupos que hay son de prueba. Se borran `groups`, `expenses` y
+`payments` en Koyeb **antes de mergear**, no después. **`users` no se toca** — no cambia de forma.
+
+El orden importa y estaba al revés hasta la review del 04-08-2026. El push a `main` toca
+`backend/**`, así que **dispara el despliegue de Koyeb solo**: si la base aún tiene documentos
+viejos, el código nuevo se encuentra gastos con `participants.user` en vez de `.member`, y
+`entryFor(undefined)` revienta en *cada* recálculo de balance; los grupos viejos no tienen
+`members[].name`, que ahora es obligatorio, ni `inviteCode`, así que con dos o más el índice único
+ni siquiera se puede construir. Vaciando primero, lo peor que pasa son unos minutos con el código
+viejo sobre una base vacía: no ves grupos, y nada falla.
 
 Es obligatorio y no puede quedarse a medias: un gasto viejo guarda un `_id` de usuario donde el
 código nuevo espera un `_id` de miembro, y **los dos son `ObjectId` válidos**, así que no falla —
 devuelve datos silenciosamente incorrectos. Eso es peor que un error.
 
-Al mergear, el push toca `backend/**` y `frontend/**`, así que dispara Koyeb y Cloudflare Pages
-**en paralelo**: hay unos minutos de descoordinación inevitable, más el vaciado. `CLIENT_URL` en
-Koyeb tiene que seguir siendo el origen de producción de Pages sin barra final (se compara
-literalmente en `socket/socket.server.js`) y ahora también construye el enlace de invitación.
+El push toca también `frontend/**`, así que Cloudflare Pages sale **en paralelo** con Koyeb: hay
+unos minutos de descoordinación inevitable. `CLIENT_URL` en Koyeb tiene que seguir siendo el origen
+de producción de Pages sin barra final: se compara literalmente en `socket/socket.server.js`.
+Verificado el 04-08-2026 contra el handshake del socket, que devuelve el valor configurado tal cual.
+
+El enlace de invitación **no** sale de ahí, contra lo que decía este plan: lo monta el front con
+`window.location.origin` (`utils/members.js`). O sea que el enlace lleva el origen desde el que
+estés mirando la app — uno copiado en local apunta a `localhost:3000`.
 
 ## Estado de ejecución
 
@@ -364,54 +428,114 @@ Se marca cada paso al completarlo. Una fase no se da por cerrada hasta que sus t
 
 ### Fase 1 — PR A: modelo y motor · rama `feat/miembros-invitados`
 
-- [ ] 2. `group.schema.js`: `inviteCode` (único, `crypto.randomBytes(16).toString('base64url')` en
+- [x] 2. `group.schema.js`: `inviteCode` (único, `crypto.randomBytes(16).toString('base64url')` en
       `pre('validate')`), `members: [{ name, user }]`, `balance: [{ member, amount }]`
-- [ ] 3. `updateBalance()` indexa por `_id` de miembro y pierde **todos** sus `populate`
-- [ ] 4. `generateDebts()` crea los pagos con `from: debtor.member` / `to: creditor.member`
-- [ ] 5. `expense.schema.js`: `paidBy: ObjectId` sin ref, `participants: [{ member, amountOwed }]`
-- [ ] 6. `payment.schema.js`: `from` y `to` a `ObjectId` sin ref
-- [ ] 7. Nuevo `backend/src/utils/members.js` con `memberOf()` y `hydrateMembers()`
-- [ ] 8. Tests del motor con ids de miembro
+- [x] 3. `updateBalance()` indexa por `_id` de miembro y pierde **todos** sus `populate`
+- [x] 4. `generateDebts()` crea los pagos con `from: debtor.member` / `to: creditor.member`
+- [x] 5. `expense.schema.js`: `paidBy: ObjectId` sin ref, `participants: [{ member, amountOwed }]`
+- [x] 6. `payment.schema.js`: `from` y `to` a `ObjectId` sin ref
+- [x] 7. Nuevo `backend/src/utils/members.js` con `memberOf()` y `hydrateMembers()`
+- [x] 8. Tests del motor con ids de miembro (`backend/src/tests/engine.test.js`)
 
 ### Fase 2 — PR B: controladores de grupo
 
-- [ ] 9. `createGroup` recibe `members: [{ name }]`, añade al creador desde el JWT, rechaza
+- [x] 9. `createGroup` recibe `members: [{ name }]`, añade al creador desde el JWT, rechaza
       nombres duplicados
-- [ ] 10. `updateGroup` con `_id` opcional por miembro; **409** al dar de baja a alguien con gastos
-- [ ] 11. `inviteCode` en los payloads de `getGroupById`, `getUserGroups` y `getGroupDetails`
-- [ ] 12. `GET /group/join/:inviteCode` → grupo y **sólo** miembros con `user == null`
-- [ ] 13. `POST /group/join/:inviteCode` con `{ memberId }` o `{ name }`; 409 si el miembro ya está
+- [x] 10. `updateGroup` con `_id` opcional por miembro; **409** al dar de baja a alguien con gastos
+- [x] 11. `inviteCode` en los payloads de `getGroupById`, `getUserGroups` y `getGroupDetails`
+- [x] 12. `GET /group/join/:inviteCode` → grupo y **sólo** miembros con `user == null`
+- [x] 13. `POST /group/join/:inviteCode` con `{ memberId }` o `{ name }`; 409 si el miembro ya está
       enlazado o si quien llama ya es miembro
-- [ ] 14. `POST /group/:groupId/invite-code/regenerate`
-- [ ] 15. Rutas registradas en `group.routes.js`
-- [ ] 16. `deleteGroup` borra también los `Payment` del grupo
-- [ ] 17. Tests de los controladores de grupo y del flujo de unirse
+- [x] 14. `POST /group/:groupId/invite-code/regenerate`
+- [x] 15. Rutas registradas en `group.routes.js`
+- [x] 16. `deleteGroup` borra también los `Payment` del grupo
+- [x] 17. Tests de los controladores de grupo y del flujo de unirse
 
 ### Fase 3 — PR C: gastos, pagos e hidratación
 
-- [ ] 18. `expense.controller.js`: `paidBy` y `participants` como ids de miembro validados contra
+- [x] 18. `expense.controller.js`: `paidBy` y `participants` como ids de miembro validados contra
       `group.members`; fuera `User.findById(paidBy)` y `User.find({ _id: { $in: … } })`
-- [ ] 19. `getExpensesByUserId` rehecho: grupos del usuario → su `_id` de miembro → consulta
-- [ ] 20. `pay` con la excepción sin-cuenta→sin-cuenta
-- [ ] 21. `hydrateMembers` aplicado en los ~6 endpoints que hoy usan `populate`
-- [ ] 22. Notificaciones sólo a miembros con `user` enlazado
-- [ ] 23. Tests de gastos y pagos
+- [x] 19. `getExpensesByUserId` rehecho: grupos del usuario → su `_id` de miembro → consulta
+- [x] 20. `pay` con la excepción sin-cuenta→sin-cuenta
+- [x] 21. `hydrateMembers` aplicado en los ~6 endpoints que hoy usan `populate`
+- [x] 22. Notificaciones sólo a miembros con `user` enlazado; de paso, `notificationTypes` pasa a
+      exportar `DEBT_SETTLED`, que es la clave que `payments.controller.js` lee
+- [x] 23. Tests de gastos y pagos (`backend/src/tests/expense.test.js`)
 
 ### Fase 4 — PR D: frontend
 
-- [ ] 24. `groupForm.jsx` con filas de nombre, sin email; los existentes llevan su `_id`
-- [ ] 25. `createGroup.jsx` sin `getUserSession()` ni el `...data.members.push({ email })`
-- [ ] 26. `group.jsx` pasa `group.members` tal cual; avatares con iniciales si `user` es `null`
-- [ ] 27. `expenseForm.jsx`: sólo el `defaultChecked` (`p.user._id` → `p.member._id`)
-- [ ] 28. `balance.jsx` → `balance.member.name`; `expense.jsx` por miembro (`debt.jsx` no cambia)
-- [ ] 29. Pantalla `/join/:inviteCode` + ruta en `App.jsx`, con login que conserva destino
-- [ ] 30. Compartir enlace (copiar + `navigator.share`), regenerarlo, distintivo de "sin cuenta"
+- [x] 24. `groupForm.jsx` con filas de nombre, sin email; los existentes llevan su `_id`. Tu propia
+      fila no lleva botón de quitar, porque el backend rechaza que te borres y sólo se salía cancelando
+- [x] 25. `createGroup.jsx` sin `getUserSession()` ni el `...data.members.push({ email })`
+- [x] 26. `group.jsx` pasa `group.members` tal cual; avatares con iniciales si `user` es `null`
+- [x] 27. `expenseForm.jsx`: sólo el `defaultChecked` (`p.user._id` → `p.member._id`)
+- [x] 28. `balance.jsx` → `balance.member.name`; `expense.jsx` por miembro (`debt.jsx` sólo refresca
+      cuando `pay` responde 409). `userExpenses.jsx` deja de tratar el 404 como lista vacía
+- [x] 29. Pantalla `/join/:inviteCode` + ruta en `App.jsx`, con login que conserva destino:
+      `components/auth/requireAuth.jsx` en **todas** las rutas privadas y `utils/nextDestination.js`,
+      que sólo acepta rutas del propio sitio para que `?next=` no sea un redirector abierto. Los
+      enlaces entre login y registro arrastran el destino
+- [x] 30. Compartir enlace (copiar + `navigator.share`), regenerarlo, distintivo de "sin cuenta"
+
+Verificado con `frontend/cypress/e2e/smoke-miembros.cy.js` contra la app real (2/2): grupo creado por
+nombres, gasto pagado por un miembro sin cuenta que sale acreedor, una segunda cuenta uniéndose por
+el enlace y heredando el historial, y el visitante sin sesión redirigido a `/login?next=…`.
+
+### Fase 4b — aterrizaje del enlace para quien no tiene sesión
+
+- [x] 31. Decidido el 04-08-2026: **ruta nueva sin auth**, `GET /group/invite/:inviteCode`, que
+      devuelve sólo `{ name }` y 404 si el código ya no vale. Handler aparte, no una condición dentro
+      del actual: la lista de miembros libres es lo único que hay que proteger de verdad, y una
+      condición compartida está a un bug de filtrarla
+- [x] 32. Pantalla de aterrizaje (`pages/join/inviteLanding.jsx`): quien abre `/join/:inviteCode` sin
+      token ve el nombre del grupo, qué es DivvyUp, y *Sign in* / *Create account* con el `?next=`
+      puesto. La ruta sale de `RequireAuth`, porque ahora decide la propia pantalla
+- [x] 33. **La foto de perfil deja de ser obligatoria al registrarse** (punto 6 del TODO), que era el
+      último obstáculo del camino que abre esta fase: el `append` sólo viaja si hay fichero —antes
+      mandaba el string `"undefined"`—, el avatar cae a la inicial del nombre, y desaparece
+      `via.placeholder.com`, que ya no responde (punto 8). De paso, `updateUser` deja de borrar la
+      foto cada vez que editas sólo el nombre
+- [x] 34. Cypress `invite-landing.cy.js`: visitante sin sesión abre el enlace → ve la explicación con
+      el nombre del grupo → se registra desde ahí sin subir foto → cae en `/join/:inviteCode` y
+      reclama su miembro, sin volver a pegar el enlace
+
+### Fase 4c — lo que la review dejó para después
+
+Los cuatro hallazgos que no bloqueaban: ninguno afecta a la corrección de los datos, y por eso no
+entraron en el paso 40. Van antes del cierre porque son de código ya escrito y el 37 conviene
+hacerlo antes de que el payload crezca en producción.
+
+- [x] 35. `userExpenses.jsx`: el `toast.error` sale del render a un `useEffect`, como ya lo hace
+      `groupDetails.jsx`. Hoy es un efecto secundario en el render, así que React avisa y el toast se
+      repite en cada uno
+- [x] 36. `createExpense.jsx` recibe los miembros por props en vez de pedir `getGroupById`, porque
+      `getGroupDetails` ya los devuelve y son exactamente los mismos
+- [x] 37. `MEMBER_PATHS` a `utils/members.js`: `group.controller.js` lo inlinea mientras
+      `expense.controller.js` tiene la constante
+- [x] 38. `expenseResponse` deja de empotrar el grupo entero —miembros incluidos— en cada gasto. Con
+      50 gastos y 8 miembros esa lista viaja 50 veces. `expenseList` y `expense` reciben `groupId` y
+      `groupMembers` por props, y `getExpensesByUserId` devuelve `members` **una vez por grupo**
 
 ### Fase 5 — cierre
 
-- [ ] 31. Merge de `feat/miembros-invitados` a `main`
-- [ ] 32. **Vaciar `groups`, `expenses` y `payments` en Koyeb** (`users` no se toca)
-- [ ] 33. Repaso extremo a extremo en producción: crear grupo por nombres, gasto pagado por un
+- [x] 39. Review de `feat/miembros-invitados` entera, con los cuatro PRs ya dentro. Es la última
+      oportunidad de leerla como una sola pieza: el merge a `main` ya no tiene vuelta atrás barata,
+      porque arrastra el vaciado de la base
+- [x] 40. Corregir los hallazgos que bloquean: reparto con más de 2 decimales, `participants` que no
+      es lista, grupo que se queda en un miembro, participante repetido, nombre de miembro sin tope,
+      nombre del creador sin `trim`, deudas regeneradas al renombrar, pago `cancelled` reactivable,
+      cuenta borrada en `getExpensesByUserId`, y el botón de quitar miembro al crear grupo
+- [x] 41. **Separar las bases, que es lo que hacía falta de verdad.** Local y Koyeb compartían
+      cluster *y* base, porque `MONGO_URL` no llevaba nombre en la ruta y Mongo usa `test` por
+      defecto: 15 de los 19 grupos de producción eran restos de mis Cypress. Ahora local va a `/test`
+      y Koyeb a `/prod`. Las dos bases quedan vacías salvo dos cuentas reutilizables
+      (`javi@divvyup.test` y `ana@divvyup.test`) para el repaso del paso 43.
+      El vaciado que pedía este paso queda hecho de sobra: **cero documentos** en las dos, así que ni
+      hay forma vieja que rompa el código nuevo ni índice único que no se pueda construir
+- [ ] 41b. **Cambiar `MONGO_URL` en el panel de Koyeb** metiendo `/prod` antes del `?`. Es lo único
+      de esta fase que no se puede hacer desde el repo
+- [ ] 42. Merge de `feat/miembros-invitados` a `main`
+- [ ] 43. Repaso extremo a extremo en producción: crear grupo por nombres, gasto pagado por un
       miembro sin cuenta, unirse por el enlace desde otra cuenta, regenerar el código
 
 ## Descartado

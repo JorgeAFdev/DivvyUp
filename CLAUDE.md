@@ -50,6 +50,10 @@ There is no lint script and no eslint config file, despite eslint deps in the ro
 
 `.env` files are per-workspace (`backend/.env`, `frontend/.env`), not at the root — see README for the full list. Backend needs `MONGO_URL`, `jwt_secret` (lowercase), `CLIENT_URL` (Socket.IO CORS origin), Cloudinary and SendGrid keys. Frontend needs `VITE_API_URL` and `VITE_SOCKET_URL`.
 
+**Local and Koyeb share the Atlas cluster but not the database.** The database is the path segment of `MONGO_URL`, before the `?`: local uses `/test`, Koyeb uses `/prod`. Leaving the path empty is what MongoDB reads as `test`, which is how running Cypress locally used to write straight into production — 15 of the 19 groups there were spec leftovers. If you add the name after the query string it silently keeps using `test`.
+
+Both databases carry the same two throwaway accounts, `javi@divvyup.test` and `ana@divvyup.test` (password in `notes.txt`), so the invite flow can be exercised end to end without registering anything. Backend jest never touches either: `connectDB()` swaps to `mongodb-memory-server` under `NODE_ENV=test`.
+
 ## Architecture
 
 ### The balance/debt engine lives in the Mongoose models, not in controllers
@@ -63,7 +67,13 @@ There is no lint script and no eslint config file, despite eslint deps in the ro
 
 `expense.schema.js` registers `post('save' | 'findOneAndUpdate' | 'findOneAndDelete')` hooks that load the group and call both methods. Consequence: any expense mutation must go through document `save()` or those specific query helpers, or balances and debts will silently drift. Bulk operations (`updateMany`, `insertMany`) bypass the hooks.
 
-All money is rounded via `roundToTwoDecimals` at every accumulation step.
+### Money is `decimal.js`, never native floats
+
+**Every monetary calculation goes through `decimal.js`** (a real `dependency` of the backend). No `+`/`-`/`/` on amounts, no `Math.round(x * 100) / 100`, no `toFixed(2)` to "round" — those are what let a group's balance stop netting to zero.
+
+- Accumulate as `Decimal`, convert once at the boundary: MongoDB stores `Number`, so the last step is `.toDecimalPlaces(2).toNumber()`. `updateBalance()` and `generateDebts()` do exactly that.
+- Splitting an expense floors each share (`ROUND_DOWN`) and hands the leftover cents out one each from the top of the participant list (`splitEvenly` in `expense.controller.js`). Dividing evenly and rounding each share independently loses or invents cents: 10 € between 3 gave three shares of 3.33 against a 10 € credit, leaving the group permanently 1 cent out.
+- Watch the predicates: `isPositive()` is **true for zero** and `isNegative()` is true for `-0`, so comparisons that must exclude zero use `.greaterThan(0)` / `.lessThan(0)`.
 
 ### Two Express app factories — pick the right one
 
@@ -90,7 +100,7 @@ Frontend stores `{token, user}` as JSON in `localStorage` under the key `user-se
 
 `utils/axios.js` creates a single axios instance from `VITE_API_URL`. There is **no auth interceptor** — every call passes `authHeaders(token)` explicitly. Endpoints are grouped per resource in `utils/{group,expense,payment}Api.js`.
 
-Data fetching is `@tanstack/react-query` **v5** — object syntax only (`useQuery({ queryKey, queryFn })`, `useMutation({ mutationFn })`, `invalidateQueries({ queryKey })`); the old `react-query` package and its positional API are gone. The `QueryClientProvider` is set up in `App.jsx`. Note that adoption is partial: only `groupDetails.jsx`, `userExpenses.jsx`, `registerForm.jsx` and `userEditForm.jsx` use it, and every query lives inline in the component — the rest still fetch with `useEffect` + `useState` and lift state to the parent (`groupList.jsx` takes `groups`/`setGroups` as props). `TODO.md` §6 tracks moving all of it into per-resource hooks; new code should go through react-query, and preferably through a hook in `src/hooks/`.
+Data fetching is `@tanstack/react-query` **v5** — object syntax only (`useQuery({ queryKey, queryFn })`, `useMutation({ mutationFn })`, `invalidateQueries({ queryKey })`); the old `react-query` package and its positional API are gone. The `QueryClientProvider` is set up in `App.jsx`. Note that adoption is partial: only `groupDetails.jsx`, `userExpenses.jsx`, `registerForm.jsx` and `userEditForm.jsx` use it, and every query lives inline in the component — the rest still fetch with `useEffect` + `useState` and lift state to the parent (`groupList.jsx` takes `groups`/`setGroups` as props). `TODO.md` §7 tracks moving all of it into per-resource hooks; new code should go through `@tanstack/react-query`, and preferably through a hook in `src/hooks/`.
 
 Styling is CSS Modules (`foo.module.css` beside `foo.jsx`) plus MUI. `context/darkModeContext.jsx` still exists, but recent commits deliberately removed per-component `useDarkMode` usage in favor of the MUI theme (`useTheme`) — follow that direction in new components.
 

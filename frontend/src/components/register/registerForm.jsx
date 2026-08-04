@@ -2,9 +2,10 @@ import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../utils/axios';
 import styles from './registerForm.module.css';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/userContextAuth';
 import { toast } from 'react-toastify';
+import { nextDestination } from '../../utils/nextDestination';
 
 const RegisterForm = () => {
     const queryClient = useQueryClient();
@@ -16,7 +17,9 @@ const RegisterForm = () => {
             formData.append('name', data.name);
             formData.append('email', data.email);
             formData.append('password', data.password);
-            formData.append('profilePicture', data.profilePicture[0]);
+            if (data.profilePicture?.[0]) {
+                formData.append('profilePicture', data.profilePicture[0]);
+            }
 
             const response = await api.post('/auth/register', formData, {
                 headers: {
@@ -33,13 +36,14 @@ const RegisterForm = () => {
 
     const { login } = useAuth();
     const navigate = useNavigate();
+    const { search } = useLocation();
     const mutation = useMutation({
         mutationFn: createUser,
         onSuccess: (userData) => {
             login(userData);
             queryClient.invalidateQueries({ queryKey: ['users'] });
             toast.success('Registration successful 🎉');
-            navigate('/groups');
+            navigate(nextDestination(search));
         }
     });
 
@@ -99,20 +103,21 @@ const RegisterForm = () => {
             {errors.password && <p className={styles.registerErrorMessage}>{errors.password.message}</p>}
 
             <label className={styles.registerLabel}>
-                Profile Picture
+                Profile Picture <span className={styles.registerOptional}>(optional)</span>
             </label>
 
             <input
                 className={styles.registerInputFile}
                 type="file"
-                {...register('profilePicture', {
-                    required: 'Profile picture is required',
-                    validate: (value) => value.length > 0 || 'You must select an image',
-                })}
+                {...register('profilePicture')}
             />
             {errors.profilePicture && <p className={styles.registerErrorMessage}>{errors.profilePicture.message}</p>}
 
             <button type="submit" className={styles.registerSubmitButton}>Register</button>
+
+            <p className={styles.registerSwitch}>
+                Already have an account? <Link to={`/login${search}`}>Login</Link>
+            </p>
 
             <p>
                 {profilePicture?.[0] ? (

@@ -2,8 +2,10 @@ import { useFieldArray, useForm } from "react-hook-form";
 import styles from "./groupform.module.css";
 import { IoCloseOutline } from "react-icons/io5";
 
-const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers, createdBy = '' }) => {
-    const minMembers = title === 'Create group' ? 1 : 2;
+const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers, lockedMemberId }) => {
+    // An existing group cannot go down to a single member: with one participant
+    // the expense form sends a boolean instead of a list.
+    const minMembers = groupMembers ? 2 : 1;
     const {
         register,
         handleSubmit,
@@ -13,9 +15,9 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
         defaultValues: {
             name: defaultValues.name,
             description: defaultValues.description,
-            members: groupMembers ?
-                groupMembers.map(m => ({ email: m.email }))
-                : Array.from({ length: minMembers }, () => ({ email: "" }))
+            members: groupMembers
+                ? groupMembers.map((m) => ({ _id: m._id, name: m.name, hasAccount: Boolean(m.user) }))
+                : [{ name: "" }]
         },
     });
 
@@ -25,7 +27,10 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
     });
 
     const handleFormSubmit = (data) => {
-        onSubmit(data);
+        onSubmit({
+            ...data,
+            members: data.members.map(({ _id, name }) => (_id ? { _id, name } : { name })),
+        });
     };
 
     return (
@@ -72,38 +77,42 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
                 </div>
 
                 <div className={styles.formField}>
-                    <label htmlFor="email" className={styles.label}>Group members</label>
-                    {createdBy && (
-                        <p className={styles.createdBy} key={createdBy}>{createdBy}</p>
-                    )}
+                    <label className={styles.label}>Group members</label>
+                    <p className={styles.hint}>
+                        Their name is enough. Anyone can join later from the group link and pick themselves off this list.
+                    </p>
                     {fields.map((field, index) => (
-                        <div key={field.id} className={styles.emailField}>
+                        <div key={field.id} className={styles.memberField}>
                             <div className={styles.row}>
                                 <input
-                                    id={`email-${index}`}
-                                    type="email"
-                                    placeholder="Email address"
-                                    {...register(`members.${index}.email`, {
-                                        required: "Email is required",
-                                        pattern: {
-                                            value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                                            message: "Invalid email address",
-                                        },
+                                    id={`member-${index}`}
+                                    type="text"
+                                    placeholder="Name"
+                                    {...register(`members.${index}.name`, {
+                                        required: "Name is required",
+                                        maxLength: { value: 30, message: 'name is to large' },
                                     })}
-                                    className={`${styles.input} ${errors.members?.[index]?.email ? styles.errorInput : ""}`}
+                                    className={`${styles.input} ${errors.members?.[index]?.name ? styles.errorInput : ""}`}
                                 />
+                                {field._id && !field.hasAccount && (
+                                    <span className={styles.tag}>no account</span>
+                                )}
                                 <div>
-                                    {fields.length > minMembers && (
-                                        <IoCloseOutline className={`${styles.btn} ${styles.redBtn}`} onClick={() => remove(index)} />
+                                    {(!lockedMemberId || field._id !== lockedMemberId) && fields.length > minMembers && (
+                                        <IoCloseOutline
+                                            className={`${styles.btn} ${styles.redBtn}`}
+                                            onClick={() => remove(index)}
+                                            id={`remove-member-${index}`}
+                                        />
                                     )}
                                 </div>
                             </div>
-                            {errors.members?.[index]?.email && (
-                                <span className={styles.errorText}>{errors.members[index].email.message}</span>
+                            {errors.members?.[index]?.name && (
+                                <span className={styles.errorText}>{errors.members[index].name.message}</span>
                             )}
                         </div>
                     ))}
-                    <button className={styles.addBtn} type="button" onClick={() => append("")} id="add-member">
+                    <button className={styles.addBtn} type="button" onClick={() => append({ name: "" })} id="add-member">
                         Add Member
                     </button>
                 </div>

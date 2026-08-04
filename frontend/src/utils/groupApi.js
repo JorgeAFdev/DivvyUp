@@ -32,3 +32,23 @@ export const getGroupDetails = async (groupId, token) => {
     return response.data;
 }
 
+
+export const getInviteName = async (inviteCode) => {
+    const response = await api.get(`/group/invite/${inviteCode}`);
+    return response.data;
+}
+
+export const getGroupByInviteCode = async (inviteCode, token) => {
+    const response = await api.get(`/group/join/${inviteCode}`, authHeaders(token));
+    return response.data;
+}
+
+export const joinGroup = async (inviteCode, data, token) => {
+    const response = await api.post(`/group/join/${inviteCode}`, data, authHeaders(token));
+    return response.data;
+};
+
+export const regenerateInviteCode = async (groupId, token) => {
+    const response = await api.post(`/group/${groupId}/invite-code/regenerate`, {}, authHeaders(token));
+    return response.data;
+};

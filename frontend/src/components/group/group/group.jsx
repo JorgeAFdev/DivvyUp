@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 import { Avatar } from '@mui/material';
 import { Tooltip } from 'react-tooltip';
+import { getUserSession } from '../../../utils/localStorage';
+import { initialsOf } from '../../../utils/members';
 
 const Group = ({ group, setGroups }) => {
     const [isEditing, setIsEditing] = useState(false);
@@ -16,7 +18,7 @@ const Group = ({ group, setGroups }) => {
     const { token } = useAuth();
     const { showConfirmationToast } = useConfirmationToast();
 
-    const groupMembers = group?.members?.map((p) => p.user)
+    const myMemberId = group.members.find((m) => m.user?._id === getUserSession()?.id)?._id;
 
     const handleActionsClick = (e) => {
         e.stopPropagation();
@@ -29,7 +31,7 @@ const Group = ({ group, setGroups }) => {
             setIsEditing(false);
             toast.success('Group successfully edited');
         } catch (error) {
-            toast.error(error.response.data.error || 'there was an error editing the group');
+            toast.error(error.response?.data?.error || 'there was an error editing the group');
         }
     }
 
@@ -46,7 +48,7 @@ const Group = ({ group, setGroups }) => {
             setGroups((prevGroups) => prevGroups.filter((g) => g._id !== group._id));
             toast.success('Group succesfully deleted')
         } catch (error) {
-            toast.error(error.response.data.error || 'there was an error deleting the group');
+            toast.error(error.response?.data?.error || 'there was an error deleting the group');
         }
     };
     return (
@@ -59,16 +61,30 @@ const Group = ({ group, setGroups }) => {
                             <p>{group.description}</p>
                         </div>
                         <div className={styles.avatar}>
-                            {group.members.map(({ user }) => (
-                                <div key={user._id}>
-                                    <Avatar src={user.profilePicture} data-tooltip-id={user._id} sx={{ backgroundColor: 'white' }} />
-                                    <Tooltip id={user._id} content={user.name} />
+                            {group.members.map((member) => (
+                                <div key={member._id}>
+                                    <Avatar
+                                        src={member.user?.profilePicture}
+                                        data-tooltip-id={member._id}
+                                        sx={{ backgroundColor: 'white', color: '#3c8ccd', fontSize: '0.9rem' }}
+                                    >
+                                        {initialsOf(member.name)}
+                                    </Avatar>
+                                    <Tooltip id={member._id} content={member.user ? member.name : `${member.name} · no account yet`} />
                                 </div>
                             ))}
                         </div>
                     </div>
                     <div className={styles.right} onClick={handleActionsClick}>
-                        <GroupActions group={group} groupMembers={groupMembers} editGroup={handleEditGroup} onDelete={handleDeleteExpense} isEditing={isEditing} setIsEditing={setIsEditing} />
+                        <GroupActions
+                            group={group}
+                            myMemberId={myMemberId}
+                            setGroups={setGroups}
+                            editGroup={handleEditGroup}
+                            onDelete={handleDeleteExpense}
+                            isEditing={isEditing}
+                            setIsEditing={setIsEditing}
+                        />
                     </div>
                 </div>
             </li>

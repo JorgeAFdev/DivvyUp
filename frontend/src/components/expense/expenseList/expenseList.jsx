@@ -1,7 +1,7 @@
 import styles from './expenseList.module.css'
 import Expense from '../expense/expense';
 
-const ExpenseList = ({ groupExpenses, refreshGroupDetails, className, title = true }) => {
+const ExpenseList = ({ groupExpenses, groupId, groupMembers, refreshGroupDetails, className, title = true }) => {
 
     return (
         <section className={styles.expenses}>
@@ -11,7 +11,7 @@ const ExpenseList = ({ groupExpenses, refreshGroupDetails, className, title = tr
                         {title && <h2 className={styles.title}>Expenses</h2>}
                         <ul className={className ? [styles[className]] : styles.detailsList}>
                             {groupExpenses?.map((item) => (
-                                <Expense key={item._id} expense={item} refreshGroupDetails={refreshGroupDetails} />
+                                <Expense key={item._id} expense={item} groupId={groupId} groupMembers={groupMembers} refreshGroupDetails={refreshGroupDetails} />
                             ))}
                         </ul>
                     </>

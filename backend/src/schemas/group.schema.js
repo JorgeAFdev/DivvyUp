@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+const Decimal = require('decimal.js');
 const mongoose = require('mongoose');
 const Expense = require('./expense.schema');
 const Payment = require('./payment.schema');
@@ -14,14 +16,29 @@ const GroupSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    inviteCode: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
 
     members: [
       {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        name: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          default: null,
+        },
       }],
     balance: [
       {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        member: { type: mongoose.Schema.Types.ObjectId, required: true },
         amount: {
           type: Number,
           default: 0
@@ -34,57 +51,63 @@ const GroupSchema = new mongoose.Schema(
   }
 );
 
-function roundToTwoDecimals(num) {
-  return (Math.round(num * 100) / 100);
-}
+const toStoredAmount = (amount) => amount.toDecimalPlaces(2).toNumber();
+
+GroupSchema.statics.newInviteCode = function () {
+  return crypto.randomBytes(16).toString('base64url');
+};
+
+GroupSchema.pre('validate', function (next) {
+  if (!this.inviteCode) {
+    this.inviteCode = this.constructor.newInviteCode();
+  }
+  next();
+});
 
 GroupSchema.methods.updateBalance = async function () {
-  const expenses = await Expense.find({ group: this._id }).populate("participants.user", "name").populate({ path: "group", select: "name description members", populate: { path: "members.user", select: "name" } }).populate("paidBy", "name");
+  const expenses = await Expense.find({ group: this._id });
 
   const completedPayments = await Payment.find({
     group: this._id,
     status: 'paid'
   });
 
-  if (expenses.length === 0) {
-    this.balance = this.members.map(member => ({
-      user: member.user._id,
-      amount: 0
-    }));
-  } else {
-    const balance = {}
+  const balance = {};
+  const entryFor = (memberId) => {
+    const key = memberId.toString();
+    balance[key] = balance[key] ?? { member: memberId, amount: new Decimal(0) };
+    return balance[key];
+  };
 
-    expenses.forEach((expense) => {
-      const { paidBy, participants, totalAmount } = expense;
-      balance[paidBy._id] = balance[paidBy._id] ?? { user: paidBy._id, amount: 0 };
-      balance[paidBy._id].amount = roundToTwoDecimals(balance[paidBy._id].amount + totalAmount);
+  this.members.forEach((member) => entryFor(member._id));
 
-      participants.forEach((participant) => {
-        const { user, amountOwed } = participant;
-        balance[user._id] = balance[user._id] ?? { user: user._id, amount: 0 };
-        balance[user._id].amount = roundToTwoDecimals(balance[user._id].amount - amountOwed);
-      });
+  expenses.forEach((expense) => {
+    const { paidBy, participants, totalAmount } = expense;
+    const payer = entryFor(paidBy);
+    payer.amount = payer.amount.plus(totalAmount);
+
+    participants.forEach((participant) => {
+      const { member, amountOwed } = participant;
+      const debtor = entryFor(member);
+      debtor.amount = debtor.amount.minus(amountOwed);
     });
+  });
 
-    completedPayments.forEach((payment) => {
-      const { from, to, amount } = payment;
-      if (balance[from]) {
-        balance[from].amount = roundToTwoDecimals(balance[from].amount + amount);
-      }
+  completedPayments.forEach((payment) => {
+    const { from, to, amount } = payment;
+    if (balance[from]) {
+      balance[from].amount = balance[from].amount.plus(amount);
+    }
 
-      if (balance[to]) {
-        balance[to].amount = roundToTwoDecimals(balance[to].amount - amount);
-      }
-    });
+    if (balance[to]) {
+      balance[to].amount = balance[to].amount.minus(amount);
+    }
+  });
 
-    this.members.forEach(member => {
-      if (!balance[member.user._id]) {
-        balance[member.user._id] = { user: member.user._id, amount: 0 };
-      }
-    });
-
-    this.balance = Object.values(balance);
-  }
+  this.balance = Object.values(balance).map(({ member, amount }) => ({
+    member,
+    amount: toStoredAmount(amount),
+  }));
   await this.save();
   return this.balance;
 }
@@ -95,32 +118,31 @@ GroupSchema.methods.generateDebts = async function () {
     status: 'pending'
   });
 
-  const balanceCopy = JSON.parse(JSON.stringify(this.balance));
+  const balanceCopy = this.balance.map(({ member, amount }) => ({ member, amount: new Decimal(amount) }));
   let debts = [];
-  let debtors = balanceCopy.filter(person => person.amount < 0);
-  let creditors = balanceCopy.filter(person => person.amount > 0);
+  let debtors = balanceCopy.filter(person => person.amount.lessThan(0));
+  let creditors = balanceCopy.filter(person => person.amount.greaterThan(0));
 
   for (let debtor of debtors) {
     for (let creditor of creditors) {
-      if (debtor.amount === 0) break;
+      if (debtor.amount.isZero()) break;
 
-      let amountToPay = Math.min(Math.abs(debtor.amount), creditor.amount);
-      amountToPay = roundToTwoDecimals(amountToPay);
+      const amountToPay = Decimal.min(debtor.amount.abs(), creditor.amount);
 
-      if (amountToPay > 0) {
+      if (amountToPay.greaterThan(0)) {
         const newPayment = await Payment.create({
           group: this._id,
-          from: debtor.user,
-          to: creditor.user,
-          amount: amountToPay,
+          from: debtor.member,
+          to: creditor.member,
+          amount: toStoredAmount(amountToPay),
           status: 'pending'
         });
         debts.push(newPayment);
       }
 
 
-      debtor.amount = roundToTwoDecimals(debtor.amount + amountToPay);
-      creditor.amount = roundToTwoDecimals(creditor.amount - amountToPay);
+      debtor.amount = debtor.amount.plus(amountToPay);
+      creditor.amount = creditor.amount.minus(amountToPay);
     }
   }
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Avatar, Menu, MenuItem, IconButton, useTheme } from '@mui/material';
 import Logout from '../logout/logout';
 import { getUserSession } from '../../utils/localStorage';
+import { initialsOf } from '../../utils/members';
 
 const UserMenu = ({ forceUpdate }) => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -21,11 +22,12 @@ const UserMenu = ({ forceUpdate }) => {
     setAnchorEl(null);
   };
   const user = getUserSession();
-  const profilePicture = user.profilePicture || 'https://via.placeholder.com/150';
   return (
     <div>
       <IconButton onClick={handleMenuOpen} style={{ padding: 0 }}>
-        <Avatar src={profilePicture} alt="profile Picture" sx={{ backgroundColor: colorBg }} />
+        <Avatar src={user.profilePicture || undefined} alt="profile Picture" sx={{ backgroundColor: colorBg, color: textColor }}>
+          {initialsOf(user.name)}
+        </Avatar>
       </IconButton>
       <Menu
         anchorEl={anchorEl}

@@ -66,3 +66,8 @@
 .loginSubmitBtn:hover {
   background-color: #0056b3;
 }
+.loginSwitch {
+    margin-top: 12px;
+    font-size: 0.875rem;
+    text-align: center;
+}

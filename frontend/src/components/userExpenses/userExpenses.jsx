@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/userContextAuth";
@@ -20,16 +21,18 @@ const UserExpenses = () => {
         retry: 0,
     });
 
+    useEffect(() => {
+        if (isError) {
+            toast.error(error?.response?.data?.error || 'Something went wrong');
+        }
+    }, [isError, error]);
+
     if (isLoading) {
         return <div className={styles.text}>Loading your expenses...</div>;
     }
 
-    if (isError) {
-        if (error.response.status === 404) {
-            return <div className={styles.text}>You don't have any expenses</div>;
-        } else {
-            toast.error(error?.response?.data.error || 'Something went wrong')
-        }
+    if (data?.length === 0) {
+        return <div className={styles.text}>You don't have any expenses</div>;
     }
 
     const refreshExpenses = () => {
@@ -42,7 +45,7 @@ const UserExpenses = () => {
                 <div key={group.groupId}>
                     <h2 className={styles.title} onClick={() => navigate(`/groups/${group.groupId}/expenses`)} data-tooltip-id={group.groupId}>{group.groupName}</h2>
                     <Tooltip id={group.groupId} content="Click to view group details" />
-                    <ExpenseList groupExpenses={group.expenses} refreshGroupDetails={refreshExpenses} className='list' title={false} />
+                    <ExpenseList groupExpenses={group.expenses} groupId={group.groupId} groupMembers={group.members} refreshGroupDetails={refreshExpenses} className='list' title={false} />
                 </div>
             ))}
         </div>

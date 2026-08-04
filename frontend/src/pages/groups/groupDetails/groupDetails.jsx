@@ -46,10 +46,10 @@ const GroupDetails = () => {
         <div>
             <BalanceList groupBalance={data.balance} />
             <div className={styles.grid}>
-                <ExpenseList groupExpenses={data.expenses} refreshGroupDetails={refreshGroupDetails} />
+                <ExpenseList groupExpenses={data.expenses} groupId={groupId} groupMembers={data.members} refreshGroupDetails={refreshGroupDetails} />
                 <DebtsList groupDebts={data.debts} refreshGroupDetails={refreshGroupDetails} />
             </div>
-            <CreateExpense refreshGroupDetails={refreshGroupDetails} />
+            <CreateExpense groupMembers={data.members} refreshGroupDetails={refreshGroupDetails} />
         </div>
     );
 };

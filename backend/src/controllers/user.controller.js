@@ -5,15 +5,16 @@ const uploadToCloudinary = require('../config/cloudinary.config');
 exports.updateUser = async (req, res) => {
     try {
         const { id } = req.jwtPayload; // ID del usuario autenticado
-        var profilePicture = ''; 
+        const changes = { name: req.body.name, email: req.body.email };
+
+        // Only touch the picture when a new one arrives. The JWT payload is
+        // {id, name, email}, so the old code assigned undefined and wiped the
+        // picture every time someone edited just their name.
         if (req.file) {
-            const result = await uploadToCloudinary(req.file.buffer); // Usamos el buffer de la imagen
-            console.log('Imagen result:', result);
-            profilePicture = result; // Guarda la URL segura de Cloudinary
-        } else {
-                profilePicture = req.jwtPayload.profilePicture;
-            };
-        const updatedUser = await User.findByIdAndUpdate(id,{name: req.body.name, email: req.body.email, profilePicture} , {
+            changes.profilePicture = await uploadToCloudinary(req.file.buffer);
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(id, changes, {
             new: true, // Devuelve el usuario actualizado
         });
 

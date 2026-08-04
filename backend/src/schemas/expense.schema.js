@@ -18,14 +18,12 @@ const ExpenseSchema = new Schema(
         },
         paidBy: {
             type: Schema.Types.ObjectId,
-            ref: "User",
             required: true,
         },
         participants: [
             {
-                user: {
+                member: {
                     type: Schema.Types.ObjectId,
-                    ref: "User",
                     required: true,
                 },
                 amountOwed: {
