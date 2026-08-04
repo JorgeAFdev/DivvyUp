@@ -501,16 +501,16 @@ Los cuatro hallazgos que no bloqueaban: ninguno afecta a la corrección de los d
 entraron en el paso 40. Van antes del cierre porque son de código ya escrito y el 37 conviene
 hacerlo antes de que el payload crezca en producción.
 
-- [ ] 35. `userExpenses.jsx`: el `toast.error` sale del render a un `useEffect`, como ya lo hace
+- [x] 35. `userExpenses.jsx`: el `toast.error` sale del render a un `useEffect`, como ya lo hace
       `groupDetails.jsx`. Hoy es un efecto secundario en el render, así que React avisa y el toast se
       repite en cada uno
-- [ ] 36. `createExpense.jsx` recibe los miembros por props en vez de pedir `getGroupById`, porque
+- [x] 36. `createExpense.jsx` recibe los miembros por props en vez de pedir `getGroupById`, porque
       `getGroupDetails` ya los devuelve y son exactamente los mismos
-- [ ] 37. `MEMBER_PATHS` a `utils/members.js`: `group.controller.js` lo inlinea mientras
+- [x] 37. `MEMBER_PATHS` a `utils/members.js`: `group.controller.js` lo inlinea mientras
       `expense.controller.js` tiene la constante
-- [ ] 38. `expenseResponse` deja de empotrar el grupo entero —miembros incluidos— en cada gasto. Con
-      50 gastos y 8 miembros esa lista viaja 50 veces. Arrastra `expense.jsx`, que lee
-      `expense.group.members` y `expense.group._id`, así que hay que pasarle ambos por props
+- [x] 38. `expenseResponse` deja de empotrar el grupo entero —miembros incluidos— en cada gasto. Con
+      50 gastos y 8 miembros esa lista viaja 50 veces. `expenseList` y `expense` reciben `groupId` y
+      `groupMembers` por props, y `getExpensesByUserId` devuelve `members` **una vez por grupo**
 
 ### Fase 5 — cierre
 

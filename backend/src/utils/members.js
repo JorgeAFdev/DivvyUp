@@ -2,6 +2,9 @@
 // that the password hash is not in the projection.
 const MEMBER_FIELDS = 'name profilePicture';
 
+// Where a member id sits inside an expense, for hydrateMembers.
+const MEMBER_PATHS = ['paidBy', 'participants.member'];
+
 const idOf = (value) => (value && value._id ? value._id : value);
 
 const toPlain = (doc) =>
@@ -49,4 +52,4 @@ const linkedUserIds = (group, memberIds) =>
     .filter((m) => m.user && memberIds.some((id) => m._id.equals(id)))
     .map((m) => idOf(m.user).toString());
 
-module.exports = { MEMBER_FIELDS, idOf, memberOf, membersById, hydrateMembers, linkedUserIds };
+module.exports = { MEMBER_FIELDS, MEMBER_PATHS, idOf, memberOf, membersById, hydrateMembers, linkedUserIds };

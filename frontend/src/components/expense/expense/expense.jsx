@@ -9,17 +9,16 @@ import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 import { Tooltip } from 'react-tooltip';
 import { initialsOf } from '../../../utils/members';
 
-const Expense = ({ expense, refreshGroupDetails }) => {
+const Expense = ({ expense, groupId, groupMembers, refreshGroupDetails }) => {
     const [isEditing, setIsEditing] = useState(false);
 
     const { token } = useAuth();
     const { showConfirmationToast } = useConfirmationToast();
 
-    const groupMembers = expense.group.members;
 
     const handleEditExpense = async (data) => {
         try {
-            const response = await updateGroupExpense(expense.group._id, expense._id, data, token);
+            const response = await updateGroupExpense(groupId, expense._id, data, token);
             setIsEditing(false);
             refreshGroupDetails();
             toast.success('Expense succesfully edited');
@@ -37,7 +36,7 @@ const Expense = ({ expense, refreshGroupDetails }) => {
 
     const onDelete = async () => {
         try {
-            await deleteGroupExpense(expense.group._id, expense._id, token);
+            await deleteGroupExpense(groupId, expense._id, token);
             refreshGroupDetails();
             toast.success('Expense succesfully deleted');
         } catch (error) {
