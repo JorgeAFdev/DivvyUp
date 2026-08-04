@@ -33,6 +33,11 @@ export const getGroupDetails = async (groupId, token) => {
 }
 
 
+export const getInviteName = async (inviteCode) => {
+    const response = await api.get(`/group/invite/${inviteCode}`);
+    return response.data;
+}
+
 export const getGroupByInviteCode = async (inviteCode, token) => {
     const response = await api.get(`/group/join/${inviteCode}`, authHeaders(token));
     return response.data;

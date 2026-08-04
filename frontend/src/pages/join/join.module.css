@@ -75,3 +75,9 @@
 .link:hover {
     color: #1e90ff;
 }
+
+.actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}

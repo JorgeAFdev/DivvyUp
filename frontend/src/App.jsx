@@ -30,7 +30,7 @@ function App() {
               <Route path="/groups" element={<RequireAuth><Groups /></RequireAuth>} />
               <Route path="/groups/:groupId/expenses" element={<RequireAuth><GroupDetails /></RequireAuth>} />
               <Route path="/my-expenses" element={<RequireAuth><MyExpenses /></RequireAuth>} />
-              <Route path="/join/:inviteCode" element={<RequireAuth><Join /></RequireAuth>} />
+              <Route path="/join/:inviteCode" element={<Join />} />
               <Route path="*" element={<NoMatch />} />
             </Route>
           </Routes>

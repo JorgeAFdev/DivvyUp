@@ -5,6 +5,7 @@ import { Button } from '@mui/material';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/userContextAuth';
 import { getGroupByInviteCode, joinGroup } from '../../utils/groupApi';
+import InviteLanding from './inviteLanding';
 import styles from './join.module.css';
 
 const Join = () => {
@@ -20,6 +21,7 @@ const Join = () => {
         queryKey: ['invite', inviteCode],
         queryFn: () => getGroupByInviteCode(inviteCode, token),
         retry: 0,
+        enabled: Boolean(token),
     });
 
     const mutation = useMutation({
@@ -33,6 +35,10 @@ const Join = () => {
             toast.error(mutationError.response?.data?.error || 'Could not join this group');
         },
     });
+
+    if (!token) {
+        return <InviteLanding />;
+    }
 
     if (isLoading) {
         return <p className={styles.text}>Loading invite...</p>;
