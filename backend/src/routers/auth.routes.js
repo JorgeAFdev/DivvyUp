@@ -71,7 +71,7 @@ Router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Missing email or password' });
         }
 
-        const foundUser = await User.findOne({ email });
+        const foundUser = await User.findOne({ email }).select('+password');
 
         // One message for both branches on purpose. Saying which of the two
         // failed tells an attacker whether that address has an account here,

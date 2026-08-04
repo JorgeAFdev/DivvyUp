@@ -22,6 +22,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
         minlength: 8,
+        // Opt-out: no query returns the hash unless it asks with select('+password').
+        // Only the login does. Projecting at each call site instead only protects
+        // the call sites someone remembered.
+        select: false,
     },
     profilePicture: {  // Campo adicional para la foto
         type: String, // Guardará una URL o ruta de la imagen
