@@ -37,7 +37,7 @@ const InviteLanding = () => {
             <h2 className={styles.title}>You have been invited to {invite.name}</h2>
             <p className={styles.text}>
                 DivvyUp keeps track of who paid what in a group and who owes whom. Sign in to pick
-                yourself from the member list — you will come straight back here.
+                yourself from the member list, and you will come straight back here.
             </p>
             <div className={styles.actions}>
                 <Button variant="contained" component={Link} to={`/login?next=${next}`} id="invite-login">
