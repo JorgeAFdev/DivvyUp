@@ -22,6 +22,9 @@ const validateGroupBody = ({ name, description, members }) => {
   if (members.some((member) => !cleanName(member.name))) {
     return "Every member needs a name";
   }
+  if (members.some((member) => cleanName(member.name).length > 30)) {
+    return "member name is too large";
+  }
   return null;
 };
 
@@ -41,7 +44,7 @@ const createGroup = async (req, res) => {
     }
 
     const formattedMembers = [
-      { name: creator.name, user: creator._id },
+      { name: cleanName(creator.name), user: creator._id },
       ...members.map((member) => ({ name: cleanName(member.name) })),
     ];
 
@@ -108,6 +111,8 @@ const updateGroup = async (req, res) => {
     }
 
     const removed = group.members.filter((member) => !keptIds.has(member._id.toString()));
+    const membershipChanged = removed.length > 0 || members.some((entry) => !entry._id);
+
     if (removed.length > 0) {
       const removedIds = removed.map((member) => member._id);
       const [expenses, settledPayments] = await Promise.all([
@@ -154,7 +159,11 @@ const updateGroup = async (req, res) => {
 
     await group.save();
     await group.updateBalance();
-    await group.generateDebts();
+    // Regenerating deletes and re-creates every pending Payment, so a rename
+    // would 404 anyone who already had a debt open on screen.
+    if (membershipChanged) {
+      await group.generateDebts();
+    }
     await group.populate("members.user", MEMBER_FIELDS);
 
     res.status(200).json(group);

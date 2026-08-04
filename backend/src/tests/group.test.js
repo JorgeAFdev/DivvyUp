@@ -97,6 +97,28 @@ describe("POST /group", () => {
         expect(response.status).toBe(400);
     });
 
+    it("trims the creator's name before checking for duplicates", async () => {
+        const spaced = await User.create({ name: "Bea ", email: "bea@user.com", password: "Password1" });
+
+        const response = await post("/group", spaced.generateJWT(), {
+            ...groupBody,
+            members: [{ name: "Bea" }],
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Duplicate members are not allowed");
+    });
+
+    it("rejects a member name longer than the group name allows", async () => {
+        const response = await post("/group", jorgeToken, {
+            ...groupBody,
+            members: [{ name: "A".repeat(31) }],
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("member name is too large");
+    });
+
     it("rejects a member without a name", async () => {
         const response = await post("/group", jorgeToken, {
             ...groupBody,
@@ -222,6 +244,46 @@ describe("PUT /group/:groupId", () => {
 
         const untouched = await Group.findById(group._id);
         expect(untouched.members).toHaveLength(3);
+    });
+
+    it("keeps the pending debts untouched when only names change", async () => {
+        await Expense.create(dinnerFor(group));
+        const [jorgeId, mamaId, anaId] = idsOf(group);
+        const before = (await Payment.find({ group: group._id, status: "pending" })).map((p) => p._id.toString()).sort();
+
+        const response = await put(`/group/${group._id}`, jorgeToken, {
+            name: "Piso",
+            description: "Otra descripción",
+            members: [
+                { _id: jorgeId, name: "Jorge" },
+                { _id: mamaId, name: "Mamá Pili" },
+                { _id: anaId, name: "Ana" },
+            ],
+        });
+
+        expect(response.status).toBe(200);
+
+        const after = (await Payment.find({ group: group._id, status: "pending" })).map((p) => p._id.toString()).sort();
+        expect(after).toEqual(before);
+    });
+
+    it("regenerates the debts when a member is removed", async () => {
+        await Expense.create({
+            ...dinnerFor(group),
+            totalAmount: 20,
+            participants: dinnerFor(group).participants.slice(0, 2).map((p) => ({ ...p })),
+        });
+        const [jorgeId, mamaId] = idsOf(group);
+        const before = (await Payment.find({ group: group._id, status: "pending" })).map((p) => p._id.toString());
+
+        await put(`/group/${group._id}`, jorgeToken, {
+            ...groupBody,
+            members: [{ _id: jorgeId, name: "Jorge" }, { _id: mamaId, name: "Mamá" }],
+        });
+
+        const after = (await Payment.find({ group: group._id, status: "pending" })).map((p) => p._id.toString());
+        expect(after).not.toEqual(before);
+        expect(after).toHaveLength(1);
     });
 
     it("refuses to let you remove yourself", async () => {
