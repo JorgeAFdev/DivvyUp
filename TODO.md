@@ -538,3 +538,19 @@ traduzca. Es el patrón que ya existe en Cartobol y funciona.
 - Cartobol usa express-validator y **no comparte los validadores con el front**: su fuente única son
   los códigos, no las reglas. Aquí se quiere lo segundo también, así que este punto es la mitad del
   patrón, no el patrón entero.
+
+## 16. Quitar el toast de "Login successfully"
+
+Al entrar ya se ve el cambio de pantalla: el toast confirma algo que la propia navegación confirma.
+
+**Estado actual (verificado):**
+
+- `frontend/src/components/login/loginForm.jsx:24` lanza `toast.success('Login successfully 🎉')`
+  justo antes del `navigate(nextDestination(search))`, así que el aviso aparece ya sobre la pantalla
+  de destino.
+- Es sólo esa línea: el `toast.error` del `catch` (`:28`) sí hace falta, porque un login fallido no
+  navega y sin él la pantalla no diría nada.
+- Nada lo comprueba: ningún spec de Cypress ni test busca ese texto, así que borrarlo no rompe
+  ninguna red.
+- Mismo caso en `registerForm.jsx:46` (`'Registration successful 🎉'`), que también navega después.
+  Decidir si se van los dos a la vez o sólo el del login.
