@@ -93,6 +93,75 @@ describe("POST /auth/register", () => {
     });
 });
 
+describe("POST /auth/register password strength", () => {
+    const register = (password) =>
+        fakeRequest.post("/auth/register").send({ name: "Ana", email: "ana@user.com", password });
+
+    const rejected = [
+        ["too short", "Pass1"],
+        ["no uppercase", "password1"],
+        ["no lowercase", "PASSWORD1"],
+        ["no number", "Passwordd"],
+    ];
+
+    it.each(rejected)("rejects a password with %s", async (_label, password) => {
+        const response = await register(password);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toMatch(/at least 8 characters/);
+        expect(await User.countDocuments({ email: "ana@user.com" })).toBe(0);
+    });
+
+    // A rejection must not quote what it rejected, or the password ends up in
+    // the response body and in any log that records one. Mongoose's minlength
+    // message does exactly that, which is one reason the rule is not there.
+    it.each(rejected)("never echoes the password back (%s)", async (_label, password) => {
+        const response = await register(password);
+
+        expect(JSON.stringify(response.body)).not.toContain(password);
+    });
+
+    it("accepts a password that meets the rule", async () => {
+        const response = await register("Password1");
+
+        expect(response.status).toBe(200);
+    });
+});
+
+describe("POST /auth/register field validation", () => {
+    // These reached save() and came back as a 500 saying "Error creating new
+    // user": a client error reported as a server one, with no reason attached.
+    it("answers 400 and the reason for a short name", async () => {
+        const response = await fakeRequest
+            .post("/auth/register")
+            .send({ name: "An", email: "ana@user.com", password: "Password1" });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Name must be at least 3 characters long");
+    });
+
+    it("answers 400 and the reason for a malformed email", async () => {
+        const response = await fakeRequest
+            .post("/auth/register")
+            .send({ name: "Ana", email: "nope", password: "Password1" });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Please enter a valid email address");
+    });
+
+    it("joins every reason when more than one field fails", async () => {
+        const response = await fakeRequest
+            .post("/auth/register")
+            .send({ name: "An", email: "nope", password: "weak" });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe(
+            "Name must be at least 3 characters long. Please enter a valid email address. " +
+            "Password must be at least 8 characters long and contain a lowercase letter, an uppercase letter and a number"
+        );
+    });
+});
+
 describe("PATCH /user/update", () => {
     it("never returns the password hash", async () => {
         const response = await fakeRequest

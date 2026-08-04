@@ -7,6 +7,31 @@ const uploadToCloudinary = require('../config/cloudinary.config'); // Función p
 
 const Router = express.Router();
 
+const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+const EMAIL_PATTERN = /.+@.+\..+/;
+
+// Checked here rather than on the schema so a bad request answers 400 where it
+// is read, instead of reaching save() and coming back as a ValidationError the
+// catch would have to tell apart from a real failure.
+const registrationErrors = ({ name, email, password }) => {
+    const errors = [];
+
+    if (!name || name.length < 3) errors.push('Name must be at least 3 characters long');
+    else if (name.length > 100) errors.push('Name must be at most 100 characters long');
+
+    if (!email) errors.push('Email not received');
+    else if (!EMAIL_PATTERN.test(email)) errors.push('Please enter a valid email address');
+
+    if (!password) errors.push('Password not received');
+    else if (!PASSWORD_PATTERN.test(password)) {
+        errors.push(
+            'Password must be at least 8 characters long and contain a lowercase letter, an uppercase letter and a number'
+        );
+    }
+
+    return errors;
+};
+
 // REGISTER
 Router.post('/register', upload.single('profilePicture'), async (req, res) => {
     try {
@@ -14,12 +39,9 @@ Router.post('/register', upload.single('profilePicture'), async (req, res) => {
         const { email, name, password } = req.body;
         let profilePicture = '';
 
-        if (!email) {
-            return res.status(400).json({ error: 'Email not received' });
-        }
-
-        if (!password) {
-            return res.status(400).json({ error: 'Password not received' });
+        const errors = registrationErrors(req.body);
+        if (errors.length) {
+            return res.status(400).json({ error: errors.join('. ') });
         }
 
         console.time('query user')
