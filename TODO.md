@@ -36,7 +36,39 @@
   hash bcrypt de todos los miembros en cada carga— se cerró al desplegar la tarea 2 proyectando
   `MEMBER_FIELDS` en los diez `populate`. Esa proyección se queda como está: sigue haciendo falta
   para no mandar el email de los miembros, pero ya no es lo único que separa el hash del cliente.
-- **No hay validación de fuerza de contraseña en ningún sitio.** `auth.routes.js` sólo comprueba que `email` y `password` vengan en el body, así que hoy se puede registrar una cuenta con la contraseña `a`. El único regex que existía (`validatePassword`, 8 caracteres con mayúscula, minúscula y dígito) vivía en `middlewares/index.js`, colgado de `POST /user/create` — una ruta sin auth que el front nunca llamó y que se borró junto con el fichero. Si se reengancha, sale de ahí: `git show HEAD~1:backend/src/middlewares/index.js`.
+- **Validación de fuerza de contraseña — HECHO.** `registrationErrors()` en `auth.routes.js`
+  valida nombre, email y contraseña antes de tocar la BD y devuelve 400 con los motivos unidos.
+  La regla es `/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/`, el `validatePassword` que vivía en el
+  `middlewares/index.js` borrado en `796040b`. `registerForm.jsx` valida el mismo patrón y lo
+  anuncia junto a la etiqueta.
+
+  Va en el controlador y no en el esquema a propósito: validando arriba, el 400 sale donde se lee
+  la petición, y el `catch` vuelve a significar sólo "esto ha fallado de verdad" en vez de tener
+  que distinguir un `ValidationError` de un error real. Es también lo que ya decía CLAUDE.md.
+  El precio es que la regla vive en dos sitios (controlador y front), que es lo que viene a
+  arreglar el punto 11.
+
+  **Corrección de lo que decía este punto:** era falso que se pudiera registrar una cuenta con la
+  contraseña `a`. El esquema ya tenía `minlength: 8` y la validación de Mongoose corre *antes* que
+  el hook `pre('save')` de bcrypt, así que veía la contraseña escrita y no el hash. Lo que sí
+  entraba era cualquier cosa de 8 caracteres: `password` y `12345678` se registraban con un 200.
+
+  Dos cosas que aparecieron al hacerlo:
+
+  - El registro devolvía **500 `Error creating new user`** para cualquier fallo de validación,
+    porque llegaba a `save()` y el `catch` genérico se lo tragaba. Le pasaba igual al nombre de
+    menos de 3 caracteres y al email mal formado: error del cliente reportado como error de
+    servidor, sin decir cuál. Con la validación arriba ya no llega ninguno.
+  - La regla **no** puede apoyarse en `minlength`: su mensaje por defecto cita el valor que
+    rechaza (`` Path `password` (`a`, length 1) ``), o sea que metería la contraseña en claro en
+    el cuerpo de la respuesta y en los logs. El `minlength: 8` del esquema se queda como
+    restricción estructural, pero desde el registro ya no lo alcanza nada. Hay tests que fijan
+    que ninguna respuesta de error contenga la contraseña.
+
+  Sin migración y sin nadie fuera: la regla sólo corre en el registro, así que las cuentas
+  existentes con contraseña débil siguen entrando. Tampoco pueden ponerse al día: **no existe
+  endpoint de cambio ni de reset de contraseña**, `user.routes.js` sólo tiene `PATCH /update`
+  (nombre, email, foto) y `GET /expenses`. Eso es del punto 5.
 
 ## 2. Miembros de grupo que no son usuarios registrados — HECHO
 
