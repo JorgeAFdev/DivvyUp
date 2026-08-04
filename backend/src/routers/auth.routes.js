@@ -73,14 +73,12 @@ Router.post('/login', async (req, res) => {
 
         const foundUser = await User.findOne({ email });
 
-        if (!foundUser) {
-            return res.status(400).json({ error: 'User not found, please Register' });
-        }
-
-        // Compara la contraseña
-        const isMatch = await foundUser.comparePassword(password);
+        // One message for both branches on purpose. Saying which of the two
+        // failed tells an attacker whether that address has an account here,
+        // which is the first half of a targeted phishing or reset attempt.
+        const isMatch = foundUser && await foundUser.comparePassword(password);
         if (!isMatch) {
-            return res.status(400).json({ error: 'Invalid Password' });
+            return res.status(400).json({ error: 'Invalid credentials' });
         }
 
         return res.status(200).json({
