@@ -1,8 +1,6 @@
 import { render } from '@testing-library/react';
 import { DarkModeContextProvider } from './darkModeContext';
 
-// App.css aliases --primary-color to --mui-palette-primary-main, which only
-// exists because the theme sets cssVariables. Nothing else would fail loudly.
 const rootVar = (name) =>
     [...document.styleSheets]
         .flatMap((sheet) => [...(sheet.cssRules || [])])
