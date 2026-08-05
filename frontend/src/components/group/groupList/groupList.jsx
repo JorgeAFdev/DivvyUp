@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { toast } from 'react-toastify';
 import styles from './grouplist.module.css';
 import { getGroupByUserId } from '../../../utils/groupApi';
 import Group from '../group/group';
@@ -17,13 +18,12 @@ const GroupList = ({ groups, setGroups }) => {
             const data = await getGroupByUserId(token);
             setGroups(data);
         } catch (error) {
-            console.log(error.response.data.error)
+            toast.error(error.response?.data?.error || 'there was an error loading your groups');
         }
     };
 
     return (
         <ListSection
-            isEmpty={!groups?.length}
             emptyMessage="There are no groups"
             listClassName={styles.list}
         >
