@@ -23,11 +23,11 @@ export const useConfirmationToast = () => {
                             onConfirm();
                         }}
                         sx={{
-                            background: "#3c8ccd",
+                            backgroundColor: "primary.dark",
                             borderRadius: "8px",
                             textTransform: "none",
                             fontWeight: "bold",
-                            "&:hover": { background: "#1e90ff" },
+                            "&:hover": { backgroundColor: "primary.main" },
                             ...confirmButtonProps.sx
                         }}
                         {...confirmButtonProps}

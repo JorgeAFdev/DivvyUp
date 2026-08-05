@@ -38,7 +38,7 @@ const Debt = ({ debt, refreshGroupDetails }) => {
                     color="primary"
                     size="small"
                     onClick={handlePayDebt}
-                    sx={{ background: "#3c8ccd", borderRadius: "8px", textTransform: "none", fontWeight: "bold", "&:hover": { background: "#1e90ff" } }}
+                    sx={{ backgroundColor: "primary.dark", borderRadius: "8px", textTransform: "none", fontWeight: "bold", "&:hover": { backgroundColor: "primary.main" } }}
                 >
                     Mark as paid
                 </Button>

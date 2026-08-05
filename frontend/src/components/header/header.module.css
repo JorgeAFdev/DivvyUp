@@ -42,7 +42,7 @@ body {
 }
 
 .navItem:hover {
-    background-color: #1e90ff;
+    background-color: var(--primary-color);
     color: white;
 }
 
