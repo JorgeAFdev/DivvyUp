@@ -44,30 +44,28 @@ const Expense = ({ expense, groupId, groupMembers, refreshGroupDetails }) => {
     };
 
     return (
-        <div className={styles.expense}>
-            <li className={styles.listItem}>
-                <div className={styles.row}>
-                    <div className={styles.left}>
-                        <p><strong>{expense.description}</strong></p>
-                        <div className={styles.paidBy}>
-                            <p>Paid by</p>
-                            <MemberAvatar
-                                name={expense.paidBy.name}
-                                src={expense.paidBy.user?.profilePicture}
-                                data-tooltip-id={expense.paidBy._id}
-                            />
-                            <Tooltip id={expense.paidBy._id} content={expense.paidBy.name} />
-                        </div>
-                    </div>
-                    <div className={styles.right}>
-                        <p><strong>{expense.totalAmount}€</strong></p>
-                        <div className={styles.actions}>
-                            <ExpenseActions groupMembers={groupMembers} handleEditExpense={handleEditExpense} onDelete={handleDeleteExpense} isEditing={isEditing} setIsEditing={setIsEditing} defaultValues={expense} />
-                        </div>
+        <li className={styles.expense}>
+            <div className={styles.row}>
+                <div className={styles.left}>
+                    <p><strong>{expense.description}</strong></p>
+                    <div className={styles.paidBy}>
+                        <p>Paid by</p>
+                        <MemberAvatar
+                            name={expense.paidBy.name}
+                            src={expense.paidBy.user?.profilePicture}
+                            data-tooltip-id={expense.paidBy._id}
+                        />
+                        <Tooltip id={expense.paidBy._id} content={expense.paidBy.name} />
                     </div>
                 </div>
-            </li>
-        </div>
+                <div className={styles.right}>
+                    <p><strong>{expense.totalAmount}€</strong></p>
+                    <div className={styles.actions}>
+                        <ExpenseActions groupMembers={groupMembers} handleEditExpense={handleEditExpense} onDelete={handleDeleteExpense} isEditing={isEditing} setIsEditing={setIsEditing} defaultValues={expense} />
+                    </div>
+                </div>
+            </div>
+        </li>
     );
 };
 

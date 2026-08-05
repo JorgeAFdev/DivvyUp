@@ -25,8 +25,10 @@ export const DarkModeContextProvider = ({ children }) => {
 
     const theme = useMemo(() =>
         createTheme({
+            cssVariables: true,
             palette: {
                 mode: darkMode ? 'dark' : 'light',
+                primary: { main: '#1e90ff', dark: '#3c8ccd' },
                 ...(darkMode
                     ? {
                         background: { color: '#333333', default: '#1a1a1a' },

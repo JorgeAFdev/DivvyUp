@@ -98,6 +98,14 @@ por qué, en [docs/archive/miembros-invitados.md](docs/archive/miembros-invitado
 - `cd frontend && pnpm test` sale con código 1: **2 suites fallidas, 0 tests ejecutados**. El error de las dos es el mismo: `Your test suite must contain at least one test.`
 - La causa son los dos únicos ficheros de test, `src/components/header/header.test.jsx` y `src/components/icon/icon.test.jsx`. Son plantillas con **todo el contenido comentado**, y encima importan `./Header` y `./Button`, ficheros que no existen (son `header.jsx` e `icon.jsx`).
 - El backend sí pasa (82/82), así que esto es solo del workspace de frontend. Los specs de Cypress también, y son runner aparte: esto es el jest del front.
+- Desde entonces hay una tercera suite y sí es real: `src/context/darkModeContext.test.jsx`, que
+  comprueba que el tema emite `--mui-palette-primary-main` y `--mui-palette-primary-dark` en
+  `:root`, que es de donde `App.css` saca `--primary-color`. Pasa; las dos rojas siguen siendo las
+  mismas dos plantillas.
+- **Nada corre jest en CI**: `.github/workflows/prod-deploy.yaml` está filtrado a `backend/**` y
+  Cloudflare Pages solo ejecuta `vite build`. O sea que este rojo no bloquea ningún deploy, y un
+  test de frontend hoy documenta intención, no protege la rama. Resumido también en `CLAUDE.md`,
+  sección *Testing notes*.
 
 **A decidir:**
 
@@ -554,3 +562,57 @@ Al entrar ya se ve el cambio de pantalla: el toast confirma algo que la propia n
   ninguna red.
 - Mismo caso en `registerForm.jsx:46` (`'Registration successful 🎉'`), que también navega después.
   Decidir si se van los dos a la vez o sólo el del login.
+
+## 17. Un `Button` propio, reutilizable y que pase WCAG
+
+Hoy conviven **dos implementaciones de botón sin nada en común**: los formularios usan `<button>`
+nativo con su propio CSS Module, y el resto de la app usa `@mui/material/Button` con su `sx` copiado.
+Ninguna de las dos pasa el contraste mínimo de AA, y entre las dos hay tres azules distintos.
+
+**Estado actual (verificado):**
+
+- **Nativos, con CSS Module propio:** `loginForm.jsx:65`, `registerForm.jsx:136`, `expenseForm.jsx:118`, `groupForm.jsx:115` y `:123`, `userEditForm.jsx:146`,
+  `userEdit.jsx:11`, `join.jsx:81` y `:119`, `logout.jsx:19`.
+- **De MUI, con `sx` a mano:** `debt.jsx:35`, los dos de `useConfirmationToast.jsx`, los cinco de
+  `groupActions.jsx`, los tres de `expenseActions.jsx`, y `join.jsx:54` y `:114`.
+- La duplicación es literal, no parecida. `.submitButton` de `expenseform.module.css` y el de
+  `groupform.module.css` son **byte a byte el mismo bloque** (nueve declaraciones). `.loginSubmitBtn`
+  y `.registerSubmitButton` son el mismo bloque con las declaraciones en otro orden. Del lado de MUI,
+  `debt.jsx:40` y `useConfirmationToast.jsx:26` repiten `borderRadius: "8px", textTransform: "none",
+  fontWeight: "bold"`, y los ocho de `groupActions`/`expenseActions` repiten
+  `color: textColor, minWidth: '0px'` resolviendo el color con su propio `useTheme()`.
+- **Tres azules de botón, sin relación entre ellos.** Los formularios de auth y de perfil usan
+  `#007bff` con hover `#0056b3`, que es el azul de Bootstrap y no aparece en ningún otro sitio de la
+  app. Los formularios de gasto y grupo usan `var(--primary-color-dark)` (`#3c8ccd`). `join.jsx:54`
+  hereda `palette.primary` (`#1e90ff`). Ese `#007bff` es el único hex de color que quedó sin
+  centralizar en el tema, precisamente porque vive en botones.
+- **Contraste con texto blanco:** `#1e90ff` **3.24:1**, `#3c8ccd` **3.61:1**, `#007bff` **3.98:1**.
+  AA pide 4.5:1 para texto normal, así que **ningún botón de la app lo pasa**. El único que llegaba
+  era `join.jsx:54` cuando heredaba el `#1976d2` por defecto de MUI (4.60:1), hasta que el tema pasó
+  a declarar `palette.primary`. Curiosamente el hover de login/register, `#0056b3`, da 7.04:1: el
+  estado de reposo suspende y el de hover aprueba.
+- No hay `Checkbox` ni `TextField` de MUI en el proyecto: los formularios son HTML nativo, así que la
+  superficie a cubrir son botones e iconos, nada más.
+
+**A decidir:**
+
+- **Si el azul de marca se toca.** Es la raíz: mientras `#1e90ff` siga siendo el primary, un `Button`
+  propio hereda el mismo suspenso. Sobre blanco hace falta bajar a algo del orden de `#0b6ecf` para
+  llegar a 4.5:1, y eso repinta cabecera, títulos e iconos, no sólo los botones. La alternativa es
+  reservar el azul claro para superficies grandes y usar el oscuro sólo para texto.
+- **Si el componente envuelve a MUI, o es `<button>` nativo.** Envolver mantiene el ripple, el
+  `disabled` y el anillo de foco que MUI ya resuelve; ir a nativo quita una capa y unifica con los
+  formularios, que son mayoría (diez sitios contra doce), pero obliga a reimplementar el foco visible.
+  Mezclar las dos es lo que hay hoy.
+- **Qué variantes hacen falta.** Del inventario salen cinco formas reales: submit de formulario
+  (relleno), acción principal (relleno), botón de menú con icono y texto, botón sólo icono, y enlace
+  sin fondo (`addBtn`, `join.jsx:119` y `logout.jsx`, los tres con `all: unset` o equivalente).
+- **`loginForm.jsx:65` ya es un `<button type="submit">`** — era el único `<input type="submit">` de
+  la app, y como no admite hijos habría obligado al componente a soportar dos elementos distintos.
+  Convertido por adelantado: ningún spec de Cypress envía ese formulario por UI, y los que sí envían
+  otros ya usan el selector `button[type="submit"]`.
+- Lo demás de WCAG que ya falta hoy: los dos botones que abren el menú de acciones
+  (`groupActions.jsx:72`, `expenseActions.jsx:28`) contienen sólo un `<Icon variant='dots' />` y no
+  tienen nombre accesible — `Icon` renderiza el SVG de `react-icons` sin `title`, `aria-label` ni
+  `role`. Los de dentro del menú sí lo tienen, porque llevan texto visible. El foco de teclado se ve
+  sólo con el outline por defecto del navegador.

@@ -1,18 +1,18 @@
 import Balance from "../balance/balance";
+import ListSection from "../../listSection/listSection";
 import styles from './balanceList.module.css';
 
-
 const BalanceList = ({ groupBalance }) => {
-
     return (
-        <div className={styles.balanceList}>
-            <h2 className={styles.title}>Balance</h2>
-            <div className={styles.balance}>
-                {groupBalance?.map((item, index) => (
-                    <Balance balance={item} key={index} />
-                ))}
-            </div>
-        </div>
+        <ListSection
+            title="Balance"
+            className={styles.balanceList}
+            listClassName={styles.balance}
+        >
+            {groupBalance?.map((item) => (
+                <Balance balance={item} key={item.member?._id ?? item._id} />
+            ))}
+        </ListSection>
     )
 }
 

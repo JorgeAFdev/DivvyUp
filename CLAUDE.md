@@ -140,7 +140,7 @@ An empty result is a `200 []`, not a 404: that goes for `getUserGroups`, `getExp
 
 - Backend tests use `mongodb-memory-server`: `connectDB()` in `mongo/connection/index.js` swaps to an in-memory URI whenever `NODE_ENV === 'test'`, so tests must set that env var (the `pnpm test` script does). `--runInBand` is required — the tests share one DB. The `mongodb-memory-server` import is deliberately **lazy**, inside the `NODE_ENV === 'test'` branch: it is a devDependency and is absent from the production image, so a top-level require crashes the container at boot.
 - Any backend test hitting a route needs an `Authorization: Bearer` header — almost every route carries `jwtMiddleware`. `group.test.js` sets `process.env.jwt_secret` *before* its requires, because both `security/jwt.js` and `user.schema.js` capture the secret at import time.
-- The two frontend `.test.jsx` files are entirely commented out, so `pnpm test` in `frontend/` passes vacuously.
+- `pnpm test` in `frontend/` **exits 1**: `header.test.jsx` and `icon.test.jsx` are commented out top to bottom, and jest fails a suite that contains no tests. The only live suite is `context/darkModeContext.test.jsx`. Nothing runs jest in CI either — the deploy workflow is path-filtered to `backend/**` and Cloudflare Pages only runs `vite build` — so a frontend test guards intent, not the pipeline. `TODO.md` §4 tracks getting the suite green.
 - `vitest.workspace.js` wires the Storybook test addon (Vitest + Playwright/chromium) separately from the jest setup — two independent frontend test runners coexist.
 
 ## Deployment

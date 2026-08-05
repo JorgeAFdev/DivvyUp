@@ -5,6 +5,8 @@
 }
 
 :root {
+    --primary-color: var(--mui-palette-primary-main);
+    --primary-color-dark: var(--mui-palette-primary-dark);
     --color: #252424;
     --bg-color: #f8f7f7;
     --secondary-bg-color: #f0f0f0;

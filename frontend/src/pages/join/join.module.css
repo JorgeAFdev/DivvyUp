@@ -43,7 +43,7 @@
 }
 
 .member:hover:enabled {
-    border-color: #3c8ccd;
+    border-color: var(--primary-color-dark);
 }
 
 .member:disabled {
@@ -69,11 +69,11 @@
 .link {
     all: unset;
     cursor: pointer;
-    color: #3c8ccd;
+    color: var(--primary-color-dark);
 }
 
 .link:hover {
-    color: #1e90ff;
+    color: var(--primary-color);
 }
 
 .actions {
