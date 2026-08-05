@@ -3,7 +3,7 @@ import Debt from "./debt/debt";
 
 const DebtsList = ({ groupDebts, refreshGroupDetails }) => {
     return (
-        <ListSection title="Debts" isEmpty={!groupDebts?.length}>
+        <ListSection title="Debts">
             {groupDebts?.map((debt) => (
                 <Debt key={debt._id} debt={debt} refreshGroupDetails={refreshGroupDetails} />
             ))}

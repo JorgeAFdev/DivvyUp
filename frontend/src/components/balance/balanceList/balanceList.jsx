@@ -6,7 +6,6 @@ const BalanceList = ({ groupBalance }) => {
     return (
         <ListSection
             title="Balance"
-            isEmpty={!groupBalance?.length}
             className={styles.balanceList}
             listClassName={styles.balance}
         >

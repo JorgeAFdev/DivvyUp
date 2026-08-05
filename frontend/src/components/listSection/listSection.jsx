@@ -1,6 +1,9 @@
+import { Children } from 'react';
 import styles from './listSection.module.css';
 
-const ListSection = ({ title, isEmpty, emptyMessage, listClassName, className, children }) => {
+const ListSection = ({ title, emptyMessage, listClassName, className, children }) => {
+    const isEmpty = Children.count(children) === 0;
+
     if (isEmpty && !emptyMessage) return null;
 
     return (
