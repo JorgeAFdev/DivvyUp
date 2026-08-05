@@ -18,7 +18,6 @@ const RegisterForm = () => {
             { ...data, profilePicture: data.profilePicture?.[0] },
             {
                 onSuccess: () => {
-                    toast.success('Registration successful 🎉');
                     navigate(nextDestination(search));
                 },
                 onError: (error) => {

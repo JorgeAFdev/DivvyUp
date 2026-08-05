@@ -17,7 +17,6 @@ const Login = ({ forceUpdate }) => {
   const onSubmit = (data) => {
     login.mutate(data, {
       onSuccess: () => {
-        toast.success('Login successfully 🎉');
         navigate(nextDestination(search));
       },
       onError: (error) => {

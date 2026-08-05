@@ -559,21 +559,14 @@ traduzca. Es el patrón que ya existe en Cartobol y funciona.
   los códigos, no las reglas. Aquí se quiere lo segundo también, así que este punto es la mitad del
   patrón, no el patrón entero.
 
-## 16. Quitar el toast de "Login successfully"
+## 16. Quitar el toast de "Login successfully" — HECHO
 
-Al entrar ya se ve el cambio de pantalla: el toast confirma algo que la propia navegación confirma.
+Se fueron los dos, el del login y el del registro: el `onSuccess` de `loginForm.jsx` y el de
+`registerForm.jsx` sólo navegan. La confirmación de que has entrado es la pantalla de destino, y el
+toast aparecía ya encima de ella.
 
-**Estado actual (verificado):**
-
-- `frontend/src/components/login/loginForm.jsx:24` lanza `toast.success('Login successfully 🎉')`
-  justo antes del `navigate(nextDestination(search))`, así que el aviso aparece ya sobre la pantalla
-  de destino.
-- Es sólo esa línea: el `toast.error` del `catch` (`:28`) sí hace falta, porque un login fallido no
-  navega y sin él la pantalla no diría nada.
-- Nada lo comprueba: ningún spec de Cypress ni test busca ese texto, así que borrarlo no rompe
-  ninguna red.
-- Mismo caso en `registerForm.jsx:46` (`'Registration successful 🎉'`), que también navega después.
-  Decidir si se van los dos a la vez o sólo el del login.
+Los `toast.error` de los dos `onError` siguen donde estaban, que es donde hacen falta: un login o un
+registro fallido no navega, y sin el aviso la pantalla no diría nada.
 
 ## 17. Un `Button` propio, reutilizable y que pase WCAG
 
