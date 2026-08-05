@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "test": "cross-env NODE_ENV=test jest --coverage --runInBand"
+    "test": "cross-env NODE_ENV=test jest --coverage --runInBand",
+    "clean:e2e": "node scripts/clean-e2e.js"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",
