@@ -7,7 +7,7 @@ const LAYOUTS = {
     grid: styles.grid,
 };
 
-const ExpenseList = ({ groupExpenses, groupId, groupMembers, refreshGroupDetails, variant = 'column', showTitle = true }) => {
+const ExpenseList = ({ groupExpenses, groupId, groupMembers, variant = 'column', showTitle = true }) => {
     return (
         <ListSection
             title={showTitle ? 'Expenses' : undefined}
@@ -15,7 +15,7 @@ const ExpenseList = ({ groupExpenses, groupId, groupMembers, refreshGroupDetails
             listClassName={LAYOUTS[variant]}
         >
             {groupExpenses?.map((item) => (
-                <Expense key={item._id} expense={item} groupId={groupId} groupMembers={groupMembers} refreshGroupDetails={refreshGroupDetails} />
+                <Expense key={item._id} expense={item} groupId={groupId} groupMembers={groupMembers} />
             ))}
         </ListSection>
     );

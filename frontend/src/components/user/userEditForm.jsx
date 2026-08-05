@@ -1,18 +1,16 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../utils/axios"; // Usa axios desde api.js
 import { toast } from "react-toastify";
-import { useAuth } from "../../context/userContextAuth";
-import styles from "./userEditForm.module.css"; // Mantiene los estilos CSS
+import { useUpdateProfile } from "../../hooks/useProfile";
+import { getStorageObject, setStorageObject } from "../../utils/localStorage";
+import styles from "./userEditForm.module.css";
 import { IoCloseOutline } from "react-icons/io5";
 
 const UserEditForm = ({ user, onClose }) => {
-    const queryClient = useQueryClient();
     const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm();
-    const { token } = useAuth(); // Token de autenticación
 
-    // Cargar los datos actuales del usuario en el formulario
+    const mutation = useUpdateProfile();
+
     useEffect(() => {
         if (user) {
             setValue("name", user.name);
@@ -20,64 +18,28 @@ const UserEditForm = ({ user, onClose }) => {
         }
     }, [user, setValue]);
 
-    // Función para actualizar el usuario en el backend
-    const updateUser = async (data) => {
-        try {
-            const formData = new FormData();
-            formData.append("name", data.name);
-            formData.append("email", data.email);
-
-            // Verificar si se subió una nueva imagen
-            if (data.profilePicture?.[0]) {
-                formData.append("profilePicture", data.profilePicture[0]);
-            }
-
-            // Enviar la petición PATCH al backend usando Axios
-            const response = await api.patch("/user/update", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                    Authorization: `Bearer ${token}`
-                }
-            });
-
-            return response.data;
-        } catch (error) {
-            toast.error(error.response?.data?.error || "Error al actualizar el usuario.");
-            throw error;
-        }
-    };
-
-    // React Query Mutation para manejar la actualización
-    const mutation = useMutation({
-        mutationFn: updateUser,
-        onSuccess: (updatedUser) => {
-            // Obtener sesión actual y actualizarla con los nuevos datos
-            const session = JSON.parse(localStorage.getItem("user-session")) || {};
-            session.user = updatedUser.user;
-            localStorage.setItem("user-session", JSON.stringify(session));
-
-            // Actualizar la caché de React Query
-            queryClient.setQueryData(["users"], (oldData) => {
-                if (!oldData) return [updatedUser.user];
-                return oldData.map((u) => (u.id === updatedUser.user.id ? updatedUser.user : u));
-            });
-            window.location.reload();
-
-            // Notificar éxito y cerrar el formulario
-            toast.success("¡Usuario actualizado con éxito! 🎉");
-            onClose();
-        },
-        onError: () => {
-            toast.error("Hubo un error al actualizar el usuario.");
-        }
-    });
-
-    // Manejo de envío del formulario
     const onSubmit = (data) => {
-        mutation.mutate(data);
+        mutation.mutate(
+            { ...data, profilePicture: data.profilePicture?.[0] },
+            {
+                onSuccess: (updatedUser) => {
+                    // The profile screen reads the user straight from the session, not
+                    // from a query, so the new data has to land there and the page has
+                    // to be repainted with it.
+                    const session = getStorageObject('user-session') || {};
+                    setStorageObject(JSON.stringify({ ...session, user: updatedUser.user }));
+
+                    toast.success("¡Usuario actualizado con éxito! 🎉");
+                    onClose();
+                    window.location.reload();
+                },
+                onError: (error) => {
+                    toast.error(error.response?.data?.error || "Hubo un error al actualizar el usuario.");
+                },
+            },
+        );
     };
 
-    // Obtener la vista previa de la imagen
     const profilePicture = watch("profilePicture");
 
     return (

@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@mui/material';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/userContextAuth';
-import { getGroupByInviteCode, joinGroup } from '../../utils/groupApi';
+import { useInvite, useJoinGroup } from '../../hooks/useInvite';
 import InviteLanding from './inviteLanding';
 import styles from './join.module.css';
 
@@ -12,29 +11,25 @@ const Join = () => {
     const { inviteCode } = useParams();
     const { token } = useAuth();
     const navigate = useNavigate();
-    const queryClient = useQueryClient();
 
     const [newName, setNewName] = useState('');
     const [isNaming, setIsNaming] = useState(false);
 
-    const { data: group, isLoading, isError, error } = useQuery({
-        queryKey: ['invite', inviteCode],
-        queryFn: () => getGroupByInviteCode(inviteCode, token),
-        retry: 0,
-        enabled: Boolean(token),
-    });
+    const { data: group, isLoading, isError, error } = useInvite(inviteCode);
 
-    const mutation = useMutation({
-        mutationFn: (body) => joinGroup(inviteCode, body, token),
-        onSuccess: (joined) => {
-            queryClient.invalidateQueries({ queryKey: ['groupDetails', joined._id] });
-            toast.success(`You are now part of ${joined.name}`);
-            navigate(`/groups/${joined._id}/expenses`);
-        },
-        onError: (mutationError) => {
-            toast.error(mutationError.response?.data?.error || 'Could not join this group');
-        },
-    });
+    const mutation = useJoinGroup(inviteCode);
+
+    const join = (body) => {
+        mutation.mutate(body, {
+            onSuccess: (joined) => {
+                toast.success(`You are now part of ${joined.name}`);
+                navigate(`/groups/${joined._id}/expenses`);
+            },
+            onError: (mutationError) => {
+                toast.error(mutationError.response?.data?.error || 'Could not join this group');
+            },
+        });
+    };
 
     if (!token) {
         return <InviteLanding />;
@@ -82,7 +77,7 @@ const Join = () => {
                                     type="button"
                                     className={styles.member}
                                     disabled={mutation.isPending}
-                                    onClick={() => mutation.mutate({ memberId: member._id })}
+                                    onClick={() => join({ memberId: member._id })}
                                     id={`claim-${member._id}`}
                                 >
                                     {member.name}
@@ -100,7 +95,7 @@ const Join = () => {
                     className={styles.newMember}
                     onSubmit={(event) => {
                         event.preventDefault();
-                        mutation.mutate({ name: newName });
+                        join({ name: newName });
                     }}
                 >
                     <input

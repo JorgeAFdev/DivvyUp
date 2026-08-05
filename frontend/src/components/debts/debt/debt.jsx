@@ -1,13 +1,12 @@
 import { Button } from '@mui/material';
 import styles from './debt.module.css'
-import { useAuth } from '../../../context/userContextAuth';
-import { updatePayment } from '../../../utils/paymentApi';
 import { toast } from 'react-toastify';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
+import { useSettleDebt } from '../../../hooks/usePayments';
 
-const Debt = ({ debt, refreshGroupDetails }) => {
-    const { token } = useAuth();
+const Debt = ({ debt, groupId }) => {
     const { showConfirmationToast } = useConfirmationToast();
+    const settleDebt = useSettleDebt(groupId);
 
     const handlePayDebt = async () => {
         showConfirmationToast({
@@ -16,17 +15,15 @@ const Debt = ({ debt, refreshGroupDetails }) => {
         });
     };
 
-    const confirmPayment = async () => {
-        try {
-            await updatePayment(debt._id, token);
-            toast.success('Debt marked as paid');
-            refreshGroupDetails();
-        } catch (error) {
-            toast.error(error.response?.data?.error || 'Something went wrong');
-            if (error.response?.status === 409) {
-                refreshGroupDetails();
-            }
-        }
+    const confirmPayment = () => {
+        settleDebt.mutate(debt._id, {
+            onSuccess: () => {
+                toast.success('Debt marked as paid');
+            },
+            onError: (error) => {
+                toast.error(error.response?.data?.error || 'Something went wrong');
+            },
+        });
     };
 
     return (
@@ -37,6 +34,7 @@ const Debt = ({ debt, refreshGroupDetails }) => {
                 color="primary"
                 size="small"
                 onClick={handlePayDebt}
+                disabled={settleDebt.isPending}
                 sx={{ backgroundColor: "primary.dark", borderRadius: "8px", textTransform: "none", fontWeight: "bold", "&:hover": { backgroundColor: "primary.main" } }}
             >
                 Mark as paid

@@ -1,9 +1,7 @@
 import { useForm } from 'react-hook-form';
-import api from '../../utils/axios';
-import { setStorageObject } from '../../utils/localStorage';
 import styles from './loginForm.module.css';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/userContextAuth';
+import { useLogin } from '../../hooks/useSession';
 import { toast } from 'react-toastify';
 import { nextDestination } from '../../utils/nextDestination';
 import { PASSWORD_MESSAGE, PASSWORD_PATTERN } from '../../utils/validation';
@@ -11,22 +9,21 @@ import { PASSWORD_MESSAGE, PASSWORD_PATTERN } from '../../utils/validation';
 
 const Login = ({ forceUpdate }) => {
   const { register, handleSubmit, formState: { errors } } = useForm({});
-  const { login } = useAuth();
   const navigate = useNavigate();
   const { search } = useLocation();
 
-  const onSubmit = async (data) => {
-    try {
-      const response = await api.post('/auth/login', data);
+  const login = useLogin();
 
-      if (response?.data.token) {
-        login(response.data);
+  const onSubmit = (data) => {
+    login.mutate(data, {
+      onSuccess: () => {
         toast.success('Login successfully 🎉');
         navigate(nextDestination(search));
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Login failed. Please try again.');
-    }
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.error || 'Login failed. Please try again.');
+      },
+    });
   };
 
   return (
@@ -62,7 +59,7 @@ const Login = ({ forceUpdate }) => {
       />
       {errors.password && <p id="login-password-error" className={styles.loginError}>{errors.password.message}</p>}
 
-      <button type="submit" className={styles.loginSubmitBtn}>Login</button>
+      <button type="submit" className={styles.loginSubmitBtn} disabled={login.isPending}>Login</button>
 
       <p className={styles.loginSwitch}>
         No account yet? <Link to={`/register${search}`}>Register</Link>

@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../../context/userContextAuth';
-import { getGroupDetails } from '../../../utils/groupApi';
+import { useGroupDetails } from '../../../hooks/useGroupDetails';
 import { useNavigate, useParams } from 'react-router-dom';
 import styles from "./groupDetails.module.css"
 import ExpenseList from '../../../components/expense/expenseList/expenseList';
@@ -12,16 +10,11 @@ import DebtsList from '../../../components/debts/debtsList';
 
 
 const GroupDetails = () => {
-    const queryClient = useQueryClient();
     const navigate = useNavigate();
 
     const { groupId } = useParams();
-    const { token } = useAuth();
 
-    const { data, isLoading, isError, error } = useQuery({
-        queryKey: ['groupDetails', groupId],
-        queryFn: () => getGroupDetails(groupId, token),
-    });
+    const { data, isLoading, isError, error } = useGroupDetails(groupId);
 
     useEffect(() => {
         if (isError) {
@@ -38,18 +31,14 @@ const GroupDetails = () => {
         return <div className={styles.text}>Error loading data: {error.response?.data?.error || error}</div>;
     }
 
-    const refreshGroupDetails = () => {
-        queryClient.invalidateQueries({ queryKey: ['groupDetails', groupId] });
-    };
-
     return (
         <div>
             <BalanceList groupBalance={data.balance} />
             <div className={styles.grid}>
-                <ExpenseList groupExpenses={data.expenses} groupId={groupId} groupMembers={data.members} refreshGroupDetails={refreshGroupDetails} />
-                <DebtsList groupDebts={data.debts} refreshGroupDetails={refreshGroupDetails} />
+                <ExpenseList groupExpenses={data.expenses} groupId={groupId} groupMembers={data.members} />
+                <DebtsList groupDebts={data.debts} groupId={groupId} />
             </div>
-            <CreateExpense groupMembers={data.members} refreshGroupDetails={refreshGroupDetails} />
+            <CreateExpense groupMembers={data.members} />
         </div>
     );
 };

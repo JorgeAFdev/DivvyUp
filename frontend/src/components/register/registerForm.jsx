@@ -1,55 +1,31 @@
 import { useForm } from 'react-hook-form';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../../utils/axios';
 import styles from './registerForm.module.css';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/userContextAuth';
+import { useRegister } from '../../hooks/useSession';
 import { toast } from 'react-toastify';
 import { nextDestination } from '../../utils/nextDestination';
 import { PASSWORD_HINT, PASSWORD_MESSAGE, PASSWORD_PATTERN } from '../../utils/validation';
 
 const RegisterForm = () => {
-    const queryClient = useQueryClient();
     const { register, handleSubmit, watch, formState: { errors } } = useForm();
 
-    const createUser = async (data) => {
-        try {
-            const formData = new FormData();
-            formData.append('name', data.name);
-            formData.append('email', data.email);
-            formData.append('password', data.password);
-            if (data.profilePicture?.[0]) {
-                formData.append('profilePicture', data.profilePicture[0]);
-            }
-
-            const response = await api.post('/auth/register', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-
-            return response.data;
-        } catch (error) {
-            const errorMessage = error.response?.data?.error || 'Registration failed. Please try again.';
-            toast.error(errorMessage);
-        }
-    };
-
-    const { login } = useAuth();
     const navigate = useNavigate();
     const { search } = useLocation();
-    const mutation = useMutation({
-        mutationFn: createUser,
-        onSuccess: (userData) => {
-            login(userData);
-            queryClient.invalidateQueries({ queryKey: ['users'] });
-            toast.success('Registration successful 🎉');
-            navigate(nextDestination(search));
-        }
-    });
+    const mutation = useRegister();
 
     const onSubmit = (data) => {
-        mutation.mutate(data);
+        mutation.mutate(
+            { ...data, profilePicture: data.profilePicture?.[0] },
+            {
+                onSuccess: () => {
+                    toast.success('Registration successful 🎉');
+                    navigate(nextDestination(search));
+                },
+                onError: (error) => {
+                    toast.error(error.response?.data?.error || 'Registration failed. Please try again.');
+                },
+            },
+        );
     };
 
     const profilePicture = watch('profilePicture');
@@ -133,7 +109,7 @@ const RegisterForm = () => {
             />
             {errors.profilePicture && <p id="register-profile-picture-error" className={styles.registerErrorMessage}>{errors.profilePicture.message}</p>}
 
-            <button type="submit" className={styles.registerSubmitButton}>Register</button>
+            <button type="submit" className={styles.registerSubmitButton} disabled={mutation.isPending}>Register</button>
 
             <p className={styles.registerSwitch}>
                 Already have an account? <Link to={`/login${search}`}>Login</Link>
