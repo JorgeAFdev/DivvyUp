@@ -62,7 +62,7 @@ const Login = ({ forceUpdate }) => {
       />
       {errors.password && <p id="login-password-error" className={styles.loginError}>{errors.password.message}</p>}
 
-      <input type="submit" value="Login" className={styles.loginSubmitBtn} />
+      <button type="submit" className={styles.loginSubmitBtn}>Login</button>
 
       <p className={styles.loginSwitch}>
         No account yet? <Link to={`/register${search}`}>Register</Link>
