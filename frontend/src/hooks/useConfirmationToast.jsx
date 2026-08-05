@@ -22,6 +22,7 @@ export const useConfirmationToast = () => {
                             toast.dismiss();
                             onConfirm();
                         }}
+                        {...confirmButtonProps}
                         sx={{
                             backgroundColor: "primary.dark",
                             borderRadius: "8px",
@@ -30,7 +31,6 @@ export const useConfirmationToast = () => {
                             "&:hover": { backgroundColor: "primary.main" },
                             ...confirmButtonProps.sx
                         }}
-                        {...confirmButtonProps}
                     >
                         {confirmText}
                     </Button>
@@ -41,13 +41,13 @@ export const useConfirmationToast = () => {
                         onClick={() => {
                             toast.dismiss();
                         }}
+                        {...cancelButtonProps}
                         sx={{
                             borderRadius: "8px",
                             textTransform: "none",
                             fontWeight: "bold",
                             ...cancelButtonProps.sx
                         }}
-                        {...cancelButtonProps}
                     >
                         {cancelText}
                     </Button>
