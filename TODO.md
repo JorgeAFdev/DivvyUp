@@ -76,8 +76,8 @@
 identidad y `user` opcional, así que con una sola cuenta se lleva el grupo entero y quien quiera se
 une después por el enlace, eligiéndose de la lista y heredando su historial.
 
-El desarrollo completo, con las decisiones descartadas y por qué, está en
-[PLAN-miembros-invitados.md](PLAN-miembros-invitados.md).
+Las reglas que el código nuevo tiene que respetar están en `CLAUDE.md`; las decisiones descartadas y
+por qué, en [docs/archive/miembros-invitados.md](docs/archive/miembros-invitados.md).
 
 ## 3. Landing page
 
