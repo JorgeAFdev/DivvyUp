@@ -7,12 +7,11 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { useTheme } from '@mui/material';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../../context/userContextAuth';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
-import { regenerateInviteCode } from '../../../utils/groupApi';
+import { useRegenerateInviteCode } from '../../../hooks/useGroups';
 import { inviteLinkFor } from '../../../utils/members';
 
-const GroupActions = ({ group, myMemberId, setGroups, editGroup, isEditing, setIsEditing, onDelete }) => {
+const GroupActions = ({ group, myMemberId, editGroup, isEditing, setIsEditing, onDelete }) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const open = Boolean(anchorEl);
     const handleClick = (event) => {
@@ -22,8 +21,8 @@ const GroupActions = ({ group, myMemberId, setGroups, editGroup, isEditing, setI
         setAnchorEl(null);
     };
 
-    const { token } = useAuth();
     const { showConfirmationToast } = useConfirmationToast();
+    const regenerateInviteCode = useRegenerateInviteCode(group._id);
 
     const theme = useTheme();
     const textColor = theme.palette.text.primary;
@@ -55,14 +54,15 @@ const GroupActions = ({ group, myMemberId, setGroups, editGroup, isEditing, setI
     const resetInviteLink = () => {
         showConfirmationToast({
             message: 'Anyone holding the current link will no longer be able to join. Continue?',
-            onConfirm: async () => {
-                try {
-                    const { inviteCode } = await regenerateInviteCode(group._id, token);
-                    setGroups((prevGroups) => prevGroups.map((g) => (g._id === group._id ? { ...g, inviteCode } : g)));
-                    toast.success('New invite link ready to share');
-                } catch (error) {
-                    toast.error(error.response?.data?.error || 'there was an error resetting the link');
-                }
+            onConfirm: () => {
+                regenerateInviteCode.mutate(undefined, {
+                    onSuccess: () => {
+                        toast.success('New invite link ready to share');
+                    },
+                    onError: (error) => {
+                        toast.error(error.response?.data?.error || 'there was an error resetting the link');
+                    },
+                });
             },
         });
     };

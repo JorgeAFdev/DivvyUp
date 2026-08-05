@@ -1,29 +1,30 @@
 import { useState } from 'react';
 import styles from './expense.module.css'
-import { deleteGroupExpense, updateGroupExpense } from '../../../utils/expenseApi';
 import { toast } from 'react-toastify';
 import ExpenseActions from '../expenseActions/expenseActions';
-import { useAuth } from '../../../context/userContextAuth';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
+import { useDeleteExpense, useUpdateExpense } from '../../../hooks/useExpenses';
 import { Tooltip } from 'react-tooltip';
 import MemberAvatar from '../../avatar/memberAvatar';
 
-const Expense = ({ expense, groupId, groupMembers, refreshGroupDetails }) => {
+const Expense = ({ expense, groupId, groupMembers }) => {
     const [isEditing, setIsEditing] = useState(false);
 
-    const { token } = useAuth();
     const { showConfirmationToast } = useConfirmationToast();
 
+    const updateExpense = useUpdateExpense(groupId, expense._id);
+    const deleteExpense = useDeleteExpense(groupId, expense._id);
 
-    const handleEditExpense = async (data) => {
-        try {
-            const response = await updateGroupExpense(groupId, expense._id, data, token);
-            setIsEditing(false);
-            refreshGroupDetails();
-            toast.success('Expense succesfully edited');
-        } catch (error) {
-            toast.error(error.response?.data?.error || 'there was an error editing the expense');
-        }
+    const handleEditExpense = (data) => {
+        updateExpense.mutate(data, {
+            onSuccess: () => {
+                setIsEditing(false);
+                toast.success('Expense succesfully edited');
+            },
+            onError: (error) => {
+                toast.error(error.response?.data?.error || 'there was an error editing the expense');
+            },
+        });
     }
 
     const handleDeleteExpense = async () => {
@@ -33,14 +34,15 @@ const Expense = ({ expense, groupId, groupMembers, refreshGroupDetails }) => {
         });
     };
 
-    const onDelete = async () => {
-        try {
-            await deleteGroupExpense(groupId, expense._id, token);
-            refreshGroupDetails();
-            toast.success('Expense succesfully deleted');
-        } catch (error) {
-            toast.error(error.response?.data?.error || 'there was an error deleting the expense');
-        }
+    const onDelete = () => {
+        deleteExpense.mutate(undefined, {
+            onSuccess: () => {
+                toast.success('Expense succesfully deleted');
+            },
+            onError: (error) => {
+                toast.error(error.response?.data?.error || 'there was an error deleting the expense');
+            },
+        });
     };
 
     return (

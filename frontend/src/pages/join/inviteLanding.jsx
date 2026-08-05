@@ -1,7 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { Button } from '@mui/material';
-import { getInviteName } from '../../utils/groupApi';
+import { useInviteName } from '../../hooks/useInvite';
 import styles from './join.module.css';
 
 // What someone without a session sees when they follow an invite link. The
@@ -11,11 +10,7 @@ const InviteLanding = () => {
     const { inviteCode } = useParams();
     const next = encodeURIComponent(`/join/${inviteCode}`);
 
-    const { data: invite, isLoading, isError } = useQuery({
-        queryKey: ['inviteName', inviteCode],
-        queryFn: () => getInviteName(inviteCode),
-        retry: 0,
-    });
+    const { data: invite, isLoading, isError } = useInviteName(inviteCode);
 
     if (isLoading) {
         return <p className={styles.text}>Loading invite...</p>;

@@ -1,26 +1,22 @@
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 import styles from './grouplist.module.css';
-import { getGroupByUserId } from '../../../utils/groupApi';
 import Group from '../group/group';
 import ListSection from '../../listSection/listSection';
-import { useAuth } from '../../../context/userContextAuth';
+import { useGroups } from '../../../hooks/useGroups';
 
-const GroupList = ({ groups, setGroups }) => {
+const GroupList = () => {
+    const { data: groups, isLoading, isError, error } = useGroups();
+
     useEffect(() => {
-        getGroups();
-    }, []);
-
-    const { token } = useAuth();
-
-    const getGroups = async () => {
-        try {
-            const data = await getGroupByUserId(token);
-            setGroups(data);
-        } catch (error) {
+        if (isError) {
             toast.error(error.response?.data?.error || 'there was an error loading your groups');
         }
-    };
+    }, [isError, error]);
+
+    if (isLoading) {
+        return <p className={styles.text}>Loading your groups...</p>;
+    }
 
     return (
         <ListSection
@@ -28,7 +24,7 @@ const GroupList = ({ groups, setGroups }) => {
             listClassName={styles.list}
         >
             {groups?.map((group) => (
-                <Group key={group._id} group={group} setGroups={setGroups} />
+                <Group key={group._id} group={group} />
             ))}
         </ListSection>
     );
