@@ -64,10 +64,19 @@ Joining a group is one field — `members[i].user = userId` — so nothing is ev
 
 Consequences worth knowing before touching anything here:
 
-- **`populate` cannot resolve a ref that points inside another document's subdocument array.** `balance[].member`, `debt.from` and `participants[].member` therefore have no `ref` at all; the join is done by hand with `hydrateMembers(group, target, paths)` in `utils/members.js`, and `MEMBER_PATHS` is where an expense keeps its member ids. The only surviving `populate` is `members.user`, always with the `MEMBER_FIELDS` projection — widening it is how the password hash used to reach every group member.
+- **`populate` cannot resolve a ref that points inside another document's subdocument array.** `balance[].member`, `debt.from` and `participants[].member` therefore have no `ref` at all; the join is done by hand with `hydrateMembers(group, target, paths)` in `utils/members.js`, and `MEMBER_PATHS` is where an expense keeps its member ids. The only surviving `populate` is `members.user`, always with the `MEMBER_FIELDS` projection (`'name profilePicture'`, email deliberately left out) — widening it is how the password hash used to reach every group member.
 - **Permission checks use `memberOf(group, userId)`**, which returns the member (not a boolean) because callers need its `_id`. It never matches a member without an account.
 - `Group.inviteCode` is 16 random bytes, unique-indexed, generated in `pre('validate')`. It is the whole authentication of the join flow, so it is regenerable and never guessable. `GET /group/invite/:code` is public and answers only `{ name }`; the list of unclaimed members stays behind the token in `GET /group/join/:code`.
 - The invite URL is built in the **frontend** from `window.location.origin`, not from `CLIENT_URL`.
+
+Contract rules that came out of building this and that new code has to keep:
+
+- **The name shown is always `member.name`, never `member.user.name`.** The name belongs to the group and any member can edit it; the linked account only supplies the avatar. Rendering the account's name would mean that editing your profile renames you for everyone, in every group you are in.
+- **Removing a member who appears in an expense or in a settled payment is a 409** (`updateGroup`), account or no account. `updateBalance()` rebuilds from the *expenses*, not from the member list, so without that check you can drop someone and their debts stay alive. Member names are unique within a group, compared lowercased and trimmed.
+- **`pay` has exactly one exception to "you must be the `from` or the `to`":** when neither side has a linked account, any member of the group can settle that debt. `generateDebts()` produces one as soon as two account-less members are involved and nobody would ever be able to clear it. It grants an attacker nothing new — `updateExpense` and `deleteExpense` already only check membership, the ledger is collective. Settling a payment that is not `pending` is a 409, because a double click sent two PATCHes and two notifications to the creditor.
+- **`getUserGroups` filters by `members.user`, so someone who already has an account does not see the group until they open the invite link.** That is accepted friction, not a bug: it buys a single resolution path and removes the entire "that email does not exist" class of error.
+
+Why the model looks like this, what was discarded (shadow users, a `GuestMember` collection, per-member email tokens) and why is in [docs/archive/miembros-invitados.md](docs/archive/miembros-invitados.md).
 
 ### The balance/debt engine lives in the Mongoose models, not in controllers
 
