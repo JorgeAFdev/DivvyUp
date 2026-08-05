@@ -3,7 +3,7 @@ import GroupList from "../../components/group/groupList/groupList";
 import CreateGroup from "../../components/group/createGroup/createGroup";
 
 const Groups = () => {
-    const [groups, setGroups] = useState('')
+    const [groups, setGroups] = useState([])
 
     return (
         <div>
