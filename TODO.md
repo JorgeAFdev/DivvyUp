@@ -189,31 +189,43 @@ algo que el usuario añade después editando su perfil, si quiere.
 - Ese avatar por inicial sirve también para los miembros invitados del punto 2, que por definición no
   tienen `user` ni foto — hoy caen todos en el mismo `Avatar` vacío y son indistinguibles.
 
-## 7. Sacar las queries de los componentes a hooks
+## 7. Sacar las queries de los componentes a hooks — HECHO
 
-Que cada fichero tenga una responsabilidad: el componente pinta, el hook trae los datos. Hoy la capa de datos está repartida entre los propios componentes en tres estilos distintos.
+Toda petición del frontend pasa por `@tanstack/react-query` y por un hook de `src/hooks/`: ningún
+componente importa ya `utils/*Api.js` ni la instancia de axios, y no queda un solo `useQuery` o
+`useMutation` escrito dentro de un componente. Las reglas del reparto (el hook coge el token, el
+componente pone la UI) están en `CLAUDE.md`, sección *Frontend data layer*.
 
-**Estado actual (verificado):**
+Un fichero por recurso: `useGroups`, `useGroupDetails`, `useExpenses`, `usePayments`, `useInvite`,
+`useSession` (login y registro) y `useProfile`, más `queryKeys.js` con todas las claves. `authApi.js`
+y `userApi.js` son nuevos: `loginForm`, `registerForm` y `userEditForm` llamaban a `api` directamente
+y se saltaban la capa por recurso.
 
-- Conviven **tres patrones** para hacer lo mismo:
-  1. `useQuery`/`useMutation` escritos dentro del componente: `groupDetails.jsx:21`, `userExpenses.jsx:17`, `registerForm.jsx:36`, `userEditForm.jsx:51`. Son los **únicos 4 ficheros** que usan react-query.
-  2. `useEffect` + `useState` + `await` de la función de `utils/*Api.js`, con el estado subido al padre: `groupList.jsx:8-21` (recibe `groups` y `setGroups` por props), `createExpense.jsx:20-30`, `createGroup.jsx:21`.
-  3. Mutaciones a pelo en el handler, parcheando a mano el array del padre: `group.jsx:28` y `:46` (`setGroups(prev => prev.map(...) / .filter(...)`), `expense.jsx:21` y `:39`, `debt.jsx:21`.
-- `src/hooks/` ya existe pero solo tiene `useConfirmationToast.jsx`. No hay ni un hook de datos.
-- `registerForm.jsx:3`, `userEditForm.jsx:4` y `loginForm.jsx:17` llaman a `api` (la instancia de axios) directamente y se saltan `utils/*Api.js`, así que ni siquiera hay una única capa de acceso por recurso.
-- Las claves de caché están sueltas como strings en cada componente: `['groupDetails', groupId]`, `['myExpenses']`, `['users']`. `registerForm.jsx:40` invalida `['users']`, clave que **nadie consulta** — invalidación muerta.
-- `refreshGroupDetails` se define en `groupDetails.jsx:41` solo para llamar a `invalidateQueries`, y baja por props hasta las hojas (`expenseList` → `expense`, `debtsList` → `debt`, `createExpense`).
-- Cada componente repite `const { token } = useAuth()` y se lo pasa a mano a la llamada, porque no hay interceptor de axios.
-- `@tanstack/react-query` es **v5** (`frontend/package.json:20`), API de objetos.
+Lo que se llevó por delante, y que es la parte que cambia firmas y no solo mueve código:
 
-**A decidir:**
+- **`setGroups` y `refreshGroupDetails` ya no existen.** La caché es el único dueño del estado de
+  servidor, así que cada mutación invalida su clave y `GroupList`, `CreateGroup`, `ExpenseList` y
+  `DebtsList` se quedan sin esos props. `DebtsList` recibe ahora `groupId`, que es lo que `Debt`
+  necesita para saber qué invalidar.
+- **`['users']` era invalidación muerta** — nadie consultaba esa clave. Fuera, junto al
+  `setQueryData(['users'])` de `userEditForm`.
+- `registerForm` capturaba el error dentro del `mutationFn` y devolvía `undefined`, así que un
+  registro fallido entraba igualmente por `onSuccess` y llamaba a `login(undefined)`. Ahora el error
+  sube y lo pinta `onError`. `userEditForm` hacía lo contrario, capturar y relanzar, y sacaba dos
+  toasts por el mismo fallo.
+- `userEditForm` escribía `localStorage` con la clave a mano; pasa por `utils/localStorage.js`, que
+  es lo que `CLAUDE.md` dice que es el único sitio donde aparece `user-session`. El
+  `window.location.reload()` sigue ahí: la pantalla de perfil lee el usuario de la sesión y no de una
+  query, así que no hay caché que invalidar. Quitarlo pide meter el usuario en el contexto de auth.
 
-- Un fichero de hooks por recurso (`hooks/useGroups.js`, `useGroupDetails.js`, `useExpenses.js`, `usePayments.js`) exponiendo `useGroups()`, `useCreateGroup()`, `useDeleteGroup()`… y que el hook coja el token de `useAuth()` por dentro, para que los componentes dejen de pasarlo.
-- Centralizar las claves de caché (`hooks/queryKeys.js` o una factoría por recurso) para que las invalidaciones no se desincronicen de las queries.
-- Migrar los patrones 2 y 3 se lleva por delante el prop drilling: `setGroups` y `refreshGroupDetails` desaparecen si cada hook invalida su propia clave. Eso cambia la firma de varios componentes (`GroupList` se queda sin props), no es solo mover código.
-- ¿Dónde quedan los toasts y el `navigate`? Hoy están dentro de los handlers. Lo limpio es que el hook devuelva estado y el componente decida qué pintar, no que el hook reciba `onSuccess`/`onError` con UI dentro.
-- Orden barato → caro: primero extraer los 4 que ya usan react-query (mover código, sin cambio de comportamiento), después migrar los manuales.
-- Red de seguridad, a medias: el `pnpm test` del frontend sigue roto (punto 4), pero Cypress ya no. Hay **tres specs y 5 tests en verde** (`create-group`, `smoke-miembros`, `invite-landing`), todos siembran sesión, y entre ellos recorren crear grupo, meter un gasto, el balance, unirse por el enlace y `/my-expenses`. Es suficiente para validar un refactor de la capa de datos de punta a punta; lo que no cubren es nada a nivel de componente.
+Validado con `pnpm build` y con Cypress, que pasa de 3 specs y 5 tests a **7 specs y 13 tests**. Los
+cuatro nuevos (`auth`, `group-actions`, `expense-flow`, `join`) cubren justo lo que el refactor tocaba
+y nadie miraba: login por formulario y login fallido, editar perfil, editar grupo, el 409 al quitar a
+un miembro con gastos, resetear y compartir el enlace, el ciclo completo del gasto con su balance y
+sus deudas, y unirse escribiendo un nombre que no está en la lista. Los helpers de siembra viven
+ahora en `cypress/support/api.js`; las tres specs viejas siguen con su copia local.
+
+El `pnpm test` de jest sigue roto por lo del punto 4, que es anterior a esto.
 
 ## 8. El avatar por defecto apunta a un servicio de terceros caído — HECHO
 
