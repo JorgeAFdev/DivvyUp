@@ -14,14 +14,6 @@
     height: auto;
 } */
 
-.list {
-    padding: 0;
-}
-
-.listItem {
-    list-style: none;
-}
-
 .row {
     display: flex;
     justify-content: space-between;

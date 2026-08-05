@@ -1,23 +1,19 @@
+import ListSection from '../../listSection/listSection';
 import styles from './expenseList.module.css'
 import Expense from '../expense/expense';
 
-const ExpenseList = ({ groupExpenses, groupId, groupMembers, refreshGroupDetails, className, title = true }) => {
-
+const ExpenseList = ({ groupExpenses, groupId, groupMembers, refreshGroupDetails, variant = 'column', showTitle = true }) => {
     return (
-        <section className={styles.expenses}>
-            <div>
-                {groupExpenses?.length === 0 ? (<p className={styles.text} >There are no expenses in this group</p>) : (
-                    <>
-                        {title && <h2 className={styles.title}>Expenses</h2>}
-                        <ul className={className ? [styles[className]] : styles.detailsList}>
-                            {groupExpenses?.map((item) => (
-                                <Expense key={item._id} expense={item} groupId={groupId} groupMembers={groupMembers} refreshGroupDetails={refreshGroupDetails} />
-                            ))}
-                        </ul>
-                    </>
-                )}
-            </div>
-        </section>
+        <ListSection
+            title={showTitle ? 'Expenses' : undefined}
+            isEmpty={!groupExpenses?.length}
+            emptyMessage="There are no expenses in this group"
+            listClassName={styles[variant]}
+        >
+            {groupExpenses?.map((item) => (
+                <Expense key={item._id} expense={item} groupId={groupId} groupMembers={groupMembers} refreshGroupDetails={refreshGroupDetails} />
+            ))}
+        </ListSection>
     );
 };
 

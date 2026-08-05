@@ -1,0 +1,13 @@
+.title {
+    font-size: 16px;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.empty {
+    color: var(--color);
+}
+
+.list {
+    list-style: none;
+}

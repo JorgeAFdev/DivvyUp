@@ -30,20 +30,18 @@ const Debt = ({ debt, refreshGroupDetails }) => {
     };
 
     return (
-        <>
-            <div className={styles.debt}>
-                <p>{debt.from.name} owes <strong>{debt.amount}€</strong> to {debt.to.name}</p>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    size="small"
-                    onClick={handlePayDebt}
-                    sx={{ backgroundColor: "primary.dark", borderRadius: "8px", textTransform: "none", fontWeight: "bold", "&:hover": { backgroundColor: "primary.main" } }}
-                >
-                    Mark as paid
-                </Button>
-            </div >
-        </>
+        <li className={styles.debt}>
+            <p>{debt.from.name} owes <strong>{debt.amount}€</strong> to {debt.to.name}</p>
+            <Button
+                variant="contained"
+                color="primary"
+                size="small"
+                onClick={handlePayDebt}
+                sx={{ backgroundColor: "primary.dark", borderRadius: "8px", textTransform: "none", fontWeight: "bold", "&:hover": { backgroundColor: "primary.main" } }}
+            >
+                Mark as paid
+            </Button>
+        </li>
     )
 }
 

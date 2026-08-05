@@ -45,7 +45,7 @@ const UserExpenses = () => {
                 <div key={group.groupId}>
                     <h2 className={styles.title} onClick={() => navigate(`/groups/${group.groupId}/expenses`)} data-tooltip-id={group.groupId}>{group.groupName}</h2>
                     <Tooltip id={group.groupId} content="Click to view group details" />
-                    <ExpenseList groupExpenses={group.expenses} groupId={group.groupId} groupMembers={group.members} refreshGroupDetails={refreshExpenses} className='list' title={false} />
+                    <ExpenseList groupExpenses={group.expenses} groupId={group.groupId} groupMembers={group.members} refreshGroupDetails={refreshExpenses} variant="grid" showTitle={false} />
                 </div>
             ))}
         </div>

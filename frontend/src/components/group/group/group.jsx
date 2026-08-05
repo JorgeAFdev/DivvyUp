@@ -51,41 +51,39 @@ const Group = ({ group, setGroups }) => {
         }
     };
     return (
-        <div className={styles.group} id={`group-card-${group._id}`} onClick={() => navigate(`/groups/${group._id}/expenses`)}>
-            <li className={styles.listItem}>
-                <div className={styles.row} >
-                    <div className={styles.left}>
-                        <div className={styles.info}>
-                            <p><strong>{group.name}</strong></p>
-                            <p>{group.description}</p>
-                        </div>
-                        <div className={styles.avatar}>
-                            {group.members.map((member) => (
-                                <div key={member._id}>
-                                    <MemberAvatar
-                                        name={member.name}
-                                        src={member.user?.profilePicture}
-                                        data-tooltip-id={member._id}
-                                    />
-                                    <Tooltip id={member._id} content={member.user ? member.name : `${member.name} · no account yet`} />
-                                </div>
-                            ))}
-                        </div>
+        <li className={styles.group} id={`group-card-${group._id}`} onClick={() => navigate(`/groups/${group._id}/expenses`)}>
+            <div className={styles.row} >
+                <div className={styles.left}>
+                    <div className={styles.info}>
+                        <p><strong>{group.name}</strong></p>
+                        <p>{group.description}</p>
                     </div>
-                    <div className={styles.right} onClick={handleActionsClick}>
-                        <GroupActions
-                            group={group}
-                            myMemberId={myMemberId}
-                            setGroups={setGroups}
-                            editGroup={handleEditGroup}
-                            onDelete={handleDeleteExpense}
-                            isEditing={isEditing}
-                            setIsEditing={setIsEditing}
-                        />
+                    <div className={styles.avatar}>
+                        {group.members.map((member) => (
+                            <div key={member._id}>
+                                <MemberAvatar
+                                    name={member.name}
+                                    src={member.user?.profilePicture}
+                                    data-tooltip-id={member._id}
+                                />
+                                <Tooltip id={member._id} content={member.user ? member.name : `${member.name} · no account yet`} />
+                            </div>
+                        ))}
                     </div>
                 </div>
-            </li>
-        </div>
+                <div className={styles.right} onClick={handleActionsClick}>
+                    <GroupActions
+                        group={group}
+                        myMemberId={myMemberId}
+                        setGroups={setGroups}
+                        editGroup={handleEditGroup}
+                        onDelete={handleDeleteExpense}
+                        isEditing={isEditing}
+                        setIsEditing={setIsEditing}
+                    />
+                </div>
+            </div>
+        </li>
     );
 };
 
