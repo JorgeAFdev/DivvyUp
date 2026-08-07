@@ -48,7 +48,7 @@ const MobileHeader = () => {
                     <MenuItem component={Link} to="/my-expenses" onClick={closeMenu}>Expenses</MenuItem>
                     <Divider />
                     <MenuItem component={Link} to="/profile" onClick={closeMenu}>Profile</MenuItem>
-                    <ThemeMenuItem onSelect={closeMenu} />
+                    <ThemeMenuItem />
                     <Divider />
                     <MenuItem onClick={closeMenu}><Logout forceUpdate={() => { }} /></MenuItem>
                 </AppMenu>

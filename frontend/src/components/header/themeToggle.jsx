@@ -20,11 +20,11 @@ export const ThemeToggle = () => {
     );
 };
 
-export const ThemeMenuItem = ({ onSelect }) => {
+export const ThemeMenuItem = () => {
     const { darkMode, toggleDarkMode } = useDarkMode();
 
     return (
-        <MenuItem onClick={() => { toggleDarkMode(); onSelect(); }}>
+        <MenuItem onClick={toggleDarkMode}>
             {label(darkMode)}
         </MenuItem>
     );

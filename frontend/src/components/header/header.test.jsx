@@ -93,6 +93,18 @@ describe('The header component', () => {
             .toEqual(['Groups', 'Expenses', 'Profile', 'Dark mode', 'Logout']);
     });
 
+    it('keeps the collapsed menu open when the theme is toggled', () => {
+        renderHeader({ viewport: 'mobile' });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Dark mode' }));
+
+        // The label flipping is the confirmation, and closing would throw it
+        // away. Every other item in this menu leaves; this one is a switch.
+        expect(screen.getByRole('menu')).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: 'Light mode' })).toBeInTheDocument();
+    });
+
     it('closes the collapsed menu with Escape', () => {
         renderHeader({ viewport: 'mobile' });
 
