@@ -2,11 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../../context/userContextAuth';
 import { DarkModeContextProvider } from '../../context/darkModeContext';
-import Header from './header';
+import Header, { MOBILE_QUERY } from './header';
 
 jest.mock('../notifications/notifications', () => () => null);
-
-const MOBILE_QUERY = '(max-width: 767px)';
 
 const matchMediaAs = (viewport) => (query) => ({
     matches: viewport === 'mobile' && query === MOBILE_QUERY,
@@ -59,6 +57,15 @@ describe('The header component', () => {
         expect(screen.getByRole('link', { name: 'Groups' })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Expenses' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Open menu' })).not.toBeInTheDocument();
+    });
+
+    it('exposes the theme toggle as a labelled button', () => {
+        renderHeader({ viewport: 'desktop' });
+
+        const toggle = screen.getByRole('button', { name: 'Dark mode' });
+        fireEvent.click(toggle);
+
+        expect(screen.getByRole('button', { name: 'Light mode' })).toBeInTheDocument();
     });
 
     it('collapses the navigation behind the menu button on mobile', () => {
