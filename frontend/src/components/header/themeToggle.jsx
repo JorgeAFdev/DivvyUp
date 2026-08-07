@@ -25,7 +25,6 @@ export const ThemeMenuItem = ({ onSelect }) => {
 
     return (
         <MenuItem onClick={() => { toggleDarkMode(); onSelect(); }}>
-            <Icon variant={variant(darkMode)} className='theme' />
             {label(darkMode)}
         </MenuItem>
     );

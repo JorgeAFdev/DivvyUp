@@ -12,7 +12,6 @@ const AppMenu = ({ children, ...props }) => {
                     color: theme.palette.text.primary,
                 },
                 '& .MuiMenuItem-root': {
-                    gap: '10px',
                     transition: 'background-color 0.3s',
                     '&:hover': { backgroundColor: theme.palette.action.hover },
                 },
