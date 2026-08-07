@@ -6,6 +6,7 @@
     cursor: pointer;
     /* background-color: var(--secondary-bg-color); */
     color: var(--color);
+    transition: var(--theme-transition);
     /* height: 60px;
     overflow: hidden;
     transition: height .3s;

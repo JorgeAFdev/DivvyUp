@@ -11,6 +11,7 @@ body {
     width: min(90%, 120rem);
     margin: 0 auto;
     color: var(--color);
+    transition: var(--theme-transition);
 }
 
 .logo {
@@ -33,7 +34,7 @@ body {
     border-radius: 8px;
     cursor: pointer;
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: var(--theme-transition);
     color: var(--color);
 
 }
