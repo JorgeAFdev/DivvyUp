@@ -269,10 +269,43 @@ usuario sin foto.
 - Si se hace antes que el punto 6, el resultado no se nota en producción hasta que haya usuarios sin
   foto; aun así es la dependencia externa que hay que quitar primero, porque el punto 6 la multiplica.
 
-## 9. El header no colapsa en móvil
+## 9. El header no colapsa en móvil — HECHO
 
-Que por debajo del breakpoint el header se quede en logo + botón de menú, y que dentro del
-desplegable vayan los dos links de navegación, el toggle de tema y la cuenta.
+Por debajo de 768px y con sesión, el header es logo + botón de hamburguesa, y dentro del desplegable
+van `Groups`, `Expenses`, `Profile`, `Logout` y el toggle de tema.
+
+**Cómo quedaron las decisiones:**
+
+- **`Menu` de MUI** anclado al botón, no `Drawer`: es el patrón que ya usaba `UserMenu`, así que no
+  entra API nueva y el Escape y el foco vienen de serie. Comparte con `UserMenu` el mismo `sx` de
+  `background.color` / `text.primary` / `action.hover`, que es lo que evita el menú blanco sobre
+  blanco en modo oscuro.
+- **El breakpoint vive sólo en JS**, en la constante `MOBILE_QUERY` de `header.jsx`, leída con
+  `useMediaQuery`. El módulo CSS se quedó sin ninguna media query: el `gap` de `.nav` y el `padding`
+  de `.navItem` son `clamp()`, así que escalan sin necesitar un segundo sitio donde esté escrito 768.
+  Eso arregla de paso el bug de la media query invertida, que dejaba los links pegados justo en móvil.
+- **La cuenta va aplanada**: `Profile` y `Logout` son entradas directas del desplegable y `UserMenu`
+  se queda sólo para escritorio, para no meter un menú dentro de otro menú en táctil.
+- **La variante sin sesión no colapsa.** `Login` y `Register` son la llamada a la acción de esas
+  pantallas y esconderlas detrás de una hamburguesa las entierra; con el `clamp()` del `padding` ya
+  caben. El header sigue teniendo dos formas, no tres.
+- **Accesibilidad:** el botón es un `IconButton` real con `aria-label="Open menu"`, `aria-haspopup`,
+  `aria-controls` y `aria-expanded`, y el `MenuList` apunta a él con `aria-labelledby`. Cierra con
+  Escape (de MUI), al pulsar cualquier entrada, y por `useEffect` sobre `pathname` para cubrir la
+  navegación que no sale de un click en el propio menú.
+- `Icon` tiene ahora variante `menu` (`MdMenu`) en su `iconsByVariant`, con su clase `.menu` de 26px.
+- `<Notifications />` sigue montado fuera del desplegable: devuelve `null`, así que no ocupa ancho,
+  pero tiene que renderizarse para que el socket se abra igual en móvil.
+
+**Red de seguridad:** `header.test.jsx` dejó de ser una plantilla comentada y son **6 tests verdes**:
+los links de auth sin sesión, la navegación en línea en escritorio, que en móvil no está en línea, que
+el desplegable trae las cinco entradas, y el cierre con Escape. Dos avisos para el siguiente que
+escriba un test de front: `jest.setup.js` ahora define `TextEncoder`/`TextDecoder` porque
+`react-router` 7 los lee al importarse, y hay que mockear `window.matchMedia` a mano porque jsdom no
+lo trae y es lo que decide qué variante se pinta. `pnpm test` del front sigue en rojo, pero ya sólo
+por `icon.test.jsx`, que es del punto 4.
+
+**Se queda escrito lo que había:**
 
 **Estado actual (verificado):**
 
