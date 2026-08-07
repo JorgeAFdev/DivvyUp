@@ -1,7 +1,8 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background-color: #f8f9fa;
+  background-color: var(--bg-color);
+  transition: var(--theme-transition);
 }
 
 h3 {
