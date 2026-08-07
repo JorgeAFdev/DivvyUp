@@ -18,7 +18,7 @@
     width: 400px;
     animation: slideIn 0.3s ease-out;
     background: var(--secondary-bg-color);
-
+    transition: var(--theme-transition);
 }
 
 @keyframes slideIn {

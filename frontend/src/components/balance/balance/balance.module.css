@@ -6,6 +6,7 @@
     min-width: 70px;
     background-color: var(--bg-color);
     color: var(--color);
+    transition: var(--theme-transition);
 }
 
 .name {

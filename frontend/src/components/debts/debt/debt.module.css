@@ -9,4 +9,5 @@
     border: 1px solid var(--border-color);
     background-color: var(--bg-color);
     color: var(--color);
+    transition: var(--theme-transition);
 }
