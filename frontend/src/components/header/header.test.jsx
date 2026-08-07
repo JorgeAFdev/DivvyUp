@@ -85,11 +85,12 @@ describe('The header component', () => {
         fireEvent.click(button);
 
         expect(button).toHaveAttribute('aria-expanded', 'true');
-        expect(screen.getByRole('menuitem', { name: 'Groups' })).toBeInTheDocument();
-        expect(screen.getByRole('menuitem', { name: 'Expenses' })).toBeInTheDocument();
-        expect(screen.getByRole('menuitem', { name: 'Profile' })).toBeInTheDocument();
-        expect(screen.getByRole('menuitem', { name: 'Logout' })).toBeInTheDocument();
-        expect(screen.getByRole('menuitem', { name: 'Dark mode' })).toBeInTheDocument();
+
+        // Logout goes last and behind its own divider on purpose: it is
+        // destructive, it reloads the page, and Profile used to sit right on
+        // top of it in a touch target.
+        expect(screen.getAllByRole('menuitem').map((item) => item.textContent))
+            .toEqual(['Groups', 'Expenses', 'Profile', 'Dark mode', 'Logout']);
     });
 
     it('closes the collapsed menu with Escape', () => {
