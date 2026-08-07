@@ -269,10 +269,72 @@ usuario sin foto.
 - Si se hace antes que el punto 6, el resultado no se nota en producción hasta que haya usuarios sin
   foto; aun así es la dependencia externa que hay que quitar primero, porque el punto 6 la multiplica.
 
-## 9. El header no colapsa en móvil
+## 9. El header no colapsa en móvil — HECHO
 
-Que por debajo del breakpoint el header se quede en logo + botón de menú, y que dentro del
-desplegable vayan los dos links de navegación, el toggle de tema y la cuenta.
+Por debajo de 768px y con sesión, el header es logo + botón de hamburguesa, y dentro del desplegable
+van `Groups`, `Expenses`, `Profile`, `Logout` y el toggle de tema.
+
+**Cómo quedaron las decisiones:**
+
+- **`Menu` de MUI** anclado al botón, no `Drawer`: es el patrón que ya usaba `UserMenu`, así que no
+  entra API nueva y el Escape y el foco vienen de serie.
+- **Un fichero por variante.** `header.jsx` sólo decide (`GuestHeader`, `DesktopHeader`,
+  `MobileHeader`) y las piezas compartidas son `HeaderLogo` y `ThemeToggle`. El motivo no es el
+  tamaño: el estado del desplegable (`anchorEl`) es de móvil y sólo de móvil, y viviendo en
+  `MobileHeader` **cruzar el breakpoint lo desmonta**, así que el `useEffect` que lo limpiaba ya no
+  necesita depender de `isMobile`. La dependencia no se movió, desapareció.
+- **El breakpoint vive sólo en JS**, en la constante `MOBILE_QUERY` que `header.jsx` exporta (el test
+  la importa en vez de repetir el número), leída con
+  `useMediaQuery`. El módulo CSS se quedó sin ninguna media query: el `gap` de `.nav` y el `padding`
+  de `.navItem` son `clamp()`, así que escalan sin necesitar un segundo sitio donde esté escrito 768.
+  Eso arregla de paso el bug de la media query invertida, que dejaba los links pegados justo en móvil.
+- **La cuenta va aplanada**: `Profile` y `Logout` son entradas directas del desplegable y `UserMenu`
+  se queda sólo para escritorio, para no meter un menú dentro de otro menú en táctil.
+- **El orden es `Groups`, `Expenses` | `Profile`, `Dark mode` | `Logout`**, y `Logout` va último
+  detrás de su propio divisor. Antes estaba pegado justo debajo de `Profile`: es la única acción
+  destructiva del menú, hace `window.location.reload()` así que no tiene vuelta atrás, y estaba a un
+  mis-tap de distancia en un target táctil de 390px. Ahora lo único que tiene al lado es un divisor.
+  El test comprueba la lista entera en orden, no que los items existan, porque esto es una decisión
+  y no un detalle.
+- **El toggle de tema no cierra el desplegable**, y es el único item que no lo hace. Los otros cuatro
+  se van (tres navegan, `Logout` cierra la sesión); éste es un interruptor y su trabajo acaba dentro
+  del menú. Cerrando se tiraba justo la confirmación: el label pasa de `Dark mode` a `Light mode`, y
+  ese cambio es lo que enseña que es un interruptor y no un enlace. Además deshacer costaba dos
+  toques. Por eso `ThemeMenuItem` ya no recibe `onSelect`: no tiene con qué cerrar nada.
+- **En el desplegable el toggle de tema es sólo texto.** Con icono era el único item de los seis que
+  lo tenía, y el efecto real no era la asimetría sino que **el icono empujaba su label ~60px a la
+  derecha**: el menú tenía el borde izquierdo del texto desalineado en exactamente una fila. El label
+  ya dice la acción (`Dark mode` / `Light mode`), así que el icono no aportaba información. En
+  escritorio sí se queda, porque ahí el botón es sólo icono. Si algún día se quieren iconos en el
+  menú, van en los seis a la vez y con una columna de ancho fijo, no en uno.
+- **La variante sin sesión no colapsa.** `Login` y `Register` son la llamada a la acción de esas
+  pantallas y esconderlas detrás de una hamburguesa las entierra; con el `clamp()` del `padding` ya
+  caben. El header sigue teniendo dos formas, no tres.
+- **Accesibilidad:** el botón es un `IconButton` real con `aria-label="Open menu"`, `aria-haspopup`,
+  `aria-controls` y `aria-expanded`, y el `MenuList` apunta a él con `aria-labelledby`. Cierra con
+  Escape (de MUI), al pulsar cualquier entrada, y por `useEffect` sobre `pathname` para cubrir la
+  navegación que no sale de un click en el propio menú. **El toggle de tema también**: era un `<svg>`
+  con `onClick` encima, sin foco ni rol ni nombre, y ahora es un `IconButton` con `aria-label` que
+  dice la acción (`Dark mode` / `Light mode`). Afectaba a las tres variantes, no sólo a móvil.
+- **Los dos menús de la app comparten `components/menu/appMenu.jsx`**, que es el `Menu` de MUI con el
+  `sx` de `background.color` / `text.primary` / `action.hover`. Es lo que evita el menú blanco sobre
+  blanco en modo oscuro, y está en un componente y no en un helper de estilos para que no se pueda
+  usar el `Menu` pelado por olvido. Misma razón que `memberAvatar.jsx`.
+- `Icon` tiene ahora variante `menu` (`MdMenu`) en su `iconsByVariant`, con su clase `.menu` de 26px.
+- `<Notifications />` sigue montado fuera del desplegable: devuelve `null`, así que no ocupa ancho,
+  pero tiene que renderizarse para que el socket se abra igual en móvil.
+
+**Red de seguridad:** `header.test.jsx` dejó de ser una plantilla comentada y son **6 tests verdes**:
+los links de auth sin sesión, la navegación en línea en escritorio, el toggle de tema como botón con
+nombre, que en móvil la navegación no está en línea, que el desplegable trae las cinco entradas, y el
+cierre con Escape. Van todos por rol y por `aria-*`, no por estructura, y eso es lo que hizo que el
+reparto en cuatro ficheros no tocara ni una línea del test. Dos avisos para el siguiente que
+escriba un test de front: `jest.setup.js` ahora define `TextEncoder`/`TextDecoder` porque
+`react-router` 7 los lee al importarse, y hay que mockear `window.matchMedia` a mano porque jsdom no
+lo trae y es lo que decide qué variante se pinta. `pnpm test` del front sigue en rojo, pero ya sólo
+por `icon.test.jsx`, que es del punto 4.
+
+**Se queda escrito lo que había:**
 
 **Estado actual (verificado):**
 
@@ -621,3 +683,46 @@ Ninguna de las dos pasa el contraste mínimo de AA, y entre las dos hay tres azu
   tienen nombre accesible — `Icon` renderiza el SVG de `react-icons` sin `title`, `aria-label` ni
   `role`. Los de dentro del menú sí lo tienen, porque llevan texto visible. El foco de teclado se ve
   sólo con el outline por defecto del navegador.
+
+## 18. El desplegable móvil a un `Drawer` (opcional)
+
+El punto 9 eligió `Menu` a propósito y para lo que hay dentro hoy sigue siendo la elección correcta:
+cinco entradas, y **el paper mide 111.6 x 290 px, el 29% del ancho y el 34% del alto** de una pantalla
+de 390px (medido con Playwright a 390x844, no estimado). Un panel de altura completa serían ~550px
+vacíos para el mismo contenido.
+
+Lo que cambia eso es querer meter dentro algo que no cabe. Dos cosas, y cualquiera de las dos basta:
+
+- **Que móvil muestre quién eres.** Hoy no lo muestra: en escritorio `UserMenu` pinta el avatar, en
+  móvil sólo hay una hamburguesa, así que no hay forma de saber en qué cuenta estás. Una fila de
+  cabecera con avatar y nombre (el `MemberAvatar` ya existe) no entra en un paper de 112px de ancho;
+  en un `Drawer` es su sitio natural.
+- **Que el menú pase de ~7-8 entradas.** A partir de ahí el paper flotante empieza a competir con el
+  alto de la pantalla, y el `Drawer` deja de ser cromo de sobra.
+
+**Qué arrastra el cambio (verificado sobre el código de hoy):**
+
+- **`AppMenu` deja de servir para el header.** Su `sx` va sobre el `MuiPaper-root` de un `Menu`; un
+  `Drawer` tiene su propio paper y su propio backdrop. O el `Drawer` se estiliza aparte —y entonces
+  hay dos sitios que deciden cómo se ve una superficie desplegable, que es justo lo que `AppMenu`
+  vino a evitar— o la pieza compartida pasa a ser el estilo y no el componente. `UserMenu` seguiría
+  con `Menu` en escritorio en cualquier caso.
+- **Los items dejan de ser `menuitem`.** Dentro de un `Drawer` son `ListItemButton` en una `List`, con
+  rol `button`. La aserción de orden de `header.test.jsx` va por `getAllByRole('menuitem')`, así que
+  hay que reescribirla. Es el único test que se rompe, y el orden que fija (`Groups`, `Expenses`,
+  `Profile`, `Dark mode`, `Logout`, con `Logout` último y aislado) tiene que sobrevivir al cambio.
+- **La semántica ARIA de la hamburguesa cambia.** Hoy lleva `aria-haspopup="true"`, `aria-controls` y
+  `aria-expanded`, que describen un menú. Un `Drawer` es un diálogo: sería `aria-haspopup="dialog"`,
+  y el `aria-labelledby` del `MenuList` pasa a ser el título del panel. Escape y click-fuera los sigue
+  dando MUI, que en `Drawer` es un `Modal`.
+- **El ancho y el toque se arreglan de paso.** Un `Drawer` es edge-to-edge o de ~280px, así que el
+  29% de ancho deja de existir. Los items ya miden 48px de alto, que es la guía de Android y pasa el
+  mínimo de WCAG 2.5.8, así que eso no cambia.
+
+**Si esto no se hace, queda pendiente el pulido del `Menu`:** un `minWidth` del orden de 180px en el
+paper —y ahí hay que decidir si va en `AppMenu`, que ensancha también el menú de escritorio donde a
+nadie molesta, o sólo en el del header— y **subir la hamburguesa de 42 x 42 a 48**, que es lo único
+que está por debajo de mínimos (44 de iOS, 48 de Android) y sale del `padding: 8px` por defecto del
+`IconButton`. Ojo con el orden: el `minWidth` es trabajo que el `Drawer` tira a la basura, el de la
+hamburguesa no, porque el botón se queda igual. Y el mínimo de 48 para botones de sólo icono es la
+misma conversación que el punto 17.

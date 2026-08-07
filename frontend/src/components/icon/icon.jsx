@@ -1,4 +1,4 @@
-import { MdAddCircleOutline, MdEdit, MdOutlineDarkMode, MdRefresh } from "react-icons/md";
+import { MdAddCircleOutline, MdEdit, MdMenu, MdOutlineDarkMode, MdRefresh } from "react-icons/md";
 import { FaTrashAlt } from "react-icons/fa";
 import { CiLight } from "react-icons/ci";
 import { TbDotsVertical, TbShare2 } from "react-icons/tb";
@@ -12,7 +12,8 @@ const Icon = ({ className, handleClick, variant = 'add', id }) => {
         dark: MdOutlineDarkMode,
         dots: TbDotsVertical,
         share: TbShare2,
-        refresh: MdRefresh
+        refresh: MdRefresh,
+        menu: MdMenu
     };
     const Icon = iconsByVariant[variant] || MdAddCircleOutline;
     return <Icon className={`${styles.icon} ${className ? styles[className] : ''}`} onClick={handleClick} data-type={variant} id={id} />;
