@@ -135,7 +135,11 @@ The layout, one file per resource: `useGroups`, `useGroupDetails`, `useExpenses`
 
 Every avatar in the app goes through `components/avatar/memberAvatar.jsx`: outlined, monochrome, initials from `initialsOf()` when there is no picture. It is one component on purpose. The four copies it replaced had drifted into two different colour schemes, and one of them rendered white on a white header.
 
-Styling is CSS Modules (`foo.module.css` beside `foo.jsx`) plus MUI. `context/darkModeContext.jsx` still exists, but recent commits deliberately removed per-component `useDarkMode` usage in favor of the MUI theme (`useTheme`) — follow that direction in new components.
+Both dropdown menus go through `components/menu/appMenu.jsx` for the same reason: it is MUI's `Menu` carrying the `background.color` / `text.primary` / `action.hover` `sx`, which is what keeps the paper from rendering white on white in dark mode. It is a component rather than an exported style object so that reaching for the bare `Menu` is a visible choice, not an oversight.
+
+The header is **one file per variant** — `guestHeader`, `desktopHeader`, `mobileHeader`, with `header.jsx` doing nothing but picking one and exporting `MOBILE_QUERY` (768px, read with `useMediaQuery`; the CSS module deliberately has no media query, so the breakpoint is written once). The split is what keeps the collapsed menu's `anchorEl` inside `mobileHeader`: crossing the breakpoint unmounts the component, so no effect has to reset that state. Every clickable icon in the header is an `IconButton` with an `aria-label` — `Icon` on its own renders an `<svg>` with an `onClick`, which is neither focusable nor named.
+
+Styling is CSS Modules (`foo.module.css` beside `foo.jsx`) plus MUI. `context/darkModeContext.jsx` still exists, but recent commits deliberately removed per-component `useDarkMode` usage in favor of the MUI theme (`useTheme`) — follow that direction in new components. The exception is `header/themeToggle.jsx`, which needs `toggleDarkMode` itself: it is the switch.
 
 ### Backend request flow
 

@@ -277,10 +277,14 @@ van `Groups`, `Expenses`, `Profile`, `Logout` y el toggle de tema.
 **Cómo quedaron las decisiones:**
 
 - **`Menu` de MUI** anclado al botón, no `Drawer`: es el patrón que ya usaba `UserMenu`, así que no
-  entra API nueva y el Escape y el foco vienen de serie. Comparte con `UserMenu` el mismo `sx` de
-  `background.color` / `text.primary` / `action.hover`, que es lo que evita el menú blanco sobre
-  blanco en modo oscuro.
-- **El breakpoint vive sólo en JS**, en la constante `MOBILE_QUERY` de `header.jsx`, leída con
+  entra API nueva y el Escape y el foco vienen de serie.
+- **Un fichero por variante.** `header.jsx` sólo decide (`GuestHeader`, `DesktopHeader`,
+  `MobileHeader`) y las piezas compartidas son `HeaderLogo` y `ThemeToggle`. El motivo no es el
+  tamaño: el estado del desplegable (`anchorEl`) es de móvil y sólo de móvil, y viviendo en
+  `MobileHeader` **cruzar el breakpoint lo desmonta**, así que el `useEffect` que lo limpiaba ya no
+  necesita depender de `isMobile`. La dependencia no se movió, desapareció.
+- **El breakpoint vive sólo en JS**, en la constante `MOBILE_QUERY` que `header.jsx` exporta (el test
+  la importa en vez de repetir el número), leída con
   `useMediaQuery`. El módulo CSS se quedó sin ninguna media query: el `gap` de `.nav` y el `padding`
   de `.navItem` son `clamp()`, así que escalan sin necesitar un segundo sitio donde esté escrito 768.
   Eso arregla de paso el bug de la media query invertida, que dejaba los links pegados justo en móvil.
@@ -292,14 +296,22 @@ van `Groups`, `Expenses`, `Profile`, `Logout` y el toggle de tema.
 - **Accesibilidad:** el botón es un `IconButton` real con `aria-label="Open menu"`, `aria-haspopup`,
   `aria-controls` y `aria-expanded`, y el `MenuList` apunta a él con `aria-labelledby`. Cierra con
   Escape (de MUI), al pulsar cualquier entrada, y por `useEffect` sobre `pathname` para cubrir la
-  navegación que no sale de un click en el propio menú.
+  navegación que no sale de un click en el propio menú. **El toggle de tema también**: era un `<svg>`
+  con `onClick` encima, sin foco ni rol ni nombre, y ahora es un `IconButton` con `aria-label` que
+  dice la acción (`Dark mode` / `Light mode`). Afectaba a las tres variantes, no sólo a móvil.
+- **Los dos menús de la app comparten `components/menu/appMenu.jsx`**, que es el `Menu` de MUI con el
+  `sx` de `background.color` / `text.primary` / `action.hover`. Es lo que evita el menú blanco sobre
+  blanco en modo oscuro, y está en un componente y no en un helper de estilos para que no se pueda
+  usar el `Menu` pelado por olvido. Misma razón que `memberAvatar.jsx`.
 - `Icon` tiene ahora variante `menu` (`MdMenu`) en su `iconsByVariant`, con su clase `.menu` de 26px.
 - `<Notifications />` sigue montado fuera del desplegable: devuelve `null`, así que no ocupa ancho,
   pero tiene que renderizarse para que el socket se abra igual en móvil.
 
 **Red de seguridad:** `header.test.jsx` dejó de ser una plantilla comentada y son **6 tests verdes**:
-los links de auth sin sesión, la navegación en línea en escritorio, que en móvil no está en línea, que
-el desplegable trae las cinco entradas, y el cierre con Escape. Dos avisos para el siguiente que
+los links de auth sin sesión, la navegación en línea en escritorio, el toggle de tema como botón con
+nombre, que en móvil la navegación no está en línea, que el desplegable trae las cinco entradas, y el
+cierre con Escape. Van todos por rol y por `aria-*`, no por estructura, y eso es lo que hizo que el
+reparto en cuatro ficheros no tocara ni una línea del test. Dos avisos para el siguiente que
 escriba un test de front: `jest.setup.js` ahora define `TextEncoder`/`TextDecoder` porque
 `react-router` 7 los lee al importarse, y hay que mockear `window.matchMedia` a mano porque jsdom no
 lo trae y es lo que decide qué variante se pinta. `pnpm test` del front sigue en rojo, pero ya sólo
