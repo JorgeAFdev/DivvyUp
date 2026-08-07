@@ -290,6 +290,18 @@ van `Groups`, `Expenses`, `Profile`, `Logout` y el toggle de tema.
   Eso arregla de paso el bug de la media query invertida, que dejaba los links pegados justo en móvil.
 - **La cuenta va aplanada**: `Profile` y `Logout` son entradas directas del desplegable y `UserMenu`
   se queda sólo para escritorio, para no meter un menú dentro de otro menú en táctil.
+- **El orden es `Groups`, `Expenses` | `Profile`, `Dark mode` | `Logout`**, y `Logout` va último
+  detrás de su propio divisor. Antes estaba pegado justo debajo de `Profile`: es la única acción
+  destructiva del menú, hace `window.location.reload()` así que no tiene vuelta atrás, y estaba a un
+  mis-tap de distancia en un target táctil de 390px. Ahora lo único que tiene al lado es un divisor.
+  El test comprueba la lista entera en orden, no que los items existan, porque esto es una decisión
+  y no un detalle.
+- **En el desplegable el toggle de tema es sólo texto.** Con icono era el único item de los seis que
+  lo tenía, y el efecto real no era la asimetría sino que **el icono empujaba su label ~60px a la
+  derecha**: el menú tenía el borde izquierdo del texto desalineado en exactamente una fila. El label
+  ya dice la acción (`Dark mode` / `Light mode`), así que el icono no aportaba información. En
+  escritorio sí se queda, porque ahí el botón es sólo icono. Si algún día se quieren iconos en el
+  menú, van en los seis a la vez y con una columna de ancho fijo, no en uno.
 - **La variante sin sesión no colapsa.** `Login` y `Register` son la llamada a la acción de esas
   pantallas y esconderlas detrás de una hamburguesa las entierra; con el `clamp()` del `padding` ya
   caben. El header sigue teniendo dos formas, no tres.
