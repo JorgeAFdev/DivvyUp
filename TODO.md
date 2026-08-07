@@ -91,28 +91,33 @@ por qué, en [docs/archive/miembros-invitados.md](docs/archive/miembros-invitado
 - Lo mínimo para tapar el agujero es un `<Route index element={...} />` dentro del layout. Redirigir a `/groups` si hay token y a `/login` si no es de una línea, y sirve mientras no exista landing.
 - Para la landing de verdad: qué cuenta (el proyecto ya tiene capturas y copy en el `README.md` que se pueden reaprovechar), y si debe redirigir a `/groups` cuando el usuario ya está logueado.
 
-## 4. `pnpm test` del frontend está en rojo
+## 4. `pnpm test` del frontend está en rojo — HECHO
 
-**Estado actual (verificado):**
+`cd frontend && pnpm test` sale con **0**: 3 suites, 21 tests. `components/icon` (13),
+`components/header` (7, del punto 9) y `context/darkModeContext` (1, que ya estaba).
 
-- `cd frontend && pnpm test` sale con código 1: **2 suites fallidas, 0 tests ejecutados**. El error de las dos es el mismo: `Your test suite must contain at least one test.`
-- La causa son los dos únicos ficheros de test, `src/components/header/header.test.jsx` y `src/components/icon/icon.test.jsx`. Son plantillas con **todo el contenido comentado**, y encima importan `./Header` y `./Button`, ficheros que no existen (son `header.jsx` e `icon.jsx`).
-- El backend sí pasa (82/82), así que esto es solo del workspace de frontend. Los specs de Cypress también, y son runner aparte: esto es el jest del front.
-- Desde entonces hay una tercera suite y sí es real: `src/context/darkModeContext.test.jsx`, que
-  comprueba que el tema emite `--mui-palette-primary-main` y `--mui-palette-primary-dark` en
-  `:root`, que es de donde `App.css` saca `--primary-color`. Pasa; las dos rojas siguen siendo las
-  mismas dos plantillas.
-- **Nada corre jest en CI**: `.github/workflows/prod-deploy.yaml` está filtrado a `backend/**` y
-  Cloudflare Pages solo ejecuta `vite build`. O sea que este rojo no bloquea ningún deploy, y un
-  test de frontend hoy documenta intención, no protege la rama. Resumido también en `CLAUDE.md`,
-  sección *Testing notes*.
+Las dos plantillas comentadas que lo tenían en rojo eran ficheros sin un solo test dentro, y jest
+falla una suite vacía. Ninguna de las dos se borró: `header.test.jsx` se escribió al hacer el punto 9
+e `icon.test.jsx` aquí. **`--passWithNoTests` sigue deliberadamente sin usarse**, que era el aviso de
+este punto: con ese flag, una suite que deja de ejecutarse por error se ve igual que una que pasa.
 
-**A decidir:**
+Lo que cubre el test de `Icon`, que no es lo obvio:
 
-- `Icon` (`src/components/icon/icon.jsx`) es presentacional puro: recibe `variant`, `className`, `handleClick` y devuelve un icono de `react-icons`. Se testea sin providers, en unas seis líneas. Buen primer test real.
-- `Header` es más caro: necesita `MemoryRouter` más `AuthProvider` y `DarkModeContextProvider`. Ojo con la rama de usuario logueado, porque renderiza `Notifications`, que abre un socket y hace `getUserSession()`; sin sesión en `localStorage` eso revienta al desestructurar. Testear primero la rama sin token, que no monta `Notifications`, es lo barato.
-- Salida rápida si no se quiere escribir tests ahora: borrar las dos plantillas. Deja `pnpm test` en verde de forma honesta en vez de con una suite rota.
-- No usar `--passWithNoTests` para taparlo: enmascara el día que un fichero de test deje de ejecutarse por error.
+- El fallo real de este componente no es que pete, es que **degrada en silencio**. `iconsByVariant[variant]`
+  devuelve `undefined` para una variante que no existe —o cuyo import se cayó— y el `|| MdAddCircleOutline`
+  la convierte en el icono de añadir, en todos los sitios donde se use, sin error. Por eso hay un
+  `it.each` sobre las ocho variantes que no son `add` comprobando que cada una renderiza un SVG
+  distinto del de `add`, y no que renderiza "algo". Verificado poniendo `menu: undefined` a mano: el
+  test falla, que es lo que hace que sirva de algo.
+- El `data-type`, el fallback de variante desconocida, la variante por defecto, que `handleClick`
+  llegue al `onClick`, y que la clase salga como `icon` más la que nombra el `className`.
+- Sin providers y sin mocks: `Icon` no toca contexto, router ni red. Fue el primer test real por eso,
+  como decía este punto.
+
+**Nada corre jest en CI**, y eso no ha cambiado: `.github/workflows/prod-deploy.yaml` está filtrado a
+`backend/**` y Cloudflare Pages sólo ejecuta `vite build`. Verde aquí significa que la suite se puede
+correr en local sin ruido, no que la rama esté protegida. La única red real del front siguen siendo
+los specs de Cypress.
 
 ## 5. Auth con Better Auth (login/register con Google y demás proveedores)
 
