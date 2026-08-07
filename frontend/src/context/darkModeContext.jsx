@@ -3,6 +3,19 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 const DarkModeContext = createContext();
 
+// Deferred to App.css rather than restated here: MUI defaults Button and
+// IconButton to duration.short (250ms), and emotion emits the var() untouched
+// for the browser to resolve, so the duration stays a single declaration.
+const THEME_TRANSITION = 'var(--theme-transition)';
+
+// Grow writes its own opacity/transform transition inline on the menu paper and
+// leaves it there, which outranks any stylesheet and would make the open menu
+// the one surface that snaps between themes. Handing it back once the menu has
+// finished opening is safe: Grow sets it again on the way out.
+const releaseGrowTransition = (node) => {
+    node.style.transition = '';
+};
+
 export const useDarkMode = () => {
     return useContext(DarkModeContext);
 };
@@ -40,6 +53,23 @@ export const DarkModeContextProvider = ({ children }) => {
                         text: { primary: '#000000' },
                         action: { hover: '#f0f0f0' },
                     }),
+            },
+            components: {
+                MuiButton: {
+                    styleOverrides: {
+                        root: { transition: `${THEME_TRANSITION}, box-shadow var(--transition-base)` },
+                    },
+                },
+                MuiIconButton: {
+                    styleOverrides: { root: { transition: THEME_TRANSITION } },
+                },
+                MuiAvatar: {
+                    styleOverrides: { root: { transition: THEME_TRANSITION } },
+                },
+                MuiMenu: {
+                    defaultProps: { slotProps: { transition: { onEntered: releaseGrowTransition } } },
+                    styleOverrides: { paper: { transition: THEME_TRANSITION } },
+                },
             },
         })
         , [darkMode]);
