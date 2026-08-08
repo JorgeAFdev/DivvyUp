@@ -1,5 +1,4 @@
 import { Server } from 'socket.io';
-import dotenv from 'dotenv';
 
 let clientUrl = process.env.CLIENT_URL
 
@@ -15,7 +14,7 @@ const socketServer = (server) => {
             socket.join(`user:${userId}`);
         });
 
-        io.on('disconnect', (socket) => {
+        socket.on('disconnect', () => {
             console.log(`User disconnected: ${socket.id}`);
         });
     });
