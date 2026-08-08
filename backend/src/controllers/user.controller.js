@@ -1,27 +1,24 @@
 const User = require('../schemas/user.schema');
 const uploadToCloudinary = require('../config/cloudinary.config');
 
-// Actualizar un usuario
 const updateUser = async (req, res) => {
     try {
-        const { id } = req.jwtPayload; // ID del usuario autenticado
+        const { id } = req.jwtPayload;
         const changes = { name: req.body.name, email: req.body.email };
 
-        // Only touch the picture when a new one arrives. The JWT payload is
-        // {id, name, email}, so the old code assigned undefined and wiped the
-        // picture every time someone edited just their name.
+        // Without this guard, an edit with no new file sets profilePicture
+        // to undefined and wipes it.
         if (req.file) {
             changes.profilePicture = await uploadToCloudinary(req.file.buffer);
         }
 
         const updatedUser = await User.findByIdAndUpdate(id, changes, {
-            new: true, // Devuelve el usuario actualizado
+            new: true,
         });
 
         if (!updatedUser) {
             return res.status(404).json({ message: "Usuario no encontrado" });
         }
-        console.log('User updated:', updatedUser);
         res.status(200).json({ message: "Usuario actualizado exitosamente", user: updatedUser });
     } catch (error) {
         console.error(error);
