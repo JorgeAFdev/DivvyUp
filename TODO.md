@@ -732,67 +732,22 @@ que está por debajo de mínimos (44 de iOS, 48 de Android) y sale del `padding:
 hamburguesa no, porque el botón se queda igual. Y el mínimo de 48 para botones de sólo icono es la
 misma conversación que el punto 17.
 
-## 19. Dos fuentes de verdad para el color, y ya divergieron
+## 19. Dos fuentes de verdad para el color — HECHO
 
-El color se declara en dos sitios que nadie sincroniza: las custom properties de `App.css`
-(`:root` y `body.dark`) y la `palette` del `createTheme` en `context/darkModeContext.jsx`. Las
-lee gente distinta —los CSS Modules las primeras, los componentes de MUI la segunda— y hoy no
-dicen lo mismo.
+`App.css` declara todos los colores y `theme/appTheme.js` los lee para pasárselos a MUI, así que la
+paleta no pertenece a la librería de UI. Las reglas están en `CLAUDE.md`, sección *Frontend data
+layer*.
 
-**Estado actual (verificado):**
+Las decisiones que el código no cuenta por sí solo:
 
-- **En claro hay dos negros de texto.** `--color` es `#252424` y `text.primary` es `#000000`, así
-  que el texto de una card (CSS) y el de un `MenuItem` (MUI) son colores distintos en la misma
-  pantalla. En oscuro sí coinciden, los dos `#FAFAFA`.
-- **En claro hay dos superficies.** `--secondary-bg-color` es `#f0f0f0` y `background.color` es
-  `#FAFAFA`. En oscuro coinciden, los dos `#333333`.
-- **`#f0f0f0` en claro es a la vez superficie de formulario y `action.hover`**, y en oscuro
-  `action.hover` (`#09090b`) es exactamente `--bg-color`, el fondo de página. El hover de los menús
-  y el fondo de la app son el mismo valor por accidente, no por decisión.
-- **`background.default` no lo lee nadie.** `#1a1a1a` en oscuro y `#ffffff` en claro, y no aparece
-  en `src/` ni hay `CssBaseline` que lo aplique al `body`. Es un tercer gris oscuro muerto, junto a
-  `#09090b` y `#333333`.
-- **La dependencia ya va en una dirección**, pero sólo para el primary: `--primary-color:
-  var(--mui-palette-primary-main)`. El resto está duplicado a mano.
-- **`background.color` es una clave inventada**, no estándar de MUI. Por eso el fondo del `Paper` de
-  los menús hay que ponerlo a mano con `sx`, y por eso ese `sx` está repetido en `appMenu.jsx:11`,
-  `groupActions.jsx:29` y `expenseActions.jsx:23`.
-
-**Que el `createTheme` lea el CSS es la dirección equivocada.** MUI necesita colores que pueda
-parsear, no cadenas `var()`: deriva con `alpha()` para hovers y ripples, con `darken`/`lighten`, con
-`getContrastText()`, y `augmentColor` calcula `light`/`dark`/`contrastText` a partir de `main`.
-Con `cssVariables: true` es peor, porque genera sus propias `--mui-palette-*` desde la paleta y
-necesita valores reales. Y leerlas en runtime con `getComputedStyle` depende de que la hoja ya esté
-aplicada, devuelve vacío en el primer render y hay que re-ejecutarlo en cada toggle.
-
-**Lo que sí funciona es invertir**: MUI como única fuente, `App.css` como capa de alias.
-
-```css
-:root {
-    --color: var(--mui-palette-text-primary);
-    --bg-color: var(--mui-palette-background-default);
-    --secondary-bg-color: var(--mui-palette-background-paper);
-}
-```
-
-Y el bloque `body.dark` de color desaparece entero, porque MUI ya cambia sus variables al cambiar de
-modo.
-
-**Qué arrastra:**
-
-- **Renombrar `background.color` a `background.paper`.** Es lo que `Paper` lee por defecto, así que
-  el menú saldría bien solo y los tres `sx` duplicados se encogen. Va en el mismo cambio o no vale
-  la pena.
-- **`body.dark` sólo se selecciona en `App.css:25`**, así que quitar el bloque de color está
-  contenido. La clase sigue haciendo falta si algún día vuelve a haber CSS que dependa del modo.
-  `useDarkMode` sólo lo usa `themeToggle.jsx`, que es el interruptor.
-- **El primer pintado.** `--mui-palette-*` la inyecta emotion desde JS, así que antes de montar
-  React no existe y los alias quedan sin valor. Hace falta fallback:
-  `var(--mui-palette-background-default, #f8f7f7)`.
-- **Decidir qué valor gana** en cada pareja que hoy diverge. No es un renombrado mecánico: elegir
-  `#000000` o `#252424` para el texto claro repinta media app.
-
-**Riesgo:** toca el color de toda la aplicación, así que va en su propia rama y no encima de otro
-trabajo. Buen momento para **sacar el `createTheme` a su propio fichero** (`theme/appTheme.js` con
-`createAppTheme(darkMode)`): `darkModeContext.jsx` lleva hoy el estado del modo y el sistema de
-diseño, y la segunda mitad es la que va a seguir creciendo con cada `styleOverrides`.
+- **Texto claro `#252424`, superficie clara `#f0f0f0`**: donde CSS y MUI divergían, gana el valor del
+  CSS. `#FAFAFA` de superficie no servía, porque el fondo de página es `#f8f7f7` y los formularios se
+  habrían quedado sin relieve contra él.
+- **`action.hover` sin override.** El default de MUI es alpha y compone sobre la superficie que tenga
+  debajo, así que no puede igualarla. Un valor sólido sí: `#f0f0f0` era a la vez superficie de
+  formulario y hover.
+- **La clave es `background.paper`, no `background.color`**, que era inventada. `Paper` lee la primera
+  por su cuenta, y con eso los menús no necesitan `sx`.
+- **`divider` y `text.secondary` están en la paleta** porque son la contraparte de `--border-color` y
+  `--placeholder-color`; sin ellas MUI seguiría decidiéndolas por su cuenta.
+- **La clase `body.dark` la sigue poniendo `darkModeContext`** aunque hoy sólo la lea `App.css`.
