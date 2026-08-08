@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from "express";
 import http from 'http';
 import cors from "cors";
@@ -24,5 +25,3 @@ const port = process.env.PORT || 3001;
 server.listen(port, () => {
   console.log("Server is up and running ⚡");
 });
-
-export { app, server };
