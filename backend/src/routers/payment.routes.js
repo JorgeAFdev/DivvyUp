@@ -1,10 +1,10 @@
-const express = require("express");
-const { jwtMiddleware } = require("../security/jwt")
-const paymentController = require("../controllers/payments.controller");
+import express from "express";
+import { jwtMiddleware } from "../security/jwt.js";
+import * as paymentController from "../controllers/payments.controller.js";
 
 const router = express.Router();
 
 router.patch("/:paymentId", jwtMiddleware, paymentController.pay);
 
 
-module.exports = router;
+export default router;

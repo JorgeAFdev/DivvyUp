@@ -1,17 +1,14 @@
-// Must be set before the modules below are loaded: both jwt.js and user.schema.js
-// capture process.env.jwt_secret at import time.
-process.env.jwt_secret = process.env.jwt_secret || "test-secret";
+import Decimal from "decimal.js";
+import supertest from "supertest";
+import { bootstrapApp } from "../bootstrap.js";
+import { disconnectDB, connectDB } from "../mongo/connection/index.js";
+import Group from "../schemas/group.schema.js";
+import Expense from "../schemas/expense.schema.js";
+import Payment from "../schemas/payment.schema.js";
+import User from "../schemas/user.schema.js";
 
-const Decimal = require("decimal.js");
-const supertest = require("supertest");
-const { bootstrapApp } = require("../bootstrap");
 const app = bootstrapApp();
 const fakeRequest = supertest(app);
-const { disconnectDB, connectDB } = require("../mongo/connection");
-const Group = require("../schemas/group.schema");
-const Expense = require("../schemas/expense.schema");
-const Payment = require("../schemas/payment.schema");
-const User = require("../schemas/user.schema");
 
 const auth = (token) => ({ Authorization: `Bearer ${token}` });
 

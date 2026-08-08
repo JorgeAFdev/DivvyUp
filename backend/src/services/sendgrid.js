@@ -1,4 +1,4 @@
-const sendgrid = require('@sendgrid/mail');
+import sendgrid from '@sendgrid/mail';
 sendgrid.setApiKey(process.env.SENDGRID_API_KEY);
 
 const sendEmail = (to, subject, text) => {
@@ -14,4 +14,4 @@ const sendEmail = (to, subject, text) => {
     sendgrid.send(msg);
 };
 
-module.exports = sendEmail
+export default sendEmail;

@@ -1,10 +1,8 @@
-const express = require("express");
-const expensesController = require("../controllers/expense.controller");
-const upload = require('../config/multer.config'); // Middleware de multer
-
-
-const { jwtMiddleware } = require("../security/jwt");
-const userController = require("../controllers/user.controller");
+import express from "express";
+import * as expensesController from "../controllers/expense.controller.js";
+import upload from '../config/multer.config.js';
+import { jwtMiddleware } from "../security/jwt.js";
+import * as userController from "../controllers/user.controller.js";
 
 const router = express.Router();
 
@@ -12,4 +10,4 @@ router.patch("/update", jwtMiddleware, upload.single('profilePicture'), userCont
 router.get("/expenses", jwtMiddleware, expensesController.getExpensesByUserId);
 
 
-module.exports = router;
+export default router;

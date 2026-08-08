@@ -8,8 +8,8 @@
 // Only accounts whose email is <letters><timestamp>@test.com go, which is the
 // shape every spec builds with Date.now(). javi@divvyup.test and
 // ana@divvyup.test have no digits and a different domain, so they survive.
-require('dotenv').config();
-const mongoose = require('mongoose');
+import 'dotenv/config';
+import mongoose from 'mongoose';
 
 const SPEC_EMAIL = /^[a-zA-Z]+\d{10,}@test\.com$/;
 const commit = process.argv.includes('--yes');

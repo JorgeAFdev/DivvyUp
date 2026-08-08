@@ -1,8 +1,8 @@
-const mongoose = require("mongoose");
-const Group = require("../schemas/group.schema");
-const Payment = require("../schemas/payment.schema");
-const { MEMBER_FIELDS, memberOf, hydrateMembers, linkedUserIds } = require("../utils/members");
-const { sendNotificationToUser, notificationTypes } = require("../services/notifications");
+import mongoose from "mongoose";
+import Group from "../schemas/group.schema.js";
+import Payment from "../schemas/payment.schema.js";
+import { MEMBER_FIELDS, memberOf, hydrateMembers, linkedUserIds } from "../utils/members.js";
+import { sendNotificationToUser, notificationTypes } from "../services/notifications.js";
 
 const pay = async (req, res) => {
   try {
@@ -68,4 +68,4 @@ const pay = async (req, res) => {
   }
 };
 
-module.exports = { pay };
+export { pay };

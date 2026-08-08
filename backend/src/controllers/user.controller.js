@@ -1,5 +1,5 @@
-const User = require('../schemas/user.schema');
-const uploadToCloudinary = require('../config/cloudinary.config');
+import User from '../schemas/user.schema.js';
+import uploadToCloudinary from '../config/cloudinary.config.js';
 
 const updateUser = async (req, res) => {
     try {
@@ -26,4 +26,4 @@ const updateUser = async (req, res) => {
     }
 };
 
-module.exports = { updateUser };
+export { updateUser };

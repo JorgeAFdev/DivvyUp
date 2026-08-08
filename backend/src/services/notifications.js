@@ -12,4 +12,4 @@ const sendNotificationToUser = (io, userId, type, message, data = {}) => {
     });
 };
 
-module.exports = { notificationTypes, sendNotificationToUser };
+export { notificationTypes, sendNotificationToUser };

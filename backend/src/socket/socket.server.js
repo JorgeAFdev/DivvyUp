@@ -1,5 +1,5 @@
-const { Server } = require('socket.io');
-const dotenv = require('dotenv');
+import { Server } from 'socket.io';
+import dotenv from 'dotenv';
 
 let clientUrl = process.env.CLIENT_URL
 
@@ -22,6 +22,4 @@ const socketServer = (server) => {
     return io;
 };
 
-module.exports = {
-    socketServer,
-};
+export { socketServer };

@@ -1,9 +1,9 @@
-const Decimal = require("decimal.js");
-const Expense = require("../schemas/expense.schema");
-const Group = require("../schemas/group.schema");
-const mongoose = require("mongoose");
-const { MEMBER_FIELDS, MEMBER_PATHS, memberOf, hydrateMembers, linkedUserIds } = require("../utils/members");
-const { sendNotificationToUser, notificationTypes } = require("../services/notifications");
+import Decimal from "decimal.js";
+import Expense from "../schemas/expense.schema.js";
+import Group from "../schemas/group.schema.js";
+import mongoose from "mongoose";
+import { MEMBER_FIELDS, MEMBER_PATHS, memberOf, hydrateMembers, linkedUserIds } from "../utils/members.js";
+import { sendNotificationToUser, notificationTypes } from "../services/notifications.js";
 
 const CENT = new Decimal("0.01");
 
@@ -268,4 +268,4 @@ const deleteExpense = async (req, res) => {
 }
 
 
-module.exports = { createExpense, updateExpense, getExpensesByGroupId, getExpensesByUserId, deleteExpense };
+export { createExpense, updateExpense, getExpensesByGroupId, getExpensesByUserId, deleteExpense };

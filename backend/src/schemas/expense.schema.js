@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
 const ExpenseSchema = new Schema(
@@ -48,4 +48,4 @@ ExpenseSchema.post('findOneAndUpdate', updateGroupDetails);
 ExpenseSchema.post('findOneAndDelete', updateGroupDetails);
 
 const Expense = mongoose.model("Expense", ExpenseSchema);
-module.exports = Expense;
+export default Expense;

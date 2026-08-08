@@ -1,13 +1,10 @@
-// Must be set before the modules below are loaded: both jwt.js and user.schema.js
-// capture process.env.jwt_secret at import time.
-process.env.jwt_secret = process.env.jwt_secret || "test-secret";
+import supertest from "supertest";
+import { bootstrapApp } from "../bootstrap.js";
+import { disconnectDB, connectDB } from "../mongo/connection/index.js";
+import User from "../schemas/user.schema.js";
 
-const supertest = require("supertest");
-const { bootstrapApp } = require("../bootstrap");
 const app = bootstrapApp();
 const fakeRequest = supertest(app);
-const { disconnectDB, connectDB } = require("../mongo/connection");
-const User = require("../schemas/user.schema");
 
 const credentials = { email: "jorge@user.com", password: "Password1" };
 

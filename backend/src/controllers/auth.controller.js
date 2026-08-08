@@ -1,5 +1,5 @@
-const User = require('../schemas/user.schema');
-const uploadToCloudinary = require('../config/cloudinary.config');
+import User from '../schemas/user.schema.js';
+import uploadToCloudinary from '../config/cloudinary.config.js';
 
 const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 const EMAIL_PATTERN = /.+@.+\..+/;
@@ -101,4 +101,4 @@ const login = async (req, res) => {
     }
 };
 
-module.exports = { register, login };
+export { register, login };

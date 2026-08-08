@@ -1,6 +1,6 @@
-const express = require("express");
-const { jwtMiddleware } = require("../security/jwt")
-const groupController = require("../controllers/group.controller");
+import express from "express";
+import { jwtMiddleware } from "../security/jwt.js";
+import * as groupController from "../controllers/group.controller.js";
 
 const router = express.Router();
 
@@ -16,4 +16,4 @@ router.get("/:groupId", jwtMiddleware, groupController.getGroupById);
 router.get("/:groupId/groupDetails", jwtMiddleware, groupController.getGroupDetails);
 
 
-module.exports = router;
+export default router;
