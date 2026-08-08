@@ -20,64 +20,13 @@
 
 - `secret` se lee a nivel de módulo (`user.schema.js:6`), igual que en `security/jwt.js`. Si el módulo se carga antes de `dotenv.config()`, el secreto es `undefined` y `jwt.sign` peta. Ya obliga a un workaround en `backend/src/tests/group.test.js`.
 - **El login ya no distingue email desconocido de contraseña incorrecta**: ambas ramas responden `Invalid credentials` (arreglado el 04-08-2026, PR #82). `POST /auth/register` sí sigue enumerando, con su `Email already registered`, y ahí la fuga es inherente: no puedes permitir dos cuentas con el mismo correo sin decirlo. Taparla de verdad pide verificación por email, que es del punto 5.
-- **`password` ya tiene `select: false` — HECHO.** El campo se declara con `select: false`
-  (`user.schema.js:21-30`) y el único sitio que pide el hash es el login, con
-  `.select('+password')` (`auth.routes.js:74`). Al hacerlo apareció una fuga viva que no estaba
-  apuntada: `updateUser` devolvía el documento entero de `findByIdAndUpdate`, así que `PATCH
-  /user/update` mandaba el hash bcrypt del propio usuario al navegador y lo escribía en los logs
-  con su `console.log`. No hizo falta tocar ese controlador: con el `select: false` desaparece de
-  los dos sitios, que es justo la diferencia entre proteger el campo y proteger cada llamada.
-  Cubierto por `src/tests/auth.test.js` (9 tests, antes no había ninguno de auth): login correcto,
-  las dos ramas de credenciales inválidas con el mismo mensaje, que ni login ni register ni
-  `PATCH /user/update` devuelven el hash, y que `select('+password')` sigue trayéndolo para que
-  `comparePassword` funcione.
-
-  Antes de esto, la primera fuga —`getGroupDetails` hacía `.populate('members.user')` sin proyección y mandaba el
-  hash bcrypt de todos los miembros en cada carga— se cerró al desplegar la tarea 2 proyectando
-  `MEMBER_FIELDS` en los diez `populate`. Esa proyección se queda como está: sigue haciendo falta
-  para no mandar el email de los miembros, pero ya no es lo único que separa el hash del cliente.
-- **Validación de fuerza de contraseña — HECHO.** `registrationErrors()` en `auth.routes.js`
-  valida nombre, email y contraseña antes de tocar la BD y devuelve 400 con los motivos unidos.
-  La regla es `/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/`, el `validatePassword` que vivía en el
-  `middlewares/index.js` borrado en `796040b`. `registerForm.jsx` valida el mismo patrón y lo
-  anuncia junto a la etiqueta.
-
-  Va en el controlador y no en el esquema a propósito: validando arriba, el 400 sale donde se lee
-  la petición, y el `catch` vuelve a significar sólo "esto ha fallado de verdad" en vez de tener
-  que distinguir un `ValidationError` de un error real. Es también lo que ya decía CLAUDE.md.
-  El precio es que la regla vive en dos sitios (controlador y front), que es lo que viene a
-  arreglar el punto 11.
-
-  **Corrección de lo que decía este punto:** era falso que se pudiera registrar una cuenta con la
-  contraseña `a`. El esquema ya tenía `minlength: 8` y la validación de Mongoose corre *antes* que
-  el hook `pre('save')` de bcrypt, así que veía la contraseña escrita y no el hash. Lo que sí
-  entraba era cualquier cosa de 8 caracteres: `password` y `12345678` se registraban con un 200.
-
-  Dos cosas que aparecieron al hacerlo:
-
-  - El registro devolvía **500 `Error creating new user`** para cualquier fallo de validación,
-    porque llegaba a `save()` y el `catch` genérico se lo tragaba. Le pasaba igual al nombre de
-    menos de 3 caracteres y al email mal formado: error del cliente reportado como error de
-    servidor, sin decir cuál. Con la validación arriba ya no llega ninguno.
-  - La regla **no** puede apoyarse en `minlength`: su mensaje por defecto cita el valor que
-    rechaza (`` Path `password` (`a`, length 1) ``), o sea que metería la contraseña en claro en
-    el cuerpo de la respuesta y en los logs. El `minlength: 8` del esquema se queda como
-    restricción estructural, pero desde el registro ya no lo alcanza nada. Hay tests que fijan
-    que ninguna respuesta de error contenga la contraseña.
-
-  Sin migración y sin nadie fuera: la regla sólo corre en el registro, así que las cuentas
-  existentes con contraseña débil siguen entrando. Tampoco pueden ponerse al día: **no existe
-  endpoint de cambio ni de reset de contraseña**, `user.routes.js` sólo tiene `PATCH /update`
-  (nombre, email, foto) y `GET /expenses`. Eso es del punto 5.
-
-## 2. Miembros de grupo que no son usuarios registrados — HECHO
-
-**Desplegado el 04-08-2026** (PR #81). Un miembro es un nombre: `members[]` con `_id` propio como
-identidad y `user` opcional, así que con una sola cuenta se lleva el grupo entero y quien quiera se
-une después por el enlace, eligiéndose de la lista y heredando su historial.
-
-Las reglas que el código nuevo tiene que respetar están en `CLAUDE.md`; las decisiones descartadas y
-por qué, en [docs/archive/miembros-invitados.md](docs/archive/miembros-invitados.md).
+- **`password` con `select: false` y validación de registro en `registrationErrors()` — HECHO** (PR
+  #82/#83). Las reglas que dejaron vivas están en `CLAUDE.md`, sección *Auth*. Lo que queda abierto
+  de ahí: el regex de fuerza está escrito en `auth.routes.js` y en `registerForm.jsx` a la vez, que
+  es lo que viene a arreglar el punto 11.
+- **No existe endpoint de cambio ni de reset de contraseña.** `user.routes.js` sólo tiene
+  `PATCH /update` (nombre, email, foto) y `GET /expenses`, así que las cuentas creadas antes de la
+  regla de fuerza siguen entrando y no pueden ponerse al día. Eso es del punto 5.
 
 ## 3. Landing page
 
@@ -90,34 +39,6 @@ por qué, en [docs/archive/miembros-invitados.md](docs/archive/miembros-invitado
 
 - Lo mínimo para tapar el agujero es un `<Route index element={...} />` dentro del layout. Redirigir a `/groups` si hay token y a `/login` si no es de una línea, y sirve mientras no exista landing.
 - Para la landing de verdad: qué cuenta (el proyecto ya tiene capturas y copy en el `README.md` que se pueden reaprovechar), y si debe redirigir a `/groups` cuando el usuario ya está logueado.
-
-## 4. `pnpm test` del frontend está en rojo — HECHO
-
-`cd frontend && pnpm test` sale con **0**: 3 suites, 21 tests. `components/icon` (13),
-`components/header` (7, del punto 9) y `context/darkModeContext` (1, que ya estaba).
-
-Las dos plantillas comentadas que lo tenían en rojo eran ficheros sin un solo test dentro, y jest
-falla una suite vacía. Ninguna de las dos se borró: `header.test.jsx` se escribió al hacer el punto 9
-e `icon.test.jsx` aquí. **`--passWithNoTests` sigue deliberadamente sin usarse**, que era el aviso de
-este punto: con ese flag, una suite que deja de ejecutarse por error se ve igual que una que pasa.
-
-Lo que cubre el test de `Icon`, que no es lo obvio:
-
-- El fallo real de este componente no es que pete, es que **degrada en silencio**. `iconsByVariant[variant]`
-  devuelve `undefined` para una variante que no existe —o cuyo import se cayó— y el `|| MdAddCircleOutline`
-  la convierte en el icono de añadir, en todos los sitios donde se use, sin error. Por eso hay un
-  `it.each` sobre las ocho variantes que no son `add` comprobando que cada una renderiza un SVG
-  distinto del de `add`, y no que renderiza "algo". Verificado poniendo `menu: undefined` a mano: el
-  test falla, que es lo que hace que sirva de algo.
-- El `data-type`, el fallback de variante desconocida, la variante por defecto, que `handleClick`
-  llegue al `onClick`, y que la clase salga como `icon` más la que nombra el `className`.
-- Sin providers y sin mocks: `Icon` no toca contexto, router ni red. Fue el primer test real por eso,
-  como decía este punto.
-
-**Nada corre jest en CI**, y eso no ha cambiado: `.github/workflows/prod-deploy.yaml` está filtrado a
-`backend/**` y Cloudflare Pages sólo ejecuta `vite build`. Verde aquí significa que la suite se puede
-correr en local sin ruido, no que la rama esté protegida. La única red real del front siguen siendo
-los specs de Cypress.
 
 ## 5. Auth con Better Auth (login/register con Google y demás proveedores)
 
@@ -146,243 +67,6 @@ Sustituir el auth artesanal por [Better Auth](https://better-auth.com) para tene
 - **Tests**: `bootstrapApp()` monta el router en `/` y no conecta BD. Better Auth sí necesita una BD real, así que los tests de rutas autenticadas tendrían que crear sesiones contra `mongodb-memory-server` en vez de firmar un JWT a mano.
 - **Instalación**: `minimumReleaseAge: 4320` en `pnpm-workspace.yaml` bloquea versiones publicadas hace menos de 3 días — Better Auth publica a menudo, así que puede no resolver la última. Y tiene que ir en `dependencies` del backend, no en dev, o el contenedor (`--prod`) se cae al arrancar.
 - Confirmar contra la doc de la versión que se instale que el import de CommonJS funciona sin transpilar; el paquete es TypeScript/ESM-first.
-
-## 6. La foto de perfil no debería ser obligatoria — HECHO
-
-**Resuelto en la Fase 4b (PR #79)**, porque era el último obstáculo del camino que abría esa fase:
-llegabas por una invitación sin cuenta y tenías que subir una imagen para poder entrar. Fuera el
-`required` y el `validate` del formulario; el `append` del multipart sólo viaja si hay fichero, que
-antes mandaba el string `"undefined"`; y el avatar cae a la inicial del nombre con `initialsOf()`.
-El bug de `updateUser` que se describe abajo también está arreglado: sólo toca `profilePicture`
-cuando llega un fichero, así que editar el nombre ya no te borra la foto.
-
-Se queda escrito lo que había, que es de donde salió el diagnóstico:
-
-Hoy no puedes registrarte sin subir una imagen. Debería ser opcional en el registro y quedar como
-algo que el usuario añade después editando su perfil, si quiere.
-
-**Estado actual (verificado):**
-
-- El único sitio donde es obligatoria es el front: `registerForm.jsx:110-113` registra el input con
-  `required: 'Profile picture is required'` **y** un `validate` que exige `value.length > 0`. El
-  backend ya la trata como opcional (`auth.routes.js:15` arranca con `profilePicture = ''` y solo
-  sube a Cloudinary `if (req.file)`), y el esquema tiene `default: ''` (`user.schema.js:26-29`).
-- Quitar el `required` no basta: `registerForm.jsx:20` hace `formData.append('profilePicture', data.profilePicture[0])`
-  sin comprobar nada, así que sin fichero manda el string `"undefined"` en el multipart. Hay que
-  meter el `append` dentro de un `if`, como ya hace `userEditForm.jsx:31`.
-- El fallback cuando no hay imagen es `https://via.placeholder.com/150`, en `userMenu.jsx:24` y
-  `user.jsx:17`. Es un servicio externo de terceros que ya no responde, así que hoy un usuario sin
-  foto ve un icono roto — detallado aparte en el **punto 8**. En `group.jsx:67` y `expense.jsx:57` se pasa
-  `member.user?.profilePicture` (posiblemente `''`) directamente al `Avatar` de MUI, que en ese caso
-  ya cae solo a su fallback.
-- **Bug aparte, del mismo repaso:** `user.controller.js:13-14`, al editar el perfil sin subir
-  fichero, asigna `profilePicture = req.jwtPayload.profilePicture`. El payload del JWT es
-  `{id, name, email}` (`user.schema.js:52-56`), así que eso es `undefined` y el `findByIdAndUpdate`
-  **borra la foto que el usuario ya tenía** cada vez que cambia solo el nombre o el email. Lo
-  correcto es no incluir el campo en el `$set` cuando no viene fichero.
-
-**A decidir:**
-
-- Avatar por defecto con la inicial del nombre. El `Avatar` de MUI ya lo hace nativo: sin `src`,
-  renderiza sus children, así que `<Avatar>{user.name[0].toUpperCase()}</Avatar>` cubre el caso sin
-  añadir dependencias. Conviene derivar el color de fondo del nombre (hash → hue) para que cada
-  usuario tenga el suyo y sean distinguibles en la lista de miembros de un grupo.
-- Encaja con el punto 5: si se hace el auth con Better Auth, el login social ya devuelve la foto del
-  proveedor (`user.image` de Google/GitHub) y se puede usar automáticamente, sin pedirle nada al
-  usuario. Con lo cual el registro se queda sin campo de imagen: o viene del proveedor, o es la
-  inicial, o el usuario la sube luego desde su perfil.
-- Ese avatar por inicial sirve también para los miembros invitados del punto 2, que por definición no
-  tienen `user` ni foto — hoy caen todos en el mismo `Avatar` vacío y son indistinguibles.
-
-## 7. Sacar las queries de los componentes a hooks — HECHO
-
-Toda petición del frontend pasa por `@tanstack/react-query` y por un hook de `src/hooks/`: ningún
-componente importa ya `utils/*Api.js` ni la instancia de axios, y no queda un solo `useQuery` o
-`useMutation` escrito dentro de un componente. Las reglas del reparto (el hook coge el token, el
-componente pone la UI) están en `CLAUDE.md`, sección *Frontend data layer*.
-
-Un fichero por recurso: `useGroups`, `useGroupDetails`, `useExpenses`, `usePayments`, `useInvite`,
-`useSession` (login y registro) y `useProfile`, más `queryKeys.js` con todas las claves. `authApi.js`
-y `userApi.js` son nuevos: `loginForm`, `registerForm` y `userEditForm` llamaban a `api` directamente
-y se saltaban la capa por recurso.
-
-Lo que se llevó por delante, y que es la parte que cambia firmas y no solo mueve código:
-
-- **`setGroups` y `refreshGroupDetails` ya no existen.** La caché es el único dueño del estado de
-  servidor, así que cada mutación invalida su clave y `GroupList`, `CreateGroup`, `ExpenseList` y
-  `DebtsList` se quedan sin esos props. `DebtsList` recibe ahora `groupId`, que es lo que `Debt`
-  necesita para saber qué invalidar.
-- **`['users']` era invalidación muerta** — nadie consultaba esa clave. Fuera, junto al
-  `setQueryData(['users'])` de `userEditForm`.
-- `registerForm` capturaba el error dentro del `mutationFn` y devolvía `undefined`, así que un
-  registro fallido entraba igualmente por `onSuccess` y llamaba a `login(undefined)`. Ahora el error
-  sube y lo pinta `onError`. `userEditForm` hacía lo contrario, capturar y relanzar, y sacaba dos
-  toasts por el mismo fallo.
-- `userEditForm` escribía `localStorage` con la clave a mano; pasa por `utils/localStorage.js`, que
-  es lo que `CLAUDE.md` dice que es el único sitio donde aparece `user-session`. El
-  `window.location.reload()` sigue ahí: la pantalla de perfil lee el usuario de la sesión y no de una
-  query, así que no hay caché que invalidar. Quitarlo pide meter el usuario en el contexto de auth.
-
-Validado con `pnpm build` y con Cypress, que pasa de 3 specs y 5 tests a **7 specs y 13 tests**. Los
-cuatro nuevos (`auth`, `group-actions`, `expense-flow`, `join`) cubren justo lo que el refactor tocaba
-y nadie miraba: login por formulario y login fallido, editar perfil, editar grupo, el 409 al quitar a
-un miembro con gastos, resetear y compartir el enlace, el ciclo completo del gasto con su balance y
-sus deudas, y unirse escribiendo un nombre que no está en la lista. Los helpers de siembra viven
-ahora en `cypress/support/api.js`; las tres specs viejas siguen con su copia local.
-
-El `pnpm test` de jest sigue roto por lo del punto 4, que es anterior a esto.
-
-## 8. El avatar por defecto apunta a un servicio de terceros caído — HECHO
-
-**Resuelto en la Fase 4b (PR #79)**, junto con el punto 6: no queda ninguna referencia a
-`via.placeholder.com` en el repo. `userMenu.jsx` y `user.jsx` usan el `Avatar` de MUI con la inicial
-del nombre como children, que es lo que ya hacían `group.jsx` y `expense.jsx` para los miembros sin
-cuenta.
-
-Se queda escrito lo que había:
-
-Va en su propia rama: no toca nada del contrato de miembros, pero se ve nada más entrar con un
-usuario sin foto.
-
-**Estado actual (verificado):**
-
-- La petición a `https://via.placeholder.com/150` falla con `net::ERR_CONNECTION_CLOSED`. No es un
-  404 del recurso: la conexión se cierra sin devolver nada, el host ya no sirve.
-- Dos usos, los dos como fallback de `profilePicture` vacío:
-  - `frontend/src/components/user/userMenu.jsx:24` — la URL acaba en el `src` de un `<Avatar>` de MUI.
-  - `frontend/src/pages/user/userProfile/user.jsx:17` — `<img>` pelado, sin fallback: se queda el
-    icono de imagen rota del navegador.
-- Se dispara siempre que `user.profilePicture` es `''`. Hasta ahora casi ningún usuario caía ahí
-  porque todos se habían registrado con imagen; en cuanto la foto sea opcional en el registro
-  (punto 6) pasa a ser el caso normal, y ya lo es para las cuentas que crea el e2e.
-- El resto de sitios que pintan avatares no dependen del servicio: `group.jsx:67` y `expense.jsx:57`
-  pasan `member.user?.profilePicture` directo al `Avatar`, que cae solo a su fallback, y
-  `userEditForm.jsx:135` solo renderiza el `<img>` si hay foto.
-
-**A decidir:**
-
-- `userMenu.jsx` es sustitución directa: `<Avatar src={user.profilePicture || undefined}>` con la
-  inicial como children. Sin `src`, MUI renderiza los children — ni petición de red ni dependencia
-  nueva.
-- `user.jsx` usa un `<img>` con estilo propio (`user.module.css`), así que hay que elegir: pasarlo
-  también a `Avatar` (las dos vistas quedan iguales y el tamaño se va a `sx`), o dejar el `<img>` con
-  un asset local. Para lo segundo, en `public/assets/` solo está `logo.png` y no existe `src/assets/`,
-  o sea que habría que crear el SVG.
-- Es el mismo avatar por inicial que pide el punto 6 y que necesitan los miembros invitados del
-  punto 2, que por definición no tienen `user` ni foto. Mejor un único `components/user/userAvatar.jsx`
-  compartido que resolverlo por separado en cada sitio.
-- Si se hace antes que el punto 6, el resultado no se nota en producción hasta que haya usuarios sin
-  foto; aun así es la dependencia externa que hay que quitar primero, porque el punto 6 la multiplica.
-
-## 9. El header no colapsa en móvil — HECHO
-
-Por debajo de 768px y con sesión, el header es logo + botón de hamburguesa, y dentro del desplegable
-van `Groups`, `Expenses`, `Profile`, `Logout` y el toggle de tema.
-
-**Cómo quedaron las decisiones:**
-
-- **`Menu` de MUI** anclado al botón, no `Drawer`: es el patrón que ya usaba `UserMenu`, así que no
-  entra API nueva y el Escape y el foco vienen de serie.
-- **Un fichero por variante.** `header.jsx` sólo decide (`GuestHeader`, `DesktopHeader`,
-  `MobileHeader`) y las piezas compartidas son `HeaderLogo` y `ThemeToggle`. El motivo no es el
-  tamaño: el estado del desplegable (`anchorEl`) es de móvil y sólo de móvil, y viviendo en
-  `MobileHeader` **cruzar el breakpoint lo desmonta**, así que el `useEffect` que lo limpiaba ya no
-  necesita depender de `isMobile`. La dependencia no se movió, desapareció.
-- **El breakpoint vive sólo en JS**, en la constante `MOBILE_QUERY` que `header.jsx` exporta (el test
-  la importa en vez de repetir el número), leída con
-  `useMediaQuery`. El módulo CSS se quedó sin ninguna media query: el `gap` de `.nav` y el `padding`
-  de `.navItem` son `clamp()`, así que escalan sin necesitar un segundo sitio donde esté escrito 768.
-  Eso arregla de paso el bug de la media query invertida, que dejaba los links pegados justo en móvil.
-- **La cuenta va aplanada**: `Profile` y `Logout` son entradas directas del desplegable y `UserMenu`
-  se queda sólo para escritorio, para no meter un menú dentro de otro menú en táctil.
-- **El orden es `Groups`, `Expenses` | `Profile`, `Dark mode` | `Logout`**, y `Logout` va último
-  detrás de su propio divisor. Antes estaba pegado justo debajo de `Profile`: es la única acción
-  destructiva del menú, hace `window.location.reload()` así que no tiene vuelta atrás, y estaba a un
-  mis-tap de distancia en un target táctil de 390px. Ahora lo único que tiene al lado es un divisor.
-  El test comprueba la lista entera en orden, no que los items existan, porque esto es una decisión
-  y no un detalle.
-- **El toggle de tema no cierra el desplegable**, y es el único item que no lo hace. Los otros cuatro
-  se van (tres navegan, `Logout` cierra la sesión); éste es un interruptor y su trabajo acaba dentro
-  del menú. Cerrando se tiraba justo la confirmación: el label pasa de `Dark mode` a `Light mode`, y
-  ese cambio es lo que enseña que es un interruptor y no un enlace. Además deshacer costaba dos
-  toques. Por eso `ThemeMenuItem` ya no recibe `onSelect`: no tiene con qué cerrar nada.
-- **En el desplegable el toggle de tema es sólo texto.** Con icono era el único item de los seis que
-  lo tenía, y el efecto real no era la asimetría sino que **el icono empujaba su label ~60px a la
-  derecha**: el menú tenía el borde izquierdo del texto desalineado en exactamente una fila. El label
-  ya dice la acción (`Dark mode` / `Light mode`), así que el icono no aportaba información. En
-  escritorio sí se queda, porque ahí el botón es sólo icono. Si algún día se quieren iconos en el
-  menú, van en los seis a la vez y con una columna de ancho fijo, no en uno.
-- **La variante sin sesión no colapsa.** `Login` y `Register` son la llamada a la acción de esas
-  pantallas y esconderlas detrás de una hamburguesa las entierra; con el `clamp()` del `padding` ya
-  caben. El header sigue teniendo dos formas, no tres.
-- **Accesibilidad:** el botón es un `IconButton` real con `aria-label="Open menu"`, `aria-haspopup`,
-  `aria-controls` y `aria-expanded`, y el `MenuList` apunta a él con `aria-labelledby`. Cierra con
-  Escape (de MUI), al pulsar cualquier entrada, y por `useEffect` sobre `pathname` para cubrir la
-  navegación que no sale de un click en el propio menú. **El toggle de tema también**: era un `<svg>`
-  con `onClick` encima, sin foco ni rol ni nombre, y ahora es un `IconButton` con `aria-label` que
-  dice la acción (`Dark mode` / `Light mode`). Afectaba a las tres variantes, no sólo a móvil.
-- **Los dos menús de la app comparten `components/menu/appMenu.jsx`**, que es el `Menu` de MUI con el
-  `sx` de `background.color` / `text.primary` / `action.hover`. Es lo que evita el menú blanco sobre
-  blanco en modo oscuro, y está en un componente y no en un helper de estilos para que no se pueda
-  usar el `Menu` pelado por olvido. Misma razón que `memberAvatar.jsx`.
-- `Icon` tiene ahora variante `menu` (`MdMenu`) en su `iconsByVariant`, con su clase `.menu` de 26px.
-- `<Notifications />` sigue montado fuera del desplegable: devuelve `null`, así que no ocupa ancho,
-  pero tiene que renderizarse para que el socket se abra igual en móvil.
-
-**Red de seguridad:** `header.test.jsx` dejó de ser una plantilla comentada y son **6 tests verdes**:
-los links de auth sin sesión, la navegación en línea en escritorio, el toggle de tema como botón con
-nombre, que en móvil la navegación no está en línea, que el desplegable trae las cinco entradas, y el
-cierre con Escape. Van todos por rol y por `aria-*`, no por estructura, y eso es lo que hizo que el
-reparto en cuatro ficheros no tocara ni una línea del test. Dos avisos para el siguiente que
-escriba un test de front: `jest.setup.js` ahora define `TextEncoder`/`TextDecoder` porque
-`react-router` 7 los lee al importarse, y hay que mockear `window.matchMedia` a mano porque jsdom no
-lo trae y es lo que decide qué variante se pinta. `pnpm test` del front sigue en rojo, pero ya sólo
-por `icon.test.jsx`, que es del punto 4.
-
-**Se queda escrito lo que había:**
-
-**Estado actual (verificado):**
-
-- `frontend/src/components/header/header.jsx` renderiza dos variantes. Sin token: logo + `Login` +
-  `Register` + toggle de tema. Con token: logo, `<nav>` con `Groups` y `Expenses`, y un `<div>`
-  derecho con el toggle, `<Notifications />` y `<UserMenu />`.
-- `header.module.css` no tiene **ninguna** regla que reorganice el header en pantallas pequeñas:
-  `.header` es un flex con `justify-content: space-between` y `width: min(90%, 120rem)`, sin
-  `flex-wrap`. Los tres bloques se siguen repartiendo la misma fila por estrecha que sea.
-- La única media query del fichero está dentro de `.nav` y va **al revés** de lo que hace falta:
-  aplica `margin-left` y `gap: 20px` solo `@media (min-width: 768px)`, así que justo en móvil los dos
-  links quedan pegados sin separación.
-- El ancho mínimo lo fija sobre todo `.navItem`, con `padding: 10px 20px` por link, más el logo
-  (`max-width: 80px`) y el avatar de `UserMenu`.
-- `<Notifications />` devuelve `null` (`notifications.jsx`), así que no ocupa ancho: no es el que
-  estorba, y puede quedarse montado donde está.
-- El toggle sale de `useDarkMode()` del `darkModeContext`. Es de los pocos sitios que quedan usando
-  ese contexto, cuando la dirección del proyecto es leer el tema de MUI (`useTheme`).
-- `Icon` (`icon/icon.jsx`) mapea un `variant` a un icono de `react-icons`; **no hay variante de
-  hamburguesa**, hay que añadirla al `iconsByVariant` en vez de importar el icono suelto en el header.
-- MUI 6 está disponible y `UserMenu` ya usa `Menu` + `Avatar` + `IconButton`, así que hay precedente
-  para `Drawer` o `useMediaQuery` sin añadir dependencias.
-
-**A decidir:**
-
-- Breakpoint: el CSS ya usa 768px a mano. O se mantiene ese número en el módulo, o se pasa a
-  `theme.breakpoints.down('md')` con `useMediaQuery` — pero entonces la decisión de qué se ve vive en
-  JS y no en el CSS, y conviene que no esté en los dos sitios a la vez.
-- `Drawer` lateral de MUI frente a un `Menu` desplegable bajo el botón. El `Menu` es lo más parecido
-  a lo que ya hace `UserMenu`; el `Drawer` va mejor si luego se añaden más entradas.
-- La cuenta dentro del colapso: o se reutiliza `<UserMenu />` tal cual (queda un menú dentro de otro
-  menú, que es incómodo en táctil), o se aplanan sus items (`Profile` y `Logout`) como entradas
-  directas del desplegable y `UserMenu` se queda solo para escritorio.
-- La variante sin token también se rompe: son dos links más el toggle. Puede compartir el mismo
-  desplegable cambiando solo su contenido, o dejarse tal cual si se decide que tres elementos caben.
-- Accesibilidad, que hoy no existe en el header: el botón tiene que ser un `<button>` real con
-  `aria-label`, `aria-expanded` y `aria-controls`, cerrarse con `Escape` y al navegar a otra ruta.
-  `Icon` renderiza el SVG con un `onClick` encima, sin foco ni rol, así que el botón lo tiene que
-  envolver (`IconButton` de MUI ya lo resuelve).
-- Sin red de seguridad: `header.test.jsx` es una de las dos plantillas comentadas del punto 4 y
-  encima importa `./Header`, que no existe. Si se va a tocar el header, es el momento de escribir ese
-  test de verdad — ojo con la rama con token, que monta `Notifications` y necesita sesión en
-  `localStorage`.
 
 ## 10. `react-router` 7.18.1 tiene un aviso de seguridad, y el parche es un major
 
@@ -415,8 +99,8 @@ gobierna todas las rutas necesita su rama, su PR y una pasada completa de Cypres
 - La ruta que más vigilar es `/join/:inviteCode` y el `RequireAuth` que conserva el destino
   (`components/auth/requireAuth.jsx`), porque es lo último que se montó y lo que peor se ve si se
   rompe: `useLocation` y `Navigate` con `state` son justo lo que toca una migración de router.
-- El `pnpm test` del front sigue roto (§4), así que la validación es Cypress y nada más. Si se
-  arregla el §4 antes, mejor red para este.
+- Los 36 tests de jest del front no tocan el enrutado, así que la validación real es Cypress y nada
+  más.
 - Cambia el estado del riesgo si algún día se plantea SSR o RSC en el front: en cuanto se escriba la
   primera server action, esto pasa de aplazable a bloqueante y hay que subir antes.
 
@@ -626,15 +310,6 @@ traduzca. Es el patrón que ya existe en Cartobol y funciona.
   los códigos, no las reglas. Aquí se quiere lo segundo también, así que este punto es la mitad del
   patrón, no el patrón entero.
 
-## 16. Quitar el toast de "Login successfully" — HECHO
-
-Se fueron los dos, el del login y el del registro: el `onSuccess` de `loginForm.jsx` y el de
-`registerForm.jsx` sólo navegan. La confirmación de que has entrado es la pantalla de destino, y el
-toast aparecía ya encima de ella.
-
-Los `toast.error` de los dos `onError` siguen donde estaban, que es donde hacen falta: un login o un
-registro fallido no navega, y sin el aviso la pantalla no diría nada.
-
 ## 17. Un `Button` propio, reutilizable y que pase WCAG
 
 Hoy conviven **dos implementaciones de botón sin nada en común**: los formularios usan `<button>`
@@ -691,7 +366,8 @@ Ninguna de las dos pasa el contraste mínimo de AA, y entre las dos hay tres azu
 
 ## 18. El desplegable móvil a un `Drawer` (opcional)
 
-El punto 9 eligió `Menu` a propósito y para lo que hay dentro hoy sigue siendo la elección correcta:
+El header colapsado usa `Menu` a propósito, y para lo que hay dentro hoy sigue siendo la elección
+correcta:
 cinco entradas, y **el paper mide 111.6 x 290 px, el 29% del ancho y el 34% del alto** de una pantalla
 de 390px (medido con Playwright a 390x844, no estimado). Un panel de altura completa serían ~550px
 vacíos para el mismo contenido.
@@ -732,22 +408,3 @@ que está por debajo de mínimos (44 de iOS, 48 de Android) y sale del `padding:
 hamburguesa no, porque el botón se queda igual. Y el mínimo de 48 para botones de sólo icono es la
 misma conversación que el punto 17.
 
-## 19. Dos fuentes de verdad para el color — HECHO
-
-`App.css` declara todos los colores y `theme/appTheme.js` los lee para pasárselos a MUI, así que la
-paleta no pertenece a la librería de UI. Las reglas están en `CLAUDE.md`, sección *Frontend data
-layer*.
-
-Las decisiones que el código no cuenta por sí solo:
-
-- **Texto claro `#252424`, superficie clara `#f0f0f0`**: donde CSS y MUI divergían, gana el valor del
-  CSS. `#FAFAFA` de superficie no servía, porque el fondo de página es `#f8f7f7` y los formularios se
-  habrían quedado sin relieve contra él.
-- **`action.hover` sin override.** El default de MUI es alpha y compone sobre la superficie que tenga
-  debajo, así que no puede igualarla. Un valor sólido sí: `#f0f0f0` era a la vez superficie de
-  formulario y hover.
-- **La clave es `background.paper`, no `background.color`**, que era inventada. `Paper` lee la primera
-  por su cuenta, y con eso los menús no necesitan `sx`.
-- **`divider` y `text.secondary` están en la paleta** porque son la contraparte de `--border-color` y
-  `--placeholder-color`; sin ellas MUI seguiría decidiéndolas por su cuenta.
-- **La clase `body.dark` la sigue poniendo `darkModeContext`** aunque hoy sólo la lea `App.css`.

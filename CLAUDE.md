@@ -114,6 +114,10 @@ Notifications only go to members with a linked `user` — `linkedUserIds()` in `
 
 `user.schema.js` owns password hashing (`pre('save')` bcrypt), `comparePassword()`, and `generateJWT()` (payload `{id, name, email}`, signed with `process.env.jwt_secret`, **no expiry option is passed** despite the unused `expirationDay` calculation).
 
+**`password` is declared `select: false`**, and login is the only place that asks for the hash, with `.select('+password')`. That is the field being protected rather than each call being protected: `updateUser` returns the whole document from `findByIdAndUpdate` and used to hand the caller's own bcrypt hash to the browser and to the logs, and the projection alone closed it without touching that controller.
+
+Registration validates in `registrationErrors()` before touching the DB, so a 400 leaves from where the request is read and `catch` still means a real failure. **Do not move the strength rule onto Mongoose `minlength`:** its default message quotes the value it rejected, which puts the plaintext password in the response body and the logs. Tests pin that no error response ever contains it. The regex is currently spelled in both `auth.routes.js` and `registerForm.jsx` — point 11 of the TODO is what removes the duplication.
+
 `security/jwt.js` exports `jwtMiddleware`, which verifies the `Authorization: Bearer` header and sets `req.jwtPayload`. Nearly every route is wrapped in it; `auth.routes.js` (register/login) is not.
 
 Frontend stores `{token, user}` as JSON in `localStorage` under the key `user-session`. `utils/localStorage.js` is the only place that key appears; `context/userContextAuth.jsx` (`useAuth()`) exposes `token`/`login`/`logout`; routes in `App.jsx` gate on `token` with `<Navigate to="/login" />`.
@@ -141,6 +145,11 @@ Menu entries are `MenuItem` with the content directly inside. Do not wrap it in 
 
 The header is **one file per variant** — `guestHeader`, `desktopHeader`, `mobileHeader`, with `header.jsx` doing nothing but picking one and exporting `MOBILE_QUERY` (768px, read with `useMediaQuery`; the CSS module deliberately has no media query, so the breakpoint is written once). The split is what keeps the collapsed menu's `anchorEl` inside `mobileHeader`: crossing the breakpoint unmounts the component, so no effect has to reset that state. Every clickable icon in the header is an `IconButton` with an `aria-label` — `Icon` on its own renders an `<svg>` with an `onClick`, which is neither focusable nor named.
 
+Two rules about the collapsed menu, both of them decisions rather than details, and `header.test.jsx` asserts the whole list in order rather than that the items exist:
+
+- **The order is `Groups`, `Expenses` | `Profile`, `Dark mode` | `Logout`, and `Logout` goes last behind its own divider.** It is the only destructive action in the menu and it reloads the page, so on a 390px touch target the one thing next to it is a divider.
+- **The theme toggle is the only entry that does not close the menu.** The other four navigate or end the session; this one is a switch, and its label flipping between `Dark mode` and `Light mode` is the confirmation that it worked. Closing threw that away and made undoing it cost two taps. It is also text-only in the menu — an icon there pushed its label out of line with the other five.
+
 Styling is CSS Modules (`foo.module.css` beside `foo.jsx`) plus MUI. `context/darkModeContext.jsx` still exists, but recent commits deliberately removed per-component `useDarkMode` usage in favor of the MUI theme (`useTheme`) — follow that direction in new components. The exception is `header/themeToggle.jsx`, which needs `toggleDarkMode` itself: it is the switch.
 
 **Every colour is declared in `App.css`, and nowhere else.** `theme/appTheme.js` holds no colour value: `createAppTheme(darkMode)` reads them out of the stylesheet and hands them to `createTheme`. MUI consumes the palette, it does not own it.
@@ -153,6 +162,11 @@ Four rules hold that together:
 - **`components.*.styleOverrides` is CSS**, copied out verbatim for the browser to resolve, so a `var()` belongs there — that is why `THEME_TRANSITION` is the literal `'var(--theme-transition)'`. The split is who reads the value: the browser resolves a `var()`, JavaScript arithmetic cannot.
 - **Read the rules, not `getComputedStyle`.** The theme is built during render and the `dark` class lands in an effect, so the computed value of a colour is still the light one while the dark theme is being built. `declarationsFor()` walks `document.styleSheets` for the `:root` and `body.dark` rules and resolves them the way the cascade does.
 - **A missing declaration throws**, naming the variable. A fallback would put a colour back into JS.
+
+Two of the values are load-bearing and not free to change:
+
+- **The light surface is `#f0f0f0`, darker than the `#f8f7f7` page.** A lighter surface leaves forms and modals with no relief against the background at all.
+- **`action.hover` carries no override.** MUI's default is alpha, so it composes over whatever surface is beneath it and by construction cannot equal it. A solid value can: the previous one was `#f0f0f0`, the same value the form surface uses, which would have made the menu hover invisible.
 
 Transitions come off one knob, `--transition-base`. Set it only on the element that declares the colour: a child that re-transitions an inherited value chases its parent's animation and looks slower. `MuiMenuItem` therefore transitions `background-color` alone — it is transparent at rest and inherits its colour from the paper.
 
@@ -175,6 +189,7 @@ An empty result is a `200 []`, not a 404: that goes for `getUserGroups`, `getExp
 - Backend tests use `mongodb-memory-server`: `connectDB()` in `mongo/connection/index.js` swaps to an in-memory URI whenever `NODE_ENV === 'test'`, so tests must set that env var (the `pnpm test` script does). `--runInBand` is required — the tests share one DB. The `mongodb-memory-server` import is deliberately **lazy**, inside the `NODE_ENV === 'test'` branch: it is a devDependency and is absent from the production image, so a top-level require crashes the container at boot.
 - Any backend test hitting a route needs an `Authorization: Bearer` header — almost every route carries `jwtMiddleware`. `group.test.js` sets `process.env.jwt_secret` *before* its requires, because both `security/jwt.js` and `user.schema.js` capture the secret at import time.
 - `pnpm test` in `frontend/` is **green**: 3 suites, 36 tests — `components/icon`, `components/header` and `context/darkModeContext`. It used to exit 1 on two commented-out templates that contained no tests at all, which is why `--passWithNoTests` is deliberately absent: with it, a suite that stops running by accident looks the same as a suite that passes. Nothing runs jest in CI either — the deploy workflow is path-filtered to `backend/**` and Cloudflare Pages only runs `vite build` — so a frontend test guards intent, not the pipeline.
+- `icon.test.jsx` asserts that each variant renders an SVG **different from `add`'s**, not that it renders something. `Icon` resolves `iconsByVariant[variant] || MdAddCircleOutline`, so a variant that does not exist — or whose import broke — silently becomes the add icon everywhere it is used, with no error. Checking for "an SVG" would not catch that.
 - jsdom needs two shims for the frontend suites. `jest.setup.js` defines `TextEncoder`/`TextDecoder` from `node:util`: `react-router` 7 reads them at import time, so **any** test that renders a router fails to even load the suite without them. And a test that renders `Header` has to stub `window.matchMedia` itself — MUI's `useMediaQuery` is what decides whether the header is collapsed, and jsdom ships no `matchMedia` at all.
 - `vitest.workspace.js` wires the Storybook test addon (Vitest + Playwright/chromium) separately from the jest setup — two independent frontend test runners coexist.
 - **Cypress is the only real net the frontend has** — 7 specs, 13 tests, all green, and nothing else runs against the built app. Between them they cover login and a failed login, the profile form, creating/editing/deleting a group, the 409 when dropping a member who is in an expense, resetting and sharing the invite link, the whole life of an expense with its balance and debts, `/my-expenses`, and both halves of the join flow. Run it against a running app; it writes to whatever `MONGO_URL` points at, so check that it says `/test`.
