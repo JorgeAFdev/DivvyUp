@@ -179,32 +179,6 @@ paquete nuevo hay que añadirlo ahí a mano.
 - Hay red de seguridad razonable: los 103 tests del backend cubren buena parte de esos 400, así que
   el refactor se puede hacer sin adivinar. `auth.test.js` fija los del registro con el texto exacto.
 
-## 12. El código de auth vive en el router, no en un controlador
-
-`auth.routes.js` es el único router que además implementa. Rompe el patrón del resto de la API y por
-eso la validación del punto 1 acabó ahí en vez de junto a las demás.
-
-**Estado actual (verificado):**
-
-- `auth.routes.js` son **121 líneas** con los handlers de `/register` y `/login` dentro. Los otros
-  cuatro routers son de 10 a 19 líneas y sólo enganchan ruta con controlador: `expense.routes.js`
-  (11), `payment.routes.js` (10), `user.routes.js` (15), `group.routes.js` (19).
-- `controllers/` ya tiene `group`, `expense`, `payments` y `user`. **Falta `auth.controller.js`**, que
-  es el único hueco del patrón.
-- Dentro de esos handlers hay además cosas que no son de una ruta: `registrationErrors()`, los dos
-  regex, cuatro `console.time`/`console.timeEnd` de instrumentación y el `sendEmail` de bienvenida
-  comentado (`auth.routes.js:46`).
-
-**A decidir:**
-
-- Mover y ya está, o aprovechar para sacar `registrationErrors()` a donde acabe la validación del
-  punto 11. Si el 11 se hace antes, este movimiento es casi automático.
-- Los `console.time` con etiquetas fijas (`'register user'`, `'query user'`) se pisan si hay dos
-  registros a la vez. Al mover conviene decidir si se quedan, porque hoy son la única instrumentación
-  de la API.
-- `auth.test.js` (21 tests) va contra las rutas, no contra el controlador, así que cubre el
-  movimiento entero sin tocarlo. Es refactor puro: si algo se rompe, sale ahí.
-
 ## 13. El backend a ESM
 
 Hoy el backend es CommonJS y el frontend ESM. Unificar los dos es lo que permite que un paquete
