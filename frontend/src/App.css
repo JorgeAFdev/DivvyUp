@@ -5,16 +5,16 @@
 }
 
 :root {
-    /* The one knob for how long a theme switch takes, MUI included: the
-       component overrides in darkModeContext.jsx resolve --theme-transition
-       too. Only ever set it on the element that declares the colour, never on
-       one that just inherits it: a child that re-transitions an inherited
-       value chases the parent's own animation and ends up visibly slower. */
+    /* Only ever set the transition on the element that declares the colour: a
+       child that re-transitions an inherited value chases its parent's own
+       animation and ends up visibly slower. */
     --transition-base: 150ms ease;
     --theme-transition: background-color var(--transition-base), color var(--transition-base), border-color var(--transition-base);
 
-    --primary-color: var(--mui-palette-primary-main);
-    --primary-color-dark: var(--mui-palette-primary-dark);
+    /* Every colour in the app, declared here and in body.dark and nowhere else.
+       theme/appTheme.js reads these same names and hands them to MUI. */
+    --primary-color: #1e90ff;
+    --primary-color-dark: #3c8ccd;
     --color: #252424;
     --bg-color: #f8f7f7;
     --secondary-bg-color: #f0f0f0;

@@ -3,9 +3,8 @@ import Modal from '../../modal/modal';
 import GroupForm from '../groupForm/groupForm';
 import Icon from '../../icon/icon';
 import Button from '@mui/material/Button';
-import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import { useTheme } from '@mui/material';
+import AppMenu from '../../menu/appMenu';
 import { toast } from 'react-toastify';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 import { useRegenerateInviteCode } from '../../../hooks/useGroups';
@@ -24,12 +23,7 @@ const GroupActions = ({ group, myMemberId, editGroup, isEditing, setIsEditing, o
     const { showConfirmationToast } = useConfirmationToast();
     const regenerateInviteCode = useRegenerateInviteCode(group._id);
 
-    const theme = useTheme();
-    const textColor = theme.palette.text.primary;
-    const colorBg = theme.palette.background.color;
-    const hoverBg = theme.palette.action.hover;
-
-    const menuItemStyle = { color: textColor, minWidth: '0px', padding: '0', textTransform: 'none', fontSize: '16px', gap: '5px' };
+    const menuItemStyle = { gap: '5px' };
 
     const shareInviteLink = async () => {
         const url = inviteLinkFor(group.inviteCode);
@@ -69,39 +63,27 @@ const GroupActions = ({ group, myMemberId, editGroup, isEditing, setIsEditing, o
 
     return (
         <>
-            <Button sx={{ color: textColor, minWidth: '0px' }} id="basic-button" aria-controls={open ? 'basic-menu' : undefined} aria-haspopup="true" aria-expanded={open ? 'true' : undefined} onClick={handleClick}>
+            <Button sx={{ color: 'text.primary', minWidth: '0px' }} id="basic-button" aria-controls={open ? 'basic-menu' : undefined} aria-haspopup="true" aria-expanded={open ? 'true' : undefined} onClick={handleClick}>
                 <Icon variant='dots' className='dots' />
             </Button>
-            <Menu sx={{
-                '& .MuiPaper-root': { backgroundColor: colorBg, color: textColor }, '& .MuiMenuItem-root': {
-                    transition: 'background-color 0.3s', '&:hover': { backgroundColor: hoverBg }
-                }
-            }} id="basic-menu" anchorEl={anchorEl} open={open} onClose={handleClose} MenuListProps={{ 'aria-labelledby': 'basic-button', }}>
-                <MenuItem onClick={handleClose} >
-                    <Button sx={menuItemStyle} onClick={() => setIsEditing(true)}>
-                        <Icon variant='edit' />
-                        Edit group
-                    </Button>
+            <AppMenu id="basic-menu" anchorEl={anchorEl} open={open} onClose={handleClose} MenuListProps={{ 'aria-labelledby': 'basic-button', }}>
+                <MenuItem sx={menuItemStyle} onClick={() => { setIsEditing(true); handleClose(); }}>
+                    <Icon variant='edit' />
+                    Edit group
                 </MenuItem>
-                <MenuItem onClick={handleClose}>
-                    <Button sx={menuItemStyle} onClick={shareInviteLink} id="share-invite-link">
-                        <Icon variant='share' />
-                        Share invite link
-                    </Button>
+                <MenuItem sx={menuItemStyle} id="share-invite-link" onClick={() => { shareInviteLink(); handleClose(); }}>
+                    <Icon variant='share' />
+                    Share invite link
                 </MenuItem>
-                <MenuItem onClick={handleClose}>
-                    <Button sx={menuItemStyle} onClick={resetInviteLink} id="reset-invite-link">
-                        <Icon variant='refresh' />
-                        Reset invite link
-                    </Button>
+                <MenuItem sx={menuItemStyle} id="reset-invite-link" onClick={() => { resetInviteLink(); handleClose(); }}>
+                    <Icon variant='refresh' />
+                    Reset invite link
                 </MenuItem>
-                <MenuItem onClick={handleClose}>
-                    <Button sx={menuItemStyle} onClick={onDelete} >
-                        <Icon variant='delete' id="deleteGroup" />
-                        Delete group
-                    </Button>
+                <MenuItem sx={menuItemStyle} onClick={() => { onDelete(); handleClose(); }}>
+                    <Icon variant='delete' id="deleteGroup" />
+                    Delete group
                 </MenuItem>
-            </Menu>
+            </AppMenu>
             {isEditing && (
                 <Modal>
                     <GroupForm
