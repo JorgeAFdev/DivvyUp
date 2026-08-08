@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 DivvyUp is a group expense-splitting app (Splitwise-like). pnpm-workspaces monorepo driven by Turborepo 2.x:
-`backend/` (Express + Mongoose + Socket.IO, CommonJS) and `frontend/` (React 18 + Vite, ESM).
+`backend/` (Express + Mongoose + Socket.IO) and `frontend/` (React 18 + Vite). Both ESM.
 
 **Package manager is pnpm** — pinned via `packageManager` in the root `package.json`. Never run `npm install`; it would recreate `package-lock.json` and fight the pnpm lockfile. Workspace members are declared in `pnpm-workspace.yaml`, not in a `workspaces` field.
 
@@ -24,9 +24,9 @@ docker compose up mongo  # local MongoDB on host port 27035
 
 Backend (`cd backend`):
 ```bash
-pnpm test                                                       # NODE_ENV=test jest --coverage --runInBand
-pnpm exec cross-env NODE_ENV=test pnpm exec jest src/tests/group.test.js   # single file
-pnpm exec cross-env NODE_ENV=test pnpm exec jest -t "get groups by group Id"  # single test
+pnpm test                                                       # vitest run --coverage
+pnpm exec vitest run src/tests/group.test.js                    # single file
+pnpm exec vitest run -t "get groups by group Id"                # single test
 ```
 
 Frontend (`cd frontend`):
@@ -52,7 +52,7 @@ There is no lint script and no eslint config file, despite eslint deps in the ro
 
 **Local and Koyeb share the Atlas cluster but not the database.** The database is the path segment of `MONGO_URL`, before the `?`: local uses `/test`, Koyeb uses `/prod`. Leaving the path empty is what MongoDB reads as `test`, which is how running Cypress locally used to write straight into production — 15 of the 19 groups there were spec leftovers. If you add the name after the query string it silently keeps using `test`.
 
-Both databases carry the same two throwaway accounts, `javi@divvyup.test` and `ana@divvyup.test` (password in `notes.txt`), so the invite flow can be exercised end to end without registering anything. Backend jest never touches either: `connectDB()` swaps to `mongodb-memory-server` under `NODE_ENV=test`.
+Both databases carry the same two throwaway accounts, `javi@divvyup.test` and `ana@divvyup.test` (password in `notes.txt`), so the invite flow can be exercised end to end without registering anything. Backend tests never touch either: `connectDB()` swaps to `mongodb-memory-server` under `NODE_ENV=test`.
 
 ## Architecture
 
@@ -190,8 +190,8 @@ A comment earns its place only when the code cannot say the thing itself: the *w
 
 ## Testing notes
 
-- Backend tests use `mongodb-memory-server`: `connectDB()` in `mongo/connection/index.js` swaps to an in-memory URI whenever `NODE_ENV === 'test'`, so tests must set that env var (the `pnpm test` script does). `--runInBand` is required — the tests share one DB. The `mongodb-memory-server` import is deliberately **lazy**, inside the `NODE_ENV === 'test'` branch: it is a devDependency and is absent from the production image, so a top-level require crashes the container at boot.
-- Any backend test hitting a route needs an `Authorization: Bearer` header — almost every route carries `jwtMiddleware`. `group.test.js` sets `process.env.jwt_secret` *before* its requires, because both `security/jwt.js` and `user.schema.js` capture the secret at import time.
+- Backend tests run on **vitest** (`vitest run --coverage`), configured in `backend/vitest.config.js`. vitest defaults `NODE_ENV` to `test`, which is what `connectDB()` in `mongo/connection/index.js` checks to swap to an in-memory `mongodb-memory-server` URI — so no `cross-env` is needed. `fileParallelism: false` is set because the files share one DB per run: each test file spins its own memory server and connects the module-global mongoose, so running them serially keeps two files from racing on that connection (this is the vitest analog of jest's old `--runInBand`). `globals: true` is set so the tests' bare `describe`/`it`/`expect` need no imports. The `mongodb-memory-server` import is deliberately **lazy** — `await import(...)` inside the `NODE_ENV === 'test'` branch: it is a devDependency and absent from the production image, so a top-level import crashes the container at boot.
+- Any backend test hitting a route needs an `Authorization: Bearer` header — almost every route carries `jwtMiddleware`. The signing secret is set once in `backend/vitest.setup.js` (`setupFiles`), not per test file: `jwt.js` and `user.schema.js` read `process.env.jwt_secret` at **call time**, not at import, so the value only has to exist before the first request — no import-order dance. (Under ESM the old before-the-requires trick would not have worked anyway: `import`s are hoisted above any top-level statement.)
 - `pnpm test` in `frontend/` is **green**: 3 suites, 36 tests — `components/icon`, `components/header` and `context/darkModeContext`. It used to exit 1 on two commented-out templates that contained no tests at all, which is why `--passWithNoTests` is deliberately absent: with it, a suite that stops running by accident looks the same as a suite that passes. Nothing runs jest in CI either — the deploy workflow is path-filtered to `backend/**` and Cloudflare Pages only runs `vite build` — so a frontend test guards intent, not the pipeline.
 - `icon.test.jsx` asserts that each variant renders an SVG **different from `add`'s**, not that it renders something. `Icon` resolves `iconsByVariant[variant] || MdAddCircleOutline`, so a variant that does not exist — or whose import broke — silently becomes the add icon everywhere it is used, with no error. Checking for "an SVG" would not catch that.
 - jsdom needs two shims for the frontend suites. `jest.setup.js` defines `TextEncoder`/`TextDecoder` from `node:util`: `react-router` 7 reads them at import time, so **any** test that renders a router fails to even load the suite without them. And a test that renders `Header` has to stub `window.matchMedia` itself — MUI's `useMediaQuery` is what decides whether the header is collapsed, and jsdom ships no `matchMedia` at all.

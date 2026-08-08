@@ -18,7 +18,7 @@
 
 **Suelto, del mismo repaso:**
 
-- `secret` se lee a nivel de módulo (`user.schema.js:6`), igual que en `security/jwt.js`. Si el módulo se carga antes de `dotenv.config()`, el secreto es `undefined` y `jwt.sign` peta. Ya obliga a un workaround en `backend/src/tests/group.test.js`.
+- **El `secret` ya se lee en el momento de la llamada**, no a nivel de módulo (arreglado con el paso a ESM, punto 13): `user.schema.js` y `security/jwt.js` leen `process.env.jwt_secret` dentro de `generateJWT()` y del middleware, así que el orden de carga frente a `dotenv.config()` deja de importar y el workaround de los tests desapareció.
 - **El login ya no distingue email desconocido de contraseña incorrecta**: ambas ramas responden `Invalid credentials` (arreglado el 04-08-2026, PR #82). `POST /auth/register` sí sigue enumerando, con su `Email already registered`, y ahí la fuga es inherente: no puedes permitir dos cuentas con el mismo correo sin decirlo. Taparla de verdad pide verificación por email, que es del punto 5.
 - **`password` con `select: false` y validación de registro en `registrationErrors()` — HECHO** (PR
   #82/#83). Las reglas que dejaron vivas están en `CLAUDE.md`, sección *Auth*. Lo que queda abierto
@@ -50,7 +50,7 @@ Sustituir el auth artesanal por [Better Auth](https://better-auth.com) para tene
 - El token viaja en `Authorization: Bearer` y `jwtMiddleware` lo verifica en **19 rutas**; los controladores leen `req.jwtPayload` en **17 sitios**.
 - En el front, 22 ficheros tocan `useAuth()`, `getUserSession()` o `authHeaders(token)`. El token se pasa a mano en cada llamada — no hay interceptor de axios donde meter el cambio en un único punto.
 - `User` es un modelo de Mongoose (colección `users`) y su `_id` es la identidad que referencian `Group.members[]`, `Expense` y `Payment`. Cualquier migración tiene que preservar esos `_id` o remapear todo el grafo.
-- Backend es CommonJS y corre en Node 24 (`node -v` → v24.13.0).
+- Backend es ESM (punto 13) y corre en Node 24 (`node -v` → v24.13.0).
 
 **A tener en cuenta al integrarlo:**
 
@@ -66,7 +66,7 @@ Sustituir el auth artesanal por [Better Auth](https://better-auth.com) para tene
 - **Google Cloud**: hay que crear el OAuth client (client ID + secret) y registrar la redirect URI del callback, tanto la de producción como `http://localhost:3001` para desarrollo. Variables nuevas: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` y las credenciales del proveedor.
 - **Tests**: `bootstrapApp()` monta el router en `/` y no conecta BD. Better Auth sí necesita una BD real, así que los tests de rutas autenticadas tendrían que crear sesiones contra `mongodb-memory-server` en vez de firmar un JWT a mano.
 - **Instalación**: `minimumReleaseAge: 4320` en `pnpm-workspace.yaml` bloquea versiones publicadas hace menos de 3 días — Better Auth publica a menudo, así que puede no resolver la última. Y tiene que ir en `dependencies` del backend, no en dev, o el contenedor (`--prod`) se cae al arrancar.
-- Confirmar contra la doc de la versión que se instale que el import de CommonJS funciona sin transpilar; el paquete es TypeScript/ESM-first.
+- El paquete es TypeScript/ESM-first, y desde el punto 13 el backend también es ESM, así que se importa de forma nativa sin transpilar.
 
 ## 10. `react-router` 7.18.1 tiene un aviso de seguridad, y el parche es un major
 
@@ -138,8 +138,8 @@ depende de este punto, así que se pueden hacer y desplegar sueltas.
   un array de issues con `path`, que es más útil para pintar el error junto a su campo pero **cambia
   el contrato** de la API.
 
-**Las dos cosas que rompen esto, las dos comprobadas.** (La tercera, que jest no puede consumir un
-paquete ESM, se la lleva por delante el punto 13.)
+**Las dos cosas que rompen esto, las dos comprobadas.** (La tercera, que jest no podía consumir un
+paquete ESM, ya la resolvió el punto 13: el backend corre en vitest y es ESM.)
 
 - **El Dockerfile no lo copiaría.** `backend/Dockerfile` copia explícitamente los manifiestos raíz,
   `backend/package.json`, `frontend/package.json` y `backend/src`. Un `packages/contracts/` nuevo no
@@ -179,41 +179,32 @@ paquete nuevo hay que añadirlo ahí a mano.
 - Hay red de seguridad razonable: los 103 tests del backend cubren buena parte de esos 400, así que
   el refactor se puede hacer sin adivinar. `auth.test.js` fija los del registro con el texto exacto.
 
-## 13. El backend a ESM
+## 13. El backend a ESM — HECHO el 08-08-2026
 
-Hoy el backend es CommonJS y el frontend ESM. Unificar los dos es lo que permite que un paquete
-compartido (punto 11) lo consuman ambos sin build dual, y es la preferencia declarada.
+Backend y frontend son ambos ESM ahora. Esto es lo que permite que un paquete compartido (punto 11)
+lo consuman los dos sin build dual. Se hizo como paso propio, antes de TypeScript (punto 14), para
+que la pasada mecánica se verificara en verde sin ruido de tipos.
 
-**Estado actual (verificado):**
+**Estado actual:**
 
-- **99 `require()` en 28 ficheros** de `backend/src`, más sus `module.exports`. Es mecánico, pero hay
-  que pasarlo entero: no se puede migrar a medias dentro de un mismo paquete.
-- **El problema real no es el código, es jest.** El backend corre jest **sin `jest.config` y sin
-  `babel.config`**, o sea CommonJS puro sin transform. Un `export` ahí peta con
-  `SyntaxError: Unexpected token 'export'` (comprobado). ESM en jest pide
-  `--experimental-vm-modules` más `extensionsToTreatAsEsm`, o meter un transform.
-- **Los 103 tests no usan ni un mock de jest**: ni `jest.fn()`, ni `jest.mock()`, ni spies. Sólo
-  `describe`/`it`/`it.each`/`expect`/`beforeAll`/`beforeEach`/`afterAll`, supertest y la BD en
-  memoria. Todo eso es API que vitest ya cubre con el mismo nombre.
-- **vitest ya está en el repo**, como devDependency del frontend (`vitest ^3.0.8`, más
-  `vitest.workspace.js` para el addon de Storybook). No sería una dependencia nueva en el monorepo.
-- `node:22-slim` en el Dockerfile y v24.13.0 en local: los dos soportan ESM nativo de sobra.
-- Ojo con dos sitios que dependen de CommonJS por motivos que no son de estilo: el `require` **lazy**
-  de `mongodb-memory-server` dentro de `connectDB()` (es devDependency y no está en la imagen de
-  producción, por eso no puede ser un import de nivel superior) y el `secret` que `user.schema.js` y
-  `security/jwt.js` leen **en el momento del import**, que ya obliga al workaround de
-  `group.test.js`. Con ESM los imports se evalúan antes, así que ese orden hay que revisarlo.
-
-**A decidir:**
-
-- **jest con ESM, o cambiar a vitest.** Yo iría a vitest: resuelve ESM y TypeScript (punto 14) sin
-  configurar nada, ya está en el repo, y la migración es casi renombrar el script porque no hay
-  mocks. `--runInBand` pasa a ser `--no-file-parallelism` o `pool: 'forks'`, que sigue haciendo falta
-  porque los tests comparten BD.
-- El `require` lazy de `mongodb-memory-server` pasa a `await import()`, que obliga a que `connectDB()`
-  siga siendo async. Ya lo es.
-- Si se hace junto al punto 14 o antes: hacer los dos a la vez es un diff enorme; hacer ESM primero
-  y TS después son dos pasadas por los mismos 28 ficheros. No hay respuesta obvia.
+- `backend/package.json` lleva `"type": "module"` y se quedan las extensiones `.js`. Los 28 ficheros
+  de `src` más `scripts/clean-e2e.js` pasaron a `import`/`export`, con `.js` explícito en cada import
+  relativo (ESM no resuelve directorios: `./mongo/connection` pasó a `./mongo/connection/index.js`).
+  Los routers importan los controladores como namespace (`import * as groupController`), porque los
+  controladores exportan funciones con nombre, no un default.
+- **El runner es vitest** (`vitest run --coverage`), no jest. jest y `cross-env` se han quitado de las
+  devDependencies; `vitest` y `@vitest/coverage-v8` (`^3.0.8`, ya en el repo por el frontend) entran.
+  La config vive en `backend/vitest.config.js`: `globals: true` para que los tests sigan usando
+  `describe`/`it`/`expect` sin importarlos, `fileParallelism: false` como equivalente de `--runInBand`
+  (cada fichero levanta su propio memory server sobre la conexión global de mongoose, así que se
+  corren en serie), y coverage con proveedor `v8`. Los 103 tests siguen en verde.
+- **El `secret` ya no se captura en el import.** `jwt.js` y `user.schema.js` leen
+  `process.env.jwt_secret` en el momento de la llamada, no a nivel de módulo, así que el orden de
+  imports deja de importar (que con ESM es obligatorio: los `import` se izan por encima de cualquier
+  sentencia). El workaround por fichero de los tests desaparece: el secreto se pone una sola vez en
+  `backend/vitest.setup.js` (`setupFiles`).
+- El `require` lazy de `mongodb-memory-server` dentro de `connectDB()` pasó a `await import(...)`,
+  dentro de la rama `NODE_ENV === 'test'`. `connectDB()` ya era async.
 
 ## 14. TypeScript
 
