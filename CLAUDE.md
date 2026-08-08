@@ -184,6 +184,10 @@ Profile images: multer with `memoryStorage()` → `config/cloudinary.config.js` 
 
 An empty result is a `200 []`, not a 404: that goes for `getUserGroups`, `getExpensesByUserId` and `getExpensesByGroupId`.
 
+### Comments explain why, not what
+
+A comment earns its place only when the code cannot say the thing itself: the *why* behind a non-obvious choice, a past bug the shape is guarding against, a contract that is not visible locally. A comment that restates what the next line already says (`// Update a user` over `updateUser`, `// authenticated user id` over `req.jwtPayload`) is noise — delete it, don't write it. The rationale that does matter lives better in the commit message than in the code. The `why` comments already in the controllers (the picture-wipe bug, the single login error message, the public invite handler) are the model: none of them describe *what* the line does.
+
 ## Testing notes
 
 - Backend tests use `mongodb-memory-server`: `connectDB()` in `mongo/connection/index.js` swaps to an in-memory URI whenever `NODE_ENV === 'test'`, so tests must set that env var (the `pnpm test` script does). `--runInBand` is required — the tests share one DB. The `mongodb-memory-server` import is deliberately **lazy**, inside the `NODE_ENV === 'test'` branch: it is a devDependency and is absent from the production image, so a top-level require crashes the container at boot.
