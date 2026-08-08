@@ -52,4 +52,4 @@ const linkedUserIds = (group, memberIds) =>
     .filter((m) => m.user && memberIds.some((id) => m._id.equals(id)))
     .map((m) => idOf(m.user).toString());
 
-module.exports = { MEMBER_FIELDS, MEMBER_PATHS, idOf, memberOf, membersById, hydrateMembers, linkedUserIds };
+export { MEMBER_FIELDS, MEMBER_PATHS, idOf, memberOf, membersById, hydrateMembers, linkedUserIds };

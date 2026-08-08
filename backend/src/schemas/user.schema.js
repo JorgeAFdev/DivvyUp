@@ -1,9 +1,6 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-
-
-const secret = process.env.jwt_secret;
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -58,7 +55,7 @@ userSchema.methods.generateJWT = function () {
         name: this.name,
         email: this.email
     }
-    return jwt.sign(payload, secret, {
+    return jwt.sign(payload, process.env.jwt_secret, {
 
     });
 };
@@ -67,5 +64,5 @@ userSchema.methods.generateJWT = function () {
 
 const User = mongoose.model('User', userSchema);
 
-module.exports = User;
+export default User;
 

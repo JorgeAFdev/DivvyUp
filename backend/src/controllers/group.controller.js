@@ -1,9 +1,9 @@
-const Expense = require("../schemas/expense.schema");
-const Group = require("../schemas/group.schema");
-const Payment = require("../schemas/payment.schema");
-const User = require("../schemas/user.schema");
-const mongoose = require("mongoose");
-const { MEMBER_FIELDS, MEMBER_PATHS, memberOf, hydrateMembers } = require("../utils/members");
+import Expense from "../schemas/expense.schema.js";
+import Group from "../schemas/group.schema.js";
+import Payment from "../schemas/payment.schema.js";
+import User from "../schemas/user.schema.js";
+import mongoose from "mongoose";
+import { MEMBER_FIELDS, MEMBER_PATHS, memberOf, hydrateMembers } from "../utils/members.js";
 
 
 const cleanName = (name) => (typeof name === "string" ? name.trim() : "");
@@ -401,7 +401,7 @@ const regenerateInviteCode = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   createGroup,
   getInviteName,
   getGroupById,

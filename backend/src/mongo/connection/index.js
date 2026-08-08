@@ -1,19 +1,16 @@
-const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-
-dotenv.config();
+import mongoose from 'mongoose';
 
 let dbUrl = process.env.MONGO_URL;
 let mongodb;
 
-exports.connectDB = async () => {
+export const connectDB = async () => {
   mongoose.set('strictQuery', false);
 
   try {
     if (process.env.NODE_ENV === 'test') {
       // Required lazily: mongodb-memory-server is a devDependency and is absent
       // from the production image, which installs with --prod.
-      const { MongoMemoryServer } = require('mongodb-memory-server');
+      const { MongoMemoryServer } = await import('mongodb-memory-server');
       mongodb = await MongoMemoryServer.create();
       dbUrl = mongodb.getUri();
       console.log(dbUrl);
@@ -27,7 +24,7 @@ exports.connectDB = async () => {
   }
 };
 
-exports.disconnectDB = async () => {
+export const disconnectDB = async () => {
   try {
     await mongoose.connection.close();
     if (mongodb) {

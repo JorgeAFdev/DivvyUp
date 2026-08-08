@@ -1,9 +1,9 @@
-const mongoose = require("mongoose");
-const { connectDB, disconnectDB } = require("../mongo/connection");
-const Group = require("../schemas/group.schema");
-const Expense = require("../schemas/expense.schema");
-const Payment = require("../schemas/payment.schema");
-const { memberOf, hydrateMembers } = require("../utils/members");
+import mongoose from "mongoose";
+import { connectDB, disconnectDB } from "../mongo/connection/index.js";
+import Group from "../schemas/group.schema.js";
+import Expense from "../schemas/expense.schema.js";
+import Payment from "../schemas/payment.schema.js";
+import { memberOf, hydrateMembers } from "../utils/members.js";
 
 const jorgeUserId = new mongoose.Types.ObjectId();
 

@@ -1,5 +1,4 @@
-const { Server } = require('socket.io');
-const dotenv = require('dotenv');
+import { Server } from 'socket.io';
 
 let clientUrl = process.env.CLIENT_URL
 
@@ -15,13 +14,11 @@ const socketServer = (server) => {
             socket.join(`user:${userId}`);
         });
 
-        io.on('disconnect', (socket) => {
+        socket.on('disconnect', () => {
             console.log(`User disconnected: ${socket.id}`);
         });
     });
     return io;
 };
 
-module.exports = {
-    socketServer,
-};
+export { socketServer };

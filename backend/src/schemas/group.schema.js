@@ -1,8 +1,8 @@
-const crypto = require('crypto');
-const Decimal = require('decimal.js');
-const mongoose = require('mongoose');
-const Expense = require('./expense.schema');
-const Payment = require('./payment.schema');
+import crypto from 'crypto';
+import Decimal from 'decimal.js';
+import mongoose from 'mongoose';
+import Expense from './expense.schema.js';
+import Payment from './payment.schema.js';
 
 
 const GroupSchema = new mongoose.Schema(
@@ -150,4 +150,4 @@ GroupSchema.methods.generateDebts = async function () {
 };
 
 const Group = mongoose.model('Group', GroupSchema);
-module.exports = Group;
+export default Group;

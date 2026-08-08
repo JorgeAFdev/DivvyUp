@@ -1,9 +1,9 @@
-const express = require("express");
-const userRoutes = require("./user.routes")
-const groupExpensesRouter = require("./expense.routes");
-const groupRoutes = require("./group.routes");
-const authRouter = require("./auth.routes")
-const paymentRoutes = require("./payment.routes")
+import express from "express";
+import userRoutes from "./user.routes.js";
+import groupExpensesRouter from "./expense.routes.js";
+import groupRoutes from "./group.routes.js";
+import authRouter from "./auth.routes.js";
+import paymentRoutes from "./payment.routes.js";
 
 const router = express.Router();
 
@@ -13,4 +13,4 @@ router.use("/group", groupRoutes);
 router.use('/auth', authRouter);
 router.use('/payment', paymentRoutes);
 
-module.exports = router;
+export default router;

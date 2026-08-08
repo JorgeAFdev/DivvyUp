@@ -1,9 +1,8 @@
-const cors = require('cors');
-const express = require('express');
-const router = require('./routers/router');
+import cors from 'cors';
+import express from 'express';
+import router from './routers/router.js';
 
-
-exports.bootstrapApp = () => {
+export const bootstrapApp = () => {
     const app = express();
     app.use(cors());
     app.use(express.json());

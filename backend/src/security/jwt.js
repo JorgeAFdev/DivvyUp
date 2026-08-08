@@ -1,10 +1,4 @@
-const jwt = require('jsonwebtoken');
-const dotenv = require('dotenv');
-
-dotenv.config();
-
-const jwtSecret = process.env.jwt_secret;
-
+import jwt from 'jsonwebtoken';
 
 const jwtMiddleware = (req, res, next) => {
     const authHeader = req.headers["authorization"];
@@ -19,7 +13,7 @@ const jwtMiddleware = (req, res, next) => {
   
     try {
       
-      tokenPayload = jwt.verify(token, jwtSecret);
+      tokenPayload = jwt.verify(token, process.env.jwt_secret);
       
     } catch (error) {
       return res.status(401).json({error: "Unauthorized"});
@@ -32,6 +26,4 @@ const jwtMiddleware = (req, res, next) => {
   
 
 
-module.exports = {
-    jwtMiddleware
-}
+export { jwtMiddleware };

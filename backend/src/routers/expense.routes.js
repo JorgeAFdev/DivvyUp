@@ -1,6 +1,6 @@
-const express = require("express");
-const { jwtMiddleware } = require("../security/jwt")
-const expensesController = require("../controllers/expense.controller");
+import express from "express";
+import { jwtMiddleware } from "../security/jwt.js";
+import * as expensesController from "../controllers/expense.controller.js";
 
 const router = express.Router();
 
@@ -9,4 +9,4 @@ router.patch("/:groupId/expenses/:expenseId", jwtMiddleware, expensesController.
 router.get("/:groupId/expenses", jwtMiddleware, expensesController.getExpensesByGroupId);
 router.delete("/:groupId/expenses/:expenseId", jwtMiddleware, expensesController.deleteExpense);
 
-module.exports = router;
+export default router;
