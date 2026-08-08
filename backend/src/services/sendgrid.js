@@ -5,7 +5,7 @@ const sendEmail = (to, subject, text) => {
     const msg = {
         to,
         from: {
-            email: process.env.SENGRID_EMAIL,
+            email: process.env.SENDGRID_EMAIL,
             name: 'DivvyUp'
         },
         subject,
