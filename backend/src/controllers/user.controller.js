@@ -2,7 +2,7 @@ const User = require('../schemas/user.schema');
 const uploadToCloudinary = require('../config/cloudinary.config');
 
 // Actualizar un usuario
-exports.updateUser = async (req, res) => {
+const updateUser = async (req, res) => {
     try {
         const { id } = req.jwtPayload; // ID del usuario autenticado
         const changes = { name: req.body.name, email: req.body.email };
@@ -28,3 +28,5 @@ exports.updateUser = async (req, res) => {
         res.status(500).json({ message: "Error al actualizar el usuario", error });
     }
 };
+
+module.exports = { updateUser };
