@@ -373,3 +373,34 @@ que está por debajo de mínimos (44 de iOS, 48 de Android) y sale del `padding:
 hamburguesa no, porque el botón se queda igual. Y el mínimo de 48 para botones de sólo icono es la
 misma conversación que el punto 17.
 
+## 19. Cambiar SendGrid por Brevo o Resend
+
+Sustituir el proveedor de email por [Brevo](https://www.brevo.com) o [Resend](https://resend.com).
+
+**Estado actual (verificado):**
+
+- Todo el email vive en `backend/src/services/sendgrid.js`: `sendgrid.setApiKey(process.env.SENDGRID_API_KEY)`
+  y un único `sendEmail(to, subject, text)` que manda un `from` con `SENDGRID_EMAIL` y nombre `DivvyUp`.
+- **El módulo no se importa en ningún sitio.** El único rastro de uso es una línea **comentada** en
+  `auth.controller.js:54` (`// sendEmail(...)` de bienvenida al registrar), y ni siquiera importa el
+  módulo. Hoy no se envía ningún correo: el proveedor está cableado pero muerto.
+- Dependencia: `@sendgrid/mail@^8.1.6` en `dependencies` del backend. Variables: `SENDGRID_API_KEY`
+  y `SENDGRID_EMAIL` (el remitente verificado). Ambas documentadas en el README y en `CLAUDE.md`
+  (sección *Environment*), que hay que actualizar al cambiar de proveedor.
+
+**A decidir:**
+
+- **Brevo vs Resend.** Resend tiene el SDK más simple (`resend`, un `resend.emails.send({...})`) y DX
+  orientada a devs; Brevo (`@getbrevo/brevo`) trae plan gratis más generoso y panel de campañas. Para
+  lo que hay aquí —un correo transaccional suelto— cualquiera sirve; pesa más el free tier y la
+  verificación del dominio remitente.
+- **Verificación del remitente/dominio.** Los tres exigen verificar el `from`. Con dominio propio hace
+  falta configurar SPF/DKIM; sin él, sólo un remitente puntual verificado.
+- **La API se mantiene igual.** `sendEmail(to, subject, text)` puede quedarse con la misma firma para
+  no tocar al (futuro) llamante; sólo cambia el cuerpo del servicio y el nombre del fichero.
+- Va en `dependencies`, no en dev, o el contenedor (`--prod`) se cae al arrancar. Y ojo con
+  `minimumReleaseAge: 4320`: una versión publicada hace menos de tres días no resuelve.
+- Como aún no se envía nada, es el momento barato de cambiarlo: no hay flujo en producción que romper.
+  Si se descomenta el correo de bienvenida (o se añade reset de contraseña, punto 5), esto ya tiene
+  que estar decidido.
+
