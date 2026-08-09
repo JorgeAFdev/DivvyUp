@@ -59,6 +59,15 @@ Sustituir el auth artesanal por [Better Auth](https://better-auth.com) para tene
 - **Adaptador de BD**: `mongodbAdapter` espera un `Db` nativo del driver de mongodb, no Mongoose. Se puede pasar `mongoose.connection.db`, pero **solo después de que `connectDB()` haya resuelto** — hoy `connectDB()` se llama sin await en `index.js:18`, así que el orden de arranque cambia.
 - **Dos fuentes de identidad**: Better Auth crea sus propias colecciones (`user`, `session`, `account`, `verification`) al margen de la colección `users` de Mongoose. Hay que decidir si `User` pasa a ser un perfil que referencia al usuario de Better Auth, o si se migran los usuarios existentes conservando el `_id`. La segunda opción es la que no rompe los grupos, expenses y payments que ya existen.
 - **Cookies cross-site**: front en Cloudflare Pages y back en Koyeb son dominios distintos, así que la cookie de sesión necesita `SameSite=None; Secure`, `trustedOrigins` en la config, `cors({ credentials: true, origin: CLIENT_URL })` en vez del `cors()` abierto de hoy, y `credentials: 'include'` en el cliente. Mismo peaje que ya se apuntaba en el punto 1.
+- **Dependencia con el punto 20 (dominios propios).** El camino limpio con cookies pide front y back
+  bajo el mismo dominio registrable (`jorgeaf.dev` + `api.jorgeaf.dev`): entonces la cookie es
+  **same-site** y puede ser `SameSite=Lax`, lo que reduce la superficie CSRF y —más importante—
+  esquiva el bloqueo de third-party cookies que hace frágil el montaje cross-site. Sin el punto 20,
+  este punto hereda `SameSite=None; Secure`, tokens CSRF como defensa primaria y esa fragilidad. Aviso:
+  `Lax` no es inmunidad total (Better Auth trae su propia protección CSRF igualmente); lo que dan los
+  dominios es poder usar `Lax` en vez de `None`. La alternativa que no depende del 20 es el plugin
+  `bearer`/`jwt` (token en cabecera, sin cookie, sin CSRF), pero mantiene la exposición a XSS de hoy.
+  **Orden sugerido: 20 antes que el camino-cookies del 5.**
 - **Alternativa si no se quiere pasar a cookies**: Better Auth tiene plugins `bearer` y `jwt` que permiten seguir mandando un token en la cabecera y tocar menos el front. Menos correcto frente a XSS, pero mantiene vivos `authHeaders()` y el `localStorage` actual.
 - **Socket.IO**: `socket.server.js` mete al cliente en `user:<userId>` fiándose del `userId` que le manda el propio cliente en el evento `register` — hoy ya es suplantable. Al migrar conviene validar la sesión en el handshake en vez de creerse el payload.
 - **Vinculación de cuentas**: alguien registrado con email+contraseña que luego entra con Google usando el mismo email. Better Auth lo cubre con `accountLinking`/`trustedProviders`, pero es una decisión explícita: enlazar automáticamente por email verificado, o pedir que inicie sesión con el método original primero.
@@ -429,4 +438,82 @@ firma no cambia respecto a SendGrid, así que el (futuro) llamante no se toca.
   (opcional). `SENDGRID_API_KEY` y `SENDGRID_EMAIL` retiradas de `.env`, README y `CLAUDE.md`.
 - Test: `backend/src/tests/email.test.js` mockea `resend` y fija el payload (from/to/subject/text) y
   que un `{ error }` hace que `sendEmail` rechace.
+
+## 20. Dominio propio (`jorgeaf.dev`): front con custom domain y back a Render
+
+Ahora que `jorgeaf.dev` está en Cloudflare, dar dominio propio al front (gratis en Pages) y mover el
+back a Render para tener también custom domain gratis — en Koyeb el dominio propio es de pago, que es
+lo que empuja el cambio.
+
+**Este punto es prerequisito del camino-cookies del punto 5 (Better Auth).** Front y back bajo el
+mismo dominio registrable (`jorgeaf.dev` + `api.jorgeaf.dev`) es lo que permite cookies **same-site**
+(`SameSite=Lax`) en vez de `SameSite=None; Secure` cross-site: menos superficie CSRF y sin el problema
+del bloqueo de third-party cookies. Si el punto 5 se hiciera antes que el 20, arrastraría todo ese
+peaje de seguridad. Ver el detalle en el punto 5.
+
+### 20a. Custom domain del frontend (Cloudflare Pages)
+
+- **A decidir el hostname.** `jorgeaf.dev` es personal y va a alojar varios proyectos, así que la raíz
+  probablemente sea una landing personal y DivvyUp cuelgue de un subdominio: `divvyup.jorgeaf.dev` o
+  `app.jorgeaf.dev`. Decidir antes de tocar DNS.
+- Como el dominio ya está en Cloudflare, añadirlo en Pages es trivial: *Custom domains* en el proyecto
+  `divvyup`, Cloudflare crea el CNAME solo. No hace falta `_redirects`.
+- **Arrastra `CLIENT_URL` del backend.** Es el origin exacto que compara Socket.IO
+  (`socket/socket.server.js`), sin barra final. Al cambiar el origin del front hay que actualizarlo
+  donde corra el back, o el socket deja de conectar. Igual con cualquier CORS del back.
+- `VITE_API_URL`/`VITE_SOCKET_URL` apuntan al **back**, no al front, así que este cambio no los toca
+  (los toca el 20b).
+
+### 20b. Backend a Render o Railway
+
+- **A decidir el proveedor: Render vs Railway.** El cruce es cuántos proyectos vas a alojar:
+  - **Render free**: $0, pero el servicio **se duerme** tras ~15 min sin tráfico y el primer request
+    tarda ~30-60s en despertar (contenedor + Express + conexión a Atlas); afecta también a Socket.IO.
+    Se mitiga con el keep-alive del 20c, a costa de quemar cuota (750 h-instancia/mes por cuenta, ~2
+    servicios despiertos por ventana). El plan de pago de Render (Starter, sin spin-down) es **por
+    servicio** (~$7 cada uno), así que escala mal con varios proyectos.
+  - **Railway**: no tiene free tier real; es **$5/mes con $5 de uso incluidos, compartidos entre todos
+    los servicios/proyectos de la cuenta**. Sin spin-down. Para varios proyectos pequeños, ese único
+    $5 los cubre a todos y sale más rentable que ir sumando servicios Starter en Render o pelear con
+    keep-alives. El cruce: **1 proyecto → Render free** sale gratis; **varios always-on → Railway $5**
+    plano gana.
+  - Si se elige Railway, **el 20c (keep-alive) sobra**: no hay spin-down que evitar.
+- **Método de deploy** (aplica a los dos): o **Git nativo** del proveedor construyendo
+  `backend/Dockerfile` en cada push, o **reusar la imagen de GHCR** que el pipeline ya publica
+  (`ghcr.io/divvyup-app/splitwise:latest`) y redeployar por deploy hook / auto-deploy al publicarse.
+  Ojo con el contexto de build: es la **raíz del repo** (no `backend/`), igual que en Koyeb y Pages,
+  así que hay que configurar *Root Directory* = raíz y *Dockerfile Path* = `backend/Dockerfile`. El
+  filtro por rutas (deploy solo si cambia `backend/**`) se hace con los *build filters* del proveedor.
+- **Variables a replicar** (lo que hay en Koyeb): `MONGO_URL` (con `/prod` en la ruta, **no** vacío, o
+  MongoDB lee `test`), `jwt_secret`, `CLIENT_URL` (el nuevo origin del front, punto 20a), las tres de
+  Cloudinary, `RESEND_API_KEY` y `RESEND_FROM`. Retirar las `SENDGRID_*`.
+- **Custom domain del back**: `api.jorgeaf.dev` (gratis en ambos). Entonces el front pasa a
+  `VITE_API_URL`/`VITE_SOCKET_URL` = `https://api.jorgeaf.dev`. Esto además prepara el punto 5: con
+  front en `jorgeaf.dev` y back en `api.jorgeaf.dev`, la cookie de sesión de Better Auth sería
+  **same-site** (`SameSite=Lax`) en vez del `SameSite=None; Secure` cross-site que hoy obligaría a usar
+  Pages + Koyeb en dominios distintos.
+
+### 20c. Keep-alive con GitHub Action (ventana horaria) — solo si el back va en Render free
+
+Esto **solo aplica si en el 20b se elige Render free**. Railway no tiene spin-down, así que con Railway
+esta sección sobra entera.
+
+- **Falta una ruta de health.** Hoy todo cuelga de `/api` y no hay `GET /` ni `/health`. El keep-alive
+  necesita un endpoint barato y **público** (sin `jwtMiddleware`) al que pegar, p.ej. `GET /api/health`
+  → `200 { ok: true }`. Añadirlo en `index.js` (y en `bootstrap.js` si se quiere en tests) antes del
+  router.
+- **Ventana 8-17h en vez de 24/7, a propósito.** Render free da **750 horas-instancia al mes** por
+  cuenta. Mantener un servicio despierto 24/7 son ~730h/mes, así que un solo servicio se come casi toda
+  la cuota. Manteniéndolo despierto solo ~9h/día: ~270h/mes por servicio, así que **dos** backends
+  entran en 750h (~540h). Ese es el motivo de acotar la ventana: dejar sitio para ≥2 proyectos.
+- Un workflow con `cron: '*/10 8-16 * * *'` (cada 10 min dentro de la ventana) que hace `curl` al
+  `/api/health`. Fuera de la ventana no hay ping y el primer usuario real paga el cold-start.
+- **Dos trampas del cron de GitHub Actions:**
+  - **Es UTC y no sabe de DST.** `8-17h` de Madrid es UTC+2 en verano y UTC+1 en invierno, así que una
+    ventana fija en UTC se desplaza una hora entre estaciones. O se asume el desfase, o se ajustan las
+    horas del cron dos veces al año.
+  - **Los schedules de Actions se retrasan y a veces se saltan** bajo carga. Si un hueco entre pings
+    supera los 15 min, el servicio se duerme igual. Un pinger externo (cron-job.org, UptimeRobot) es
+    más fiable que el cron de Actions; a decidir si merece la pena depender de un tercero o basta con
+    Actions asumiendo algún fallo.
 
