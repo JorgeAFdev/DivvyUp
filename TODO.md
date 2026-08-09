@@ -442,8 +442,8 @@ firma no cambia respecto a SendGrid, así que el (futuro) llamante no se toca.
 ## 20. Dominio propio (`jorgeaf.dev`): front con custom domain y back a Render
 
 Ahora que `jorgeaf.dev` está en Cloudflare, dar dominio propio al front (gratis en Pages) y mover el
-back a Render para tener también custom domain gratis — en Koyeb el dominio propio es de pago, que es
-lo que empuja el cambio.
+back a un host con custom domain sin peaje (Render, Railway o Cloudflare Containers) — en Koyeb el
+dominio propio es de pago, que es lo que empuja el cambio.
 
 **Este punto es prerequisito del camino-cookies del punto 5 (Better Auth).** Front y back bajo el
 mismo dominio registrable (`jorgeaf.dev` + `api.jorgeaf.dev`) es lo que permite cookies **same-site**
@@ -464,9 +464,10 @@ peaje de seguridad. Ver el detalle en el punto 5.
 - `VITE_API_URL`/`VITE_SOCKET_URL` apuntan al **back**, no al front, así que este cambio no los toca
   (los toca el 20b).
 
-### 20b. Backend a Render o Railway
+### 20b. Backend a Render, Railway o Cloudflare Containers
 
-- **A decidir el proveedor: Render vs Railway.** El cruce es cuántos proyectos vas a alojar:
+- **A decidir el proveedor.** Todos los de pago arrancan en ~$5/mes, así que el cruce real es: ¿el
+  único gratis (Render) compensa su spin-down, o pago $5 y elijo por ecosistema?
   - **Render free**: $0, pero el servicio **se duerme** tras ~15 min sin tráfico y el primer request
     tarda ~30-60s en despertar (contenedor + Express + conexión a Atlas); afecta también a Socket.IO.
     Se mitiga con el keep-alive del 20c, a costa de quemar cuota (750 h-instancia/mes por cuenta, ~2
@@ -474,10 +475,20 @@ peaje de seguridad. Ver el detalle en el punto 5.
     servicio** (~$7 cada uno), así que escala mal con varios proyectos.
   - **Railway**: no tiene free tier real; es **$5/mes con $5 de uso incluidos, compartidos entre todos
     los servicios/proyectos de la cuenta**. Sin spin-down. Para varios proyectos pequeños, ese único
-    $5 los cubre a todos y sale más rentable que ir sumando servicios Starter en Render o pelear con
-    keep-alives. El cruce: **1 proyecto → Render free** sale gratis; **varios always-on → Railway $5**
-    plano gana.
-  - Si se elige Railway, **el 20c (keep-alive) sobra**: no hay spin-down que evitar.
+    $5 los cubre a todos.
+  - **Cloudflare Containers**: corre la **misma imagen Docker** (es un contenedor real, no el runtime
+    de Workers, así que Express/Mongoose/Socket.IO van sin tocar nada — el "no encaja en Workers" de
+    más arriba **no** aplica aquí). Requiere el plan **Workers Paid ($5/mes)**, que trae uso de
+    contenedor incluido y se comparte entre tus Workers/containers, modelo parecido al de Railway.
+    Ventaja fuerte: **unifica todo en Cloudflare** — front en Pages, DNS y dominio ya están ahí, el
+    custom domain del back es nativo y no hay que orquestar dos plataformas. Contra: los contenedores
+    **escalan a cero** cuando están ociosos y tienen cold-start al despertar (parecido a Render, salvo
+    que configures instancias mínimas), y es lo más nuevo de los tres para este uso.
+  - **El cruce:** **1 proyecto y te da igual el cold-start → Render free** ($0). **Vas a pagar $5 y
+    quieres varios always-on / usage compartido → Railway.** **Vas a pagar $5 y valoras tener todo en
+    Cloudflare → Containers.**
+  - Si se elige Railway o Containers con instancia mínima, **el 20c (keep-alive) sobra**: no hay
+    spin-down que evitar (en Containers, solo si dejas que escale a cero).
 - **Método de deploy** (aplica a los dos): o **Git nativo** del proveedor construyendo
   `backend/Dockerfile` en cada push, o **reusar la imagen de GHCR** que el pipeline ya publica
   (`ghcr.io/divvyup-app/splitwise:latest`) y redeployar por deploy hook / auto-deploy al publicarse.
@@ -493,10 +504,10 @@ peaje de seguridad. Ver el detalle en el punto 5.
   **same-site** (`SameSite=Lax`) en vez del `SameSite=None; Secure` cross-site que hoy obligaría a usar
   Pages + Koyeb en dominios distintos.
 
-### 20c. Keep-alive con GitHub Action (ventana horaria) — solo si el back va en Render free
+### 20c. Keep-alive con GitHub Action (ventana horaria) — solo si el back se duerme
 
-Esto **solo aplica si en el 20b se elige Render free**. Railway no tiene spin-down, así que con Railway
-esta sección sobra entera.
+Esto **solo aplica si el back tiene spin-down**: Render free, o Cloudflare Containers dejándolo escalar
+a cero. Con Railway (o Containers con instancia mínima) no hay spin-down y esta sección sobra entera.
 
 - **Falta una ruta de health.** Hoy todo cuelga de `/api` y no hay `GET /` ni `/health`. El keep-alive
   necesita un endpoint barato y **público** (sin `jwtMiddleware`) al que pegar, p.ej. `GET /api/health`
