@@ -48,7 +48,7 @@ There is no lint script and no eslint config file, despite eslint deps in the ro
 
 ## Environment
 
-`.env` files are per-workspace (`backend/.env`, `frontend/.env`), not at the root — see README for the full list. Backend needs `MONGO_URL`, `jwt_secret` (lowercase), `CLIENT_URL` (Socket.IO CORS origin), Cloudinary and SendGrid keys. Frontend needs `VITE_API_URL` and `VITE_SOCKET_URL`.
+`.env` files are per-workspace (`backend/.env`, `frontend/.env`), not at the root — see README for the full list. Backend needs `MONGO_URL`, `jwt_secret` (lowercase), `CLIENT_URL` (Socket.IO CORS origin), Cloudinary and Resend keys. Frontend needs `VITE_API_URL` and `VITE_SOCKET_URL`.
 
 **Local and Koyeb share the Atlas cluster but not the database.** The database is the path segment of `MONGO_URL`, before the `?`: local uses `/test`, Koyeb uses `/prod`. Leaving the path empty is what MongoDB reads as `test`, which is how running Cypress locally used to write straight into production — 15 of the 19 groups there were spec leftovers. If you add the name after the query string it silently keeps using `test`.
 
