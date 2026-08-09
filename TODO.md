@@ -68,6 +68,36 @@ Sustituir el auth artesanal por [Better Auth](https://better-auth.com) para tene
 - **Instalación**: `minimumReleaseAge: 4320` en `pnpm-workspace.yaml` bloquea versiones publicadas hace menos de 3 días — Better Auth publica a menudo, así que puede no resolver la última. Y tiene que ir en `dependencies` del backend, no en dev, o el contenedor (`--prod`) se cae al arrancar.
 - El paquete es TypeScript/ESM-first, y desde el punto 13 el backend también es ESM, así que se importa de forma nativa sin transpilar.
 
+## 6. Descablear el correo de bienvenida (y los que vengan) con Resend
+
+El servicio de email ya está montado (punto 19), pero no se llama desde ningún sitio: la bienvenida
+al registrar sigue **comentada** en `auth.controller.js:54` y ni siquiera importa el módulo.
+
+**A tener en cuenta:**
+
+- Importar `sendEmail` de `services/email.js` y llamarlo tras crear el usuario. **Envolver la
+  llamada en el controlador** (`.catch()` o try/catch aparte del flujo de registro) para que un
+  fallo de email **no tumbe el registro**: `sendEmail` lanza a propósito, y la bienvenida es
+  best-effort.
+- Con el remitente de pruebas (`onboarding@resend.dev`) el correo sólo llega al email dueño de la
+  cuenta de Resend, así que probarlo con usuarios reales exige verificar antes un dominio (SPF/DKIM),
+  que hoy no existe — mismo peaje que apunta el punto 19.
+- El reset de contraseña (parte del punto 5) es el otro llamante, y ahí el throw **sí** importa: si
+  el correo no se pudo mandar, la operación tiene que fallar de cara al usuario, no seguir como si
+  nada.
+
+**Dominio verificado: la entrega a usuarios reales ya no está bloqueada.** El subdominio de envío
+`send.jorgeaf.dev` está verificado en Resend (SPF/DKIM/return-path en el DNS de Cloudflare), y el
+`from` es `RESEND_FROM=DivvyUp <noreply@send.jorgeaf.dev>`. Con eso `sendEmail` entrega a cualquier
+destinatario, no sólo a la cuenta de Resend. Lo que queda de este punto es puramente descablear el
+llamante; no hay bloqueante de infraestructura.
+
+Para la historia (por qué se eligió así): la entrega a destinatarios arbitrarios **exige** verificar
+el dominio del `from` con control del DNS — no es cosa de Resend, es de cualquier proveedor. Los
+subdominios por defecto de Cloudflare Pages y Koyeb no valían (su DNS no es nuestro), y un dominio
+ajeno al proyecto como `from` se lee como phishing. Se resolvió comprando `jorgeaf.dev` en Cloudflare
+y verificando el subdominio `send`.
+
 ## 10. `react-router` 7.18.1 tiene un aviso de seguridad, y el parche es un major
 
 **Decidido el 04-08-2026: se hace, pero más adelante y en su propia rama.** No estamos afectados hoy
@@ -373,34 +403,30 @@ que está por debajo de mínimos (44 de iOS, 48 de Android) y sale del `padding:
 hamburguesa no, porque el botón se queda igual. Y el mínimo de 48 para botones de sólo icono es la
 misma conversación que el punto 17.
 
-## 19. Cambiar SendGrid por Brevo o Resend
+## 19. Cambiar SendGrid por Resend — HECHO el 09-08-2026
 
-Sustituir el proveedor de email por [Brevo](https://www.brevo.com) o [Resend](https://resend.com).
+El proveedor de email es Resend. El servicio vive en `backend/src/services/email.js`:
+`sendEmail(to, subject, text)`, ahora `async`, que instancia `new Resend(process.env.RESEND_API_KEY)`
+**en el momento de la llamada** —no a nivel de módulo, el mismo patrón que `jwt_secret` desde el
+punto 13, así que el orden frente a `dotenv` deja de importar— y hace `resend.emails.send({...})`. La
+firma no cambia respecto a SendGrid, así que el (futuro) llamante no se toca.
 
-**Estado actual (verificado):**
+**Estado:**
 
-- Todo el email vive en `backend/src/services/sendgrid.js`: `sendgrid.setApiKey(process.env.SENDGRID_API_KEY)`
-  y un único `sendEmail(to, subject, text)` que manda un `from` con `SENDGRID_EMAIL` y nombre `DivvyUp`.
-- **El módulo no se importa en ningún sitio.** El único rastro de uso es una línea **comentada** en
-  `auth.controller.js:54` (`// sendEmail(...)` de bienvenida al registrar), y ni siquiera importa el
-  módulo. Hoy no se envía ningún correo: el proveedor está cableado pero muerto.
-- Dependencia: `@sendgrid/mail@^8.1.6` en `dependencies` del backend. Variables: `SENDGRID_API_KEY`
-  y `SENDGRID_EMAIL` (el remitente verificado). Ambas documentadas en el README y en `CLAUDE.md`
-  (sección *Environment*), que hay que actualizar al cambiar de proveedor.
-
-**A decidir:**
-
-- **Brevo vs Resend.** Resend tiene el SDK más simple (`resend`, un `resend.emails.send({...})`) y DX
-  orientada a devs; Brevo (`@getbrevo/brevo`) trae plan gratis más generoso y panel de campañas. Para
-  lo que hay aquí —un correo transaccional suelto— cualquiera sirve; pesa más el free tier y la
-  verificación del dominio remitente.
-- **Verificación del remitente/dominio.** Los tres exigen verificar el `from`. Con dominio propio hace
-  falta configurar SPF/DKIM; sin él, sólo un remitente puntual verificado.
-- **La API se mantiene igual.** `sendEmail(to, subject, text)` puede quedarse con la misma firma para
-  no tocar al (futuro) llamante; sólo cambia el cuerpo del servicio y el nombre del fichero.
-- Va en `dependencies`, no en dev, o el contenedor (`--prod`) se cae al arrancar. Y ojo con
-  `minimumReleaseAge: 4320`: una versión publicada hace menos de tres días no resuelve.
-- Como aún no se envía nada, es el momento barato de cambiarlo: no hay flujo en producción que romper.
-  Si se descomenta el correo de bienvenida (o se añade reset de contraseña, punto 5), esto ya tiene
-  que estar decidido.
+- **El `from` sale de `RESEND_FROM`, con default en código `DivvyUp <onboarding@resend.dev>`** — el
+  remitente de pruebas de Resend, que **sólo entrega al email dueño de la cuenta de Resend**. Para
+  mandar a usuarios reales hace falta verificar un dominio (SPF/DKIM), que hoy no existe: DivvyUp
+  corre en los subdominios por defecto de Cloudflare Pages y Koyeb, sin DNS propio donde poner los
+  registros. El día que haya dominio, se rellena `RESEND_FROM` y no se toca código.
+- **Resend no lanza en un fallo de envío: devuelve `{ data, error }`.** `sendEmail` mira `error` y
+  **lanza** si viene, para que ningún fallo se trague en silencio (el SendGrid anterior ni siquiera
+  hacía `await`, así que un fallo era un unhandled rejection). Qué hacer con ese throw es del
+  llamante, no del servicio: la bienvenida es best-effort, el reset es crítico.
+- **Sigue sin enviarse nada:** el único llamante es la línea comentada de `auth.controller.js:54`.
+  Descablearla es el punto 6.
+- Dependencia: `resend@^6.18.1` en `dependencies` (no dev, o el contenedor `--prod` se cae al
+  arrancar). `@sendgrid/mail` fuera. Variables: `RESEND_API_KEY` (obligatoria) y `RESEND_FROM`
+  (opcional). `SENDGRID_API_KEY` y `SENDGRID_EMAIL` retiradas de `.env`, README y `CLAUDE.md`.
+- Test: `backend/src/tests/email.test.js` mockea `resend` y fija el payload (from/to/subject/text) y
+  que un `{ error }` hace que `sendEmail` rechace.
 

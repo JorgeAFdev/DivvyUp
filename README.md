@@ -75,8 +75,9 @@ VITE_SOCKET_URL=http://localhost:3001
 ```env
 MONGO_URL=<your_mongo_db_url>
 jwt_secret=<your_jwt_secret>
-SENDGRID_API_KEY=<your_sendgrid_api_key>
-SENGRID_EMAIL=<your_sendgrid_sender_email>
+RESEND_API_KEY=<your_resend_api_key>
+# Optional; defaults to "DivvyUp <onboarding@resend.dev>" (Resend's test sender)
+RESEND_FROM=<your_verified_sender>
 
 CLOUDINARY_CLOUD_NAME=<your_cloudinary_cloud_name>
 CLOUDINARY_API_KEY=<your_cloudinary_api_key>
