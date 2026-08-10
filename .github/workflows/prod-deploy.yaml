@@ -37,6 +37,12 @@ jobs:
           docker build . --file backend/Dockerfile --tag ghcr.io/divvyup-app/splitwise:latest
           docker push ghcr.io/divvyup-app/splitwise:latest
 
+      - name: 'Trigger Coolify redeploy'
+        run: |
+          curl --fail --silent --show-error \
+            "https://coolify.jorgeaf.dev/api/v1/deploy?uuid=uset5w5tsg77ctdfczsp0hse&force=false" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+
       - name: Install and configure the Koyeb CLI
         uses: koyeb-community/install-koyeb-cli@v2
         with:
