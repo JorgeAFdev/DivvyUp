@@ -60,7 +60,7 @@ Sustituir el auth artesanal por [Better Auth](https://better-auth.com) para tene
 - **Dos fuentes de identidad**: Better Auth crea sus propias colecciones (`user`, `session`, `account`, `verification`) al margen de la colección `users` de Mongoose. Hay que decidir si `User` pasa a ser un perfil que referencia al usuario de Better Auth, o si se migran los usuarios existentes conservando el `_id`. La segunda opción es la que no rompe los grupos, expenses y payments que ya existen.
 - **Cookies cross-site**: front en Cloudflare Pages y back en Koyeb son dominios distintos, así que la cookie de sesión necesita `SameSite=None; Secure`, `trustedOrigins` en la config, `cors({ credentials: true, origin: CLIENT_URL })` en vez del `cors()` abierto de hoy, y `credentials: 'include'` en el cliente. Mismo peaje que ya se apuntaba en el punto 1.
 - **Dependencia con el punto 20 (dominios propios).** El camino limpio con cookies pide front y back
-  bajo el mismo dominio registrable (`jorgeaf.dev` + `api.jorgeaf.dev`): entonces la cookie es
+  bajo el mismo dominio registrable (`divvyup.jorgeaf.dev` + `divvyup-api.jorgeaf.dev`): entonces la cookie es
   **same-site** y puede ser `SameSite=Lax`, lo que reduce la superficie CSRF y —más importante—
   esquiva el bloqueo de third-party cookies que hace frágil el montaje cross-site. Sin el punto 20,
   este punto hereda `SameSite=None; Secure`, tokens CSRF como defensa primaria y esa fragilidad. Aviso:
@@ -439,23 +439,33 @@ firma no cambia respecto a SendGrid, así que el (futuro) llamante no se toca.
 - Test: `backend/src/tests/email.test.js` mockea `resend` y fija el payload (from/to/subject/text) y
   que un `{ error }` hace que `sendEmail` rechace.
 
-## 20. Dominio propio (`jorgeaf.dev`): front con custom domain y back a Render
+## 20. Dominio propio (`jorgeaf.dev`): front con custom domain y back en VPS propio (OVH + Coolify)
 
 Ahora que `jorgeaf.dev` está en Cloudflare, dar dominio propio al front (gratis en Pages) y mover el
-back a un host con custom domain sin peaje (Render, Railway o Cloudflare Containers) — en Koyeb el
-dominio propio es de pago, que es lo que empuja el cambio.
+back a un host con custom domain sin peaje. En Koyeb el dominio propio es de pago, que es lo que empuja
+el cambio. **La vía elegida es un VPS propio (OVH VPS-1 2027 + Coolify)** en vez de un PaaS, porque el
+objetivo real no es solo DivvyUp: es **centralizar todos los backends** (DivvyUp + los dos proyectos PHP +
+futuros side projects) en una sola caja. Ahí es donde el VPS le gana a los PaaS de ~$5/servicio, que
+escalan lineal; un VPS de ~5,53 EUR/mes aguanta todos. Render/Railway/Cloudflare Containers quedan como
+alternativa cero-ops si en algún momento no se quiere el peaje de sysadmin (ver 20b-bis).
+
+**Por qué OVH y no Hetzner.** Con las subidas de precio de Hetzner de 2026, su Intel de entrada pasó a
+ser el **CX23 a ~7,25 EUR/mes** (base + IPv4 + IVA), y el ARM barato (CAX11) no estaba disponible. El
+**OVH VPS-1 2027** trae **las mismas specs (2 vCPU / 4 GB / 40 GB NVMe), es x86** (así que la imagen de
+GHCR corre sin tocar nada, sin el lío de build multi-arch de ARM), y sale a **5,53 EUR/mes IVA incluido
+con IPv4 pública y backup diario incluidos** — en Hetzner ambos eran extras de pago. El saldo de 25 EUR
+que se cargó en Hetzner para la verificación se reembolsa (ticket de soporte, sin servidor creado).
 
 **Este punto es prerequisito del camino-cookies del punto 5 (Better Auth).** Front y back bajo el
-mismo dominio registrable (`jorgeaf.dev` + `api.jorgeaf.dev`) es lo que permite cookies **same-site**
-(`SameSite=Lax`) en vez de `SameSite=None; Secure` cross-site: menos superficie CSRF y sin el problema
-del bloqueo de third-party cookies. Si el punto 5 se hiciera antes que el 20, arrastraría todo ese
-peaje de seguridad. Ver el detalle en el punto 5.
+mismo dominio registrable (`divvyup.jorgeaf.dev` + `divvyup-api.jorgeaf.dev`, ambos bajo `jorgeaf.dev`)
+es lo que permite cookies **same-site** (`SameSite=Lax`) en vez de `SameSite=None; Secure` cross-site:
+menos superficie CSRF y sin el problema del bloqueo de third-party cookies. Si el punto 5 se hiciera
+antes que el 20, arrastraría todo ese peaje de seguridad. Ver el detalle en el punto 5.
 
 ### 20a. Custom domain del frontend (Cloudflare Pages)
 
-- **A decidir el hostname.** `jorgeaf.dev` es personal y va a alojar varios proyectos, así que la raíz
-  probablemente sea una landing personal y DivvyUp cuelgue de un subdominio: `divvyup.jorgeaf.dev` o
-  `app.jorgeaf.dev`. Decidir antes de tocar DNS.
+- **Hostname decidido:** la raíz `jorgeaf.dev` queda para el portfolio personal, y DivvyUp cuelga de
+  `divvyup.jorgeaf.dev` (front) con el back en `divvyup-api.jorgeaf.dev`.
 - Como el dominio ya está en Cloudflare, añadirlo en Pages es trivial: *Custom domains* en el proyecto
   `divvyup`, Cloudflare crea el CNAME solo. No hace falta `_redirects`.
 - **Arrastra `CLIENT_URL` del backend.** Es el origin exacto que compara Socket.IO
@@ -464,50 +474,69 @@ peaje de seguridad. Ver el detalle en el punto 5.
 - `VITE_API_URL`/`VITE_SOCKET_URL` apuntan al **back**, no al front, así que este cambio no los toca
   (los toca el 20b).
 
-### 20b. Backend a Render, Railway o Cloudflare Containers
+### 20b. Backend a VPS propio (OVH VPS-1 2027 + Coolify) — vía elegida
 
-- **A decidir el proveedor.** Todos los de pago arrancan en ~$5/mes, así que el cruce real es: ¿el
-  único gratis (Render) compensa su spin-down, o pago $5 y elijo por ecosistema?
-  - **Render free**: $0, pero el servicio **se duerme** tras ~15 min sin tráfico y el primer request
-    tarda ~30-60s en despertar (contenedor + Express + conexión a Atlas); afecta también a Socket.IO.
-    Se mitiga con el keep-alive del 20c, a costa de quemar cuota (750 h-instancia/mes por cuenta, ~2
-    servicios despiertos por ventana). El plan de pago de Render (Starter, sin spin-down) es **por
-    servicio** (~$7 cada uno), así que escala mal con varios proyectos.
-  - **Railway**: no tiene free tier real; es **$5/mes con $5 de uso incluidos, compartidos entre todos
-    los servicios/proyectos de la cuenta**. Sin spin-down. Para varios proyectos pequeños, ese único
-    $5 los cubre a todos.
-  - **Cloudflare Containers**: corre la **misma imagen Docker** (es un contenedor real, no el runtime
-    de Workers, así que Express/Mongoose/Socket.IO van sin tocar nada — el "no encaja en Workers" de
-    más arriba **no** aplica aquí). Requiere el plan **Workers Paid ($5/mes)**, que trae uso de
-    contenedor incluido y se comparte entre tus Workers/containers, modelo parecido al de Railway.
-    Ventaja fuerte: **unifica todo en Cloudflare** — front en Pages, DNS y dominio ya están ahí, el
-    custom domain del back es nativo y no hay que orquestar dos plataformas. Contra: los contenedores
-    **escalan a cero** cuando están ociosos y tienen cold-start al despertar (parecido a Render, salvo
-    que configures instancias mínimas), y es lo más nuevo de los tres para este uso.
-  - **El cruce:** **1 proyecto y te da igual el cold-start → Render free** ($0). **Vas a pagar $5 y
-    quieres varios always-on / usage compartido → Railway.** **Vas a pagar $5 y valoras tener todo en
-    Cloudflare → Containers.**
-  - Si se elige Railway o Containers con instancia mínima, **el 20c (keep-alive) sobra**: no hay
-    spin-down que evitar (en Containers, solo si dejas que escale a cero).
-- **Método de deploy** (aplica a los dos): o **Git nativo** del proveedor construyendo
-  `backend/Dockerfile` en cada push, o **reusar la imagen de GHCR** que el pipeline ya publica
-  (`ghcr.io/divvyup-app/splitwise:latest`) y redeployar por deploy hook / auto-deploy al publicarse.
-  Ojo con el contexto de build: es la **raíz del repo** (no `backend/`), igual que en Koyeb y Pages,
-  así que hay que configurar *Root Directory* = raíz y *Dockerfile Path* = `backend/Dockerfile`. El
-  filtro por rutas (deploy solo si cambia `backend/**`) se hace con los *build filters* del proveedor.
+- **Máquina:** OVH **VPS-1 2027** (2 vCPU / 4 GB RAM / 40 GB NVMe, ~5,53 EUR/mes IVA incl. en mensual;
+  baja a ~3,81 EUR + IVA con compromiso anual), datacenter EU (Gravelines/Strasbourg) por latencia desde
+  España. Los 4 GB son el mínimo cómodo para Coolify: el pico de RAM no es correr los servicios, es
+  **construir imágenes** (ahí OOM-ea una caja de 2 GB). Como DivvyUp reusa la imagen ya construida en
+  GHCR (ver más abajo), en su caso no hay build en el VPS. Si con varios proyectos se queda corta, se
+  sube al VPS-2 2027 (4 vCPU / 8 GB). Contratarlo **pelado**: IPv4 y backup diario ya vienen incluidos,
+  no hacen falta las opciones extra de pago (snapshot/anti-DDoS premium).
+- **Método de deploy (DivvyUp): reusar la imagen de GHCR** que el pipeline ya publica
+  (`ghcr.io/divvyup-app/splitwise:latest`) y redeployar con el **webhook de Coolify** cuando se publica
+  la imagen. Así el build sigue ocurriendo en GitHub Actions (contexto = raíz del repo, ya resuelto) y
+  el VPS solo hace `pull` + `run`, sin construir nada ni gastar RAM/CPU en el build. La alternativa
+  (Coolify construyendo `backend/Dockerfile` en cada push) no se usa aquí; si se usara, ojo: *Base
+  Directory* = raíz del repo, *Dockerfile* = `backend/Dockerfile`, build filter a `backend/**`.
+- **TLS + reverse proxy los gestiona Coolify** (Traefik + Let's Encrypt), así que el custom domain del
+  back es gratis y automático — es justo lo que quita el peaje que empujaba salir de Koyeb.
+- **Custom domain del back:** `divvyup-api.jorgeaf.dev` (registro A al IPv4 del VPS en Cloudflare). Entonces
+  el front pasa a `VITE_API_URL`/`VITE_SOCKET_URL` = `https://divvyup-api.jorgeaf.dev`. Con front en
+  `divvyup.jorgeaf.dev` y back en `divvyup-api.jorgeaf.dev` (ambos bajo `jorgeaf.dev`), la cookie de
+  sesión de Better Auth sería **same-site** (`SameSite=Lax`) en vez del `SameSite=None; Secure`
+  cross-site que hoy obligaría Pages + Koyeb en dominios distintos.
 - **Variables a replicar** (lo que hay en Koyeb): `MONGO_URL` (con `/prod` en la ruta, **no** vacío, o
-  MongoDB lee `test`), `jwt_secret`, `CLIENT_URL` (el nuevo origin del front, punto 20a), las tres de
-  Cloudinary, `RESEND_API_KEY` y `RESEND_FROM`. Retirar las `SENDGRID_*`.
-- **Custom domain del back**: `api.jorgeaf.dev` (gratis en ambos). Entonces el front pasa a
-  `VITE_API_URL`/`VITE_SOCKET_URL` = `https://api.jorgeaf.dev`. Esto además prepara el punto 5: con
-  front en `jorgeaf.dev` y back en `api.jorgeaf.dev`, la cookie de sesión de Better Auth sería
-  **same-site** (`SameSite=Lax`) en vez del `SameSite=None; Secure` cross-site que hoy obligaría a usar
-  Pages + Koyeb en dominios distintos.
+  MongoDB lee `test`), `jwt_secret`, `CLIENT_URL` (el nuevo origin del front, `https://divvyup.jorgeaf.dev`,
+  sin barra final), las tres de Cloudinary, `RESEND_API_KEY` y `RESEND_FROM`. Retirar las `SENDGRID_*`.
+- **El peaje que se asume al autogestionar** (frente a un PaaS): parcheo del SO, hardening de SSH,
+  firewall a nivel de servidor (`ufw`, solo 22/80/443, SSH con clave), y los backups. El VPS-1 2027 trae
+  **backup diario (24h) incluido**, lo que cubre lo esencial; para las DBs conviene además un dump propio.
+  DivvyUp se salva porque Mongo sigue en **Atlas** (backup ajeno), pero los proyectos PHP con DB propia en
+  el VPS dependen de ese backup. Y es **single point of failure**: la caja caída tumba todos los proyectos
+  a la vez.
+- **Sin spin-down:** al ser un VPS always-on, **el 20c (keep-alive) sobra** y Socket.IO no sufre
+  cold-starts.
+
+### 20b-bis. Alternativa cero-ops: Render, Railway o Cloudflare Containers
+
+Solo si en algún momento no se quiere el peaje de sysadmin del 20b. Todos los de pago arrancan en
+~$5/mes; el cruce es si el único gratis (Render) compensa su spin-down o se paga $5 y se elige por
+ecosistema.
+
+- **Render free**: $0, pero el servicio **se duerme** tras ~15 min sin tráfico y el primer request
+  tarda ~30-60s en despertar (contenedor + Express + conexión a Atlas); afecta también a Socket.IO. Se
+  mitiga con el keep-alive del 20c, a costa de quemar cuota (750 h-instancia/mes por cuenta, ~2
+  servicios despiertos por ventana). El plan de pago (Starter, sin spin-down) es **por servicio** (~$7
+  cada uno), así que escala mal con varios proyectos.
+- **Railway**: no tiene free tier real; **$5/mes con $5 de uso incluidos, compartidos entre todos los
+  servicios/proyectos de la cuenta**. Sin spin-down. Para varios proyectos pequeños, ese único $5 los
+  cubre a todos.
+- **Cloudflare Containers**: corre la **misma imagen Docker** (contenedor real, no el runtime de
+  Workers, así que Express/Mongoose/Socket.IO van sin tocar nada). Requiere **Workers Paid ($5/mes)**,
+  con uso de contenedor incluido y compartido entre tus Workers/containers. Ventaja: **unifica todo en
+  Cloudflare** (front en Pages, DNS y dominio ya están ahí, custom domain nativo). Contra: **escalan a
+  cero** cuando están ociosos y tienen cold-start (salvo instancias mínimas).
+- **Método de deploy (para las tres):** Git nativo construyendo `backend/Dockerfile` en cada push, o
+  reusar la imagen de GHCR y redeployar por deploy hook. Contexto de build = **raíz del repo** (no
+  `backend/`): *Root Directory* = raíz, *Dockerfile Path* = `backend/Dockerfile`, filtro por rutas con
+  los *build filters* del proveedor.
 
 ### 20c. Keep-alive con GitHub Action (ventana horaria) — solo si el back se duerme
 
 Esto **solo aplica si el back tiene spin-down**: Render free, o Cloudflare Containers dejándolo escalar
-a cero. Con Railway (o Containers con instancia mínima) no hay spin-down y esta sección sobra entera.
+a cero — es decir, solo la alternativa cero-ops del 20b-bis. **Con la vía elegida (VPS del 20b) no hay
+spin-down y esta sección entera sobra.** Igual con Railway o Containers con instancia mínima.
 
 - **Falta una ruta de health.** Hoy todo cuelga de `/api` y no hay `GET /` ni `/health`. El keep-alive
   necesita un endpoint barato y **público** (sin `jwtMiddleware`) al que pegar, p.ej. `GET /api/health`
