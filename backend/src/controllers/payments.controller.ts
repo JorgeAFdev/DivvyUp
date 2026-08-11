@@ -8,7 +8,7 @@ import { updateBalance, generateDebts } from "../services/ledger.js";
 
 const pay = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload!;
+    const { id: userId } = req.jwtPayload;
     const { paymentId } = req.params;
 
     if (!paymentId || !mongoose.Types.ObjectId.isValid(paymentId)) {

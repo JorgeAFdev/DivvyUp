@@ -32,7 +32,7 @@ const validateGroupBody = ({ name, description, members }: { name?: string; desc
 
 const createGroup = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload!;
+    const { id: userId } = req.jwtPayload;
     const { name, description, members } = req.body;
 
     const invalid = validateGroupBody({ name, description, members });
@@ -67,7 +67,7 @@ const createGroup = async (req: Request, res: Response) => {
 
 const updateGroup = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload!;
+    const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
     const { name, description, members } = req.body;
 
@@ -177,7 +177,7 @@ const updateGroup = async (req: Request, res: Response) => {
 
 const getUserGroups = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload!;
+    const { id: userId } = req.jwtPayload;
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ error: "Invalid user Id" });
@@ -194,7 +194,7 @@ const getUserGroups = async (req: Request, res: Response) => {
 
 const getGroupById = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload!;
+    const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
 
     if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
@@ -217,7 +217,7 @@ const getGroupById = async (req: Request, res: Response) => {
 
 const deleteGroup = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload!;
+    const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
 
     if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
@@ -243,7 +243,7 @@ const deleteGroup = async (req: Request, res: Response) => {
 
 const getGroupDetails = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload!;
+    const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
 
     if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
@@ -301,7 +301,7 @@ const getInviteName = async (req: Request, res: Response) => {
 
 const getGroupByInviteCode = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload!;
+    const { id: userId } = req.jwtPayload;
     const { inviteCode } = req.params;
 
     const group = await Group.findOne({ inviteCode });
@@ -326,7 +326,7 @@ const getGroupByInviteCode = async (req: Request, res: Response) => {
 
 const joinGroup = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload!;
+    const { id: userId } = req.jwtPayload;
     const { inviteCode } = req.params;
     const { memberId, name } = req.body;
 
@@ -377,7 +377,7 @@ const joinGroup = async (req: Request, res: Response) => {
 
 const regenerateInviteCode = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload!;
+    const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
 
     if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {

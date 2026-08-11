@@ -1,5 +1,3 @@
-import 'express';
-
 export interface JwtPayload {
   id: string;
   name: string;
@@ -9,15 +7,11 @@ export interface JwtPayload {
 declare global {
   namespace Express {
     interface Request {
-      // Optional on purpose: only jwtMiddleware sets it, so a handler on a
-      // public route (register, login, getInviteName) that reads it without a
-      // guard is a compile error. Authed handlers assert it with `!`.
-      jwtPayload?: JwtPayload;
+      // Required: jwtMiddleware runs before every authed handler and 401s
+      // (without calling next) when the token is missing or invalid, so a
+      // controller that runs at all has it. TypeScript can't see middleware
+      // order, so this is the one place that runtime guarantee is stated.
+      jwtPayload: JwtPayload;
     }
   }
-}
-
-// The request shape inside a handler that sits behind jwtMiddleware.
-export interface AuthedRequest extends Express.Request {
-  jwtPayload: JwtPayload;
 }

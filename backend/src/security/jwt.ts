@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import type { Request, Response, NextFunction } from 'express';
+import type { JwtPayload } from '../types/express.js';
 
 const jwtMiddleware = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers["authorization"];
@@ -21,7 +22,7 @@ const jwtMiddleware = (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Guardamos los datos del token dentro de req.jwtPayload
-    req.jwtPayload = tokenPayload as Request['jwtPayload'];
+    req.jwtPayload = tokenPayload as JwtPayload;
     next();
   };
   

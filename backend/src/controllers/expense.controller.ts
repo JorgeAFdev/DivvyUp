@@ -71,7 +71,7 @@ const splitEvenly = (participants: unknown[], totalAmount: number) => {
 
 const createExpense = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload!;
+        const { id: userId } = req.jwtPayload;
         const { groupId } = req.params;
         const { description, totalAmount, paidBy, participants } = req.body;
 
@@ -125,7 +125,7 @@ const createExpense = async (req: Request, res: Response) => {
 
 const updateExpense = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload!;
+        const { id: userId } = req.jwtPayload;
         const { expenseId, groupId } = req.params;
         const { description, totalAmount, paidBy, participants } = req.body;
 
@@ -182,7 +182,7 @@ const updateExpense = async (req: Request, res: Response) => {
 
 const getExpensesByGroupId = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload!;
+        const { id: userId } = req.jwtPayload;
         const { groupId } = req.params;
 
         if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
@@ -209,7 +209,7 @@ const getExpensesByGroupId = async (req: Request, res: Response) => {
 
 const getExpensesByUserId = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload!;
+        const { id: userId } = req.jwtPayload;
 
         if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ error: "Invalid user ID" });
@@ -258,7 +258,7 @@ const getExpensesByUserId = async (req: Request, res: Response) => {
 
 const deleteExpense = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload!;
+        const { id: userId } = req.jwtPayload;
         const { groupId, expenseId } = req.params;
 
         if (!mongoose.Types.ObjectId.isValid(groupId) || !mongoose.Types.ObjectId.isValid(expenseId)) {
