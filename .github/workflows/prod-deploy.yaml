@@ -9,6 +9,7 @@ on:
     # installs backend deps from the workspace lockfile.
     paths:
       - 'backend/**'
+      - 'tsconfig.base.json'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'

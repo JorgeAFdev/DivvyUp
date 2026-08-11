@@ -29,9 +29,12 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      # No --prod: tsc lives in the backend devDependencies.
+      # No --prod: tsc lives in the backend devDependencies. Skip
+      # mongodb-memory-server's mongod download; only tsc runs here.
       - name: 'Install backend'
         run: pnpm install --frozen-lockfile --filter=@monorepo/backend...
+        env:
+          MONGOMS_DISABLE_POSTINSTALL: '1'
 
       - name: 'Typecheck backend'
         run: pnpm --filter=@monorepo/backend typecheck
