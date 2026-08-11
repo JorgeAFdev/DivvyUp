@@ -1,19 +1,18 @@
 import mongoose, { Types } from 'mongoose';
 import { Decimal } from 'decimal.js';
+import Payment from '../schemas/payment.schema.js';
 import type { GroupHydrated } from '../schemas/group.schema.js';
 import type { ExpenseDoc } from '../schemas/expense.schema.js';
-import type { PaymentDoc } from '../schemas/payment.schema.js';
 
 const toStoredAmount = (amount: Decimal) => amount.toDecimalPlaces(2).toNumber();
 
-// The engine reaches its models by name to stay off the expense.schema -> ledger
-// import edge; the string lookup is typed here with the schema doc types.
+// Expense is reached by name to stay off the expense.schema -> ledger import
+// edge (that cycle is real); Payment has no such edge, so it is imported directly.
 const expenseModel = () => mongoose.model<ExpenseDoc>('Expense');
-const paymentModel = () => mongoose.model<PaymentDoc>('Payment');
 
 export const updateBalance = async (group: GroupHydrated) => {
   const expenses = await expenseModel().find({ group: group._id });
-  const completedPayments = await paymentModel().find({ group: group._id, status: 'paid' });
+  const completedPayments = await Payment.find({ group: group._id, status: 'paid' });
 
   const balance: Record<string, { member: Types.ObjectId; amount: Decimal }> = {};
   const entryFor = (memberId: Types.ObjectId) => {
@@ -58,8 +57,6 @@ export const updateBalance = async (group: GroupHydrated) => {
 };
 
 export const generateDebts = async (group: GroupHydrated) => {
-  const Payment = paymentModel();
-
   await Payment.deleteMany({ group: group._id, status: 'pending' });
 
   const balanceCopy = group.balance.map(({ member, amount }) => ({ member, amount: new Decimal(amount) }));

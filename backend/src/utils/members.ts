@@ -1,5 +1,9 @@
 import type { Types } from 'mongoose';
-import type { GroupHydrated, GroupMember } from '../schemas/group.schema.js';
+import type { GroupDoc, GroupHydrated, GroupMember } from '../schemas/group.schema.js';
+
+// What toObject() yields for a member: the persisted fields plus _id, and none
+// of the Subdocument methods a real GroupMember carries.
+type MemberPlain = GroupDoc['members'][number] & { _id: Types.ObjectId };
 
 // What a linked member's account exposes. Never widen it without checking
 // that the password hash is not in the projection.
@@ -19,7 +23,7 @@ const memberOf = (group: GroupHydrated, userId: unknown): GroupMember | undefine
   group.members.find((m) => m.user && idOf(m.user).toString() === String(userId));
 
 const membersById = (group: GroupHydrated) =>
-  new Map<string, GroupMember>(group.members.map((m) => [m._id.toString(), toPlain(m)]));
+  new Map<string, MemberPlain>(group.members.map((m) => [m._id.toString(), toPlain(m)]));
 
 // Replaces member ids with the member itself on the given paths, since populate
 // cannot resolve a ref that points inside another document's subdocument array.

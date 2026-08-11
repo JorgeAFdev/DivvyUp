@@ -1,4 +1,4 @@
-import mongoose, { InferSchemaType } from "mongoose";
+import mongoose, { InferSchemaType, Model } from "mongoose";
 const Schema = mongoose.Schema;
 
 const PaymentSchema = new Schema({
@@ -34,5 +34,7 @@ const PaymentSchema = new Schema({
 
 export type PaymentDoc = InferSchemaType<typeof PaymentSchema>;
 
-const Payment = mongoose.model("Payment", PaymentSchema);
+type PaymentModel = Model<PaymentDoc>;
+
+const Payment = mongoose.model<PaymentDoc, PaymentModel>("Payment", PaymentSchema);
 export default Payment;
