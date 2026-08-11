@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { connectDB, disconnectDB } from "../mongo/connection/index.js";
 import Group from "../schemas/group.schema.js";
+import type { GroupHydrated } from "../schemas/group.schema.js";
 import Expense from "../schemas/expense.schema.js";
 import Payment from "../schemas/payment.schema.js";
 import { memberOf, hydrateMembers } from "../utils/members.js";
@@ -19,15 +20,15 @@ const setUpGroup = () =>
         ],
     });
 
-const memberIds = (group: any) => group.members.map((m: any) => m._id);
+const memberIds = (group: GroupHydrated) => group.members.map((m) => m._id);
 
-const amountOf = (group: any, memberId: any) =>
-    group.balance.find((b: any) => b.member.toString() === memberId.toString()).amount;
+const amountOf = (group: GroupHydrated, memberId: mongoose.Types.ObjectId) =>
+    group.balance.find((b) => b.member.toString() === memberId.toString())!.amount;
 
-let group: any;
-let jorge: any;
-let mama: any;
-let ana: any;
+let group: GroupHydrated;
+let jorge: mongoose.Types.ObjectId;
+let mama: mongoose.Types.ObjectId;
+let ana: mongoose.Types.ObjectId;
 
 beforeAll(async () => {
     await connectDB();
@@ -56,10 +57,10 @@ describe("Group engine", () => {
             const balance = await updateBalance(group);
 
             expect(balance).toHaveLength(3);
-            expect(balance.map((b: any) => b.member.toString())).toEqual(
+            expect(balance.map((b) => b.member.toString())).toEqual(
                 [jorge, mama, ana].map((id) => id.toString()),
             );
-            expect(balance.every((b: any) => b.amount === 0)).toBe(true);
+            expect(balance.every((b) => b.amount === 0)).toBe(true);
         });
 
         it("makes a member without an account the creditor of what they paid", async () => {
@@ -228,17 +229,17 @@ describe("Group engine", () => {
             const debts = await Payment.find({ group: group._id, status: "pending" });
 
             const [balance] = hydrateMembers(updated, updated.balance, ["member"]).filter(
-                (b: any) => b.member._id.toString() === mama.toString(),
+                (b) => b.member?._id.toString() === mama.toString(),
             );
             const [debt] = hydrateMembers(updated, debts, ["from", "to"]);
             const [hydrated] = hydrateMembers(updated, [expense], ["paidBy", "participants.member"]);
 
-            expect(balance.member.name).toBe("Mamá");
-            expect(balance.member.user).toBeNull();
-            expect(debt.from.name).toBe("Ana");
-            expect(debt.to.name).toBe("Mamá");
-            expect(hydrated.paidBy.name).toBe("Mamá");
-            expect(hydrated.participants[0].member.name).toBe("Ana");
+            expect(balance.member!.name).toBe("Mamá");
+            expect(balance.member!.user).toBeNull();
+            expect(debt.from!.name).toBe("Ana");
+            expect(debt.to!.name).toBe("Mamá");
+            expect(hydrated.paidBy!.name).toBe("Mamá");
+            expect(hydrated.participants[0].member!.name).toBe("Ana");
             expect(hydrated.participants[0].amountOwed).toBe(20);
         });
 
@@ -253,7 +254,7 @@ describe("Group engine", () => {
 
             const hydrated = hydrateMembers(group, entry, ["member"]);
 
-            expect(hydrated.member.name).toBe("Jorge");
+            expect(hydrated.member!.name).toBe("Jorge");
             expect(entry.member).toBe(group.members[0]._id);
         });
     });

@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema({
 
 export type UserDoc = InferSchemaType<typeof userSchema>;
 
-interface UserMethods {
+export interface UserMethods {
     comparePassword(inputPassword: string): Promise<boolean>;
     generateJWT(): string;
 }

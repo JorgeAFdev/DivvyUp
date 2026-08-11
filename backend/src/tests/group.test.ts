@@ -1,10 +1,13 @@
 import supertest from "supertest";
 import { bootstrapApp } from "../bootstrap.js";
 import { disconnectDB, connectDB } from "../mongo/connection/index.js";
+import type { HydratedDocument } from "mongoose";
 import Group from "../schemas/group.schema.js";
+import type { GroupHydrated } from "../schemas/group.schema.js";
 import Expense from "../schemas/expense.schema.js";
 import Payment from "../schemas/payment.schema.js";
 import User from "../schemas/user.schema.js";
+import type { UserDoc, UserMethods } from "../schemas/user.schema.js";
 
 const app = bootstrapApp();
 const fakeRequest = supertest(app);
@@ -21,9 +24,9 @@ const groupBody = {
     members: [{ name: "Mamá" }, { name: "Ana" }],
 };
 
-const idsOf = (group: any) => group.members.map((m: any) => m._id.toString());
+const idsOf = (group: GroupHydrated) => group.members.map((m) => m._id.toString());
 
-const dinnerFor = (group: any) => {
+const dinnerFor = (group: GroupHydrated) => {
     const [jorge, mama, ana] = idsOf(group);
     return {
         description: "Cena",
@@ -38,11 +41,11 @@ const dinnerFor = (group: any) => {
     };
 };
 
-let jorge: any;
-let ana: any;
-let jorgeToken: any;
-let anaToken: any;
-let group: any;
+let jorge: HydratedDocument<UserDoc, UserMethods>;
+let ana: HydratedDocument<UserDoc, UserMethods>;
+let jorgeToken: string;
+let anaToken: string;
+let group: GroupHydrated;
 
 beforeAll(async () => {
     await connectDB();
@@ -55,7 +58,7 @@ beforeAll(async () => {
 beforeEach(async () => {
     await Promise.all([Group.deleteMany({}), Expense.deleteMany({}), Payment.deleteMany({})]);
     const response = await post("/group", jorgeToken, groupBody);
-    group = await Group.findById(response.body._id);
+    group = (await Group.findById(response.body._id))!;
 });
 
 afterAll(async () => {
@@ -163,7 +166,7 @@ describe("PUT /group/:groupId", () => {
         const response = await put(`/group/${group._id}`, jorgeToken, {
             ...groupBody,
             members: [
-                ...idsOf(group).map((_id: any, i: any) => ({ _id, name: group.members[i].name })),
+                ...idsOf(group).map((_id, i) => ({ _id, name: group.members[i].name })),
                 { name: "Luis" },
             ],
         });
@@ -191,7 +194,7 @@ describe("PUT /group/:groupId", () => {
         await Expense.create({
             ...dinnerFor(group),
             totalAmount: 20,
-            participants: dinnerFor(group).participants.slice(0, 2).map((p: any) => ({ ...p })),
+            participants: dinnerFor(group).participants.slice(0, 2).map((p) => ({ ...p })),
         });
         const [jorgeId, mamaId, anaId] = idsOf(group);
 
@@ -246,7 +249,7 @@ describe("PUT /group/:groupId", () => {
     it("keeps the pending debts untouched when only names change", async () => {
         await Expense.create(dinnerFor(group));
         const [jorgeId, mamaId, anaId] = idsOf(group);
-        const before = (await Payment.find({ group: group._id, status: "pending" })).map((p: any) => p._id.toString()).sort();
+        const before = (await Payment.find({ group: group._id, status: "pending" })).map((p) => p._id.toString()).sort();
 
         const response = await put(`/group/${group._id}`, jorgeToken, {
             name: "Piso",
@@ -260,7 +263,7 @@ describe("PUT /group/:groupId", () => {
 
         expect(response.status).toBe(200);
 
-        const after = (await Payment.find({ group: group._id, status: "pending" })).map((p: any) => p._id.toString()).sort();
+        const after = (await Payment.find({ group: group._id, status: "pending" })).map((p) => p._id.toString()).sort();
         expect(after).toEqual(before);
     });
 
@@ -268,17 +271,17 @@ describe("PUT /group/:groupId", () => {
         await Expense.create({
             ...dinnerFor(group),
             totalAmount: 20,
-            participants: dinnerFor(group).participants.slice(0, 2).map((p: any) => ({ ...p })),
+            participants: dinnerFor(group).participants.slice(0, 2).map((p) => ({ ...p })),
         });
         const [jorgeId, mamaId] = idsOf(group);
-        const before = (await Payment.find({ group: group._id, status: "pending" })).map((p: any) => p._id.toString());
+        const before = (await Payment.find({ group: group._id, status: "pending" })).map((p) => p._id.toString());
 
         await put(`/group/${group._id}`, jorgeToken, {
             ...groupBody,
             members: [{ _id: jorgeId, name: "Jorge" }, { _id: mamaId, name: "Mamá" }],
         });
 
-        const after = (await Payment.find({ group: group._id, status: "pending" })).map((p: any) => p._id.toString());
+        const after = (await Payment.find({ group: group._id, status: "pending" })).map((p) => p._id.toString());
         expect(after).not.toEqual(before);
         expect(after).toHaveLength(1);
     });
@@ -499,7 +502,7 @@ describe("POST /group/join/:inviteCode", () => {
         expect(response.body.members[3].user._id).toBe(ana._id.toString());
 
         const updated = (await Group.findById(group._id))!;
-        const entry = updated.balance.find((b: any) => b.member.toString() === updated.members[3]._id.toString());
+        const entry = updated.balance.find((b) => b.member.toString() === updated.members[3]._id.toString());
         expect(entry!.amount).toBe(0);
     });
 

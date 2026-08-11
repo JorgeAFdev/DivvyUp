@@ -1,11 +1,14 @@
 import { Decimal } from "decimal.js";
+import type { HydratedDocument } from "mongoose";
 import supertest from "supertest";
 import { bootstrapApp } from "../bootstrap.js";
 import { disconnectDB, connectDB } from "../mongo/connection/index.js";
 import Group from "../schemas/group.schema.js";
+import type { GroupHydrated } from "../schemas/group.schema.js";
 import Expense from "../schemas/expense.schema.js";
 import Payment from "../schemas/payment.schema.js";
 import User from "../schemas/user.schema.js";
+import type { UserDoc, UserMethods } from "../schemas/user.schema.js";
 
 const app = bootstrapApp();
 const fakeRequest = supertest(app);
@@ -22,19 +25,19 @@ app.set("socketio", {
     to: (room: string) => ({ emit: (event: string, payload: any) => emitted.push({ room, event, payload }) }),
 });
 
-const idsOf = (group: any) => group.members.map((m: any) => m._id.toString());
+const idsOf = (group: GroupHydrated) => group.members.map((m) => m._id.toString());
 
-let jorge: any;
-let ana: any;
-let jorgeToken: any;
-let anaToken: any;
-let group: any;
-let jorgeId: any;
-let mamaId: any;
-let anaId: any;
+let jorge: HydratedDocument<UserDoc, UserMethods>;
+let ana: HydratedDocument<UserDoc, UserMethods>;
+let jorgeToken: string;
+let anaToken: string;
+let group: GroupHydrated;
+let jorgeId: string;
+let mamaId: string;
+let anaId: string;
 
 const reload = async () => {
-    group = await Group.findById(group._id);
+    group = (await Group.findById(group._id))!;
     [jorgeId, mamaId, anaId] = idsOf(group);
 };
 
@@ -54,7 +57,7 @@ beforeEach(async () => {
         description: "Gastos del piso",
         members: [{ name: "Mamá" }, { name: "Ana" }],
     });
-    group = await Group.findById(response.body._id);
+    group = (await Group.findById(response.body._id))!;
     [jorgeId, mamaId, anaId] = idsOf(group);
 });
 
@@ -81,7 +84,7 @@ describe("POST /group/:groupId/expenses", () => {
         expect(response.body.group).toBe(group._id.toString());
 
         await reload();
-        const balance = group.balance.find((b: any) => b.member.toString() === mamaId);
+        const balance = group.balance.find((b) => b.member.toString() === mamaId)!;
         expect(balance.amount).toBe(20);
     });
 
@@ -111,7 +114,7 @@ describe("POST /group/:groupId/expenses", () => {
         expect(response.body.participants.map((p: any) => p.amountOwed)).toEqual([3.34, 3.33, 3.33]);
 
         await reload();
-        const amounts = group.balance.map((b: any) => b.amount);
+        const amounts = group.balance.map((b) => b.amount);
         expect(amounts).toEqual([6.66, -3.33, -3.33]);
         expect(new Decimal(0).plus(amounts[0]).plus(amounts[1]).plus(amounts[2]).toNumber()).toBe(0);
 
@@ -240,8 +243,8 @@ describe("PATCH /group/:groupId/expenses/:expenseId", () => {
         expect(response.body.participants).toHaveLength(2);
 
         await reload();
-        expect(group.balance.find((b: any) => b.member.toString() === mamaId).amount).toBe(10);
-        expect(group.balance.find((b: any) => b.member.toString() === anaId).amount).toBe(0);
+        expect(group.balance.find((b) => b.member.toString() === mamaId)!.amount).toBe(10);
+        expect(group.balance.find((b) => b.member.toString() === anaId)!.amount).toBe(0);
     });
 });
 
@@ -291,7 +294,7 @@ describe("DELETE /group/:groupId/expenses/:expenseId", () => {
         expect(response.status).toBe(200);
 
         await reload();
-        expect(group.balance.every((b: any) => b.amount === 0)).toBe(true);
+        expect(group.balance.every((b) => b.amount === 0)).toBe(true);
         expect(await Payment.find({ group: group._id, status: "pending" })).toHaveLength(0);
     });
 });
@@ -364,7 +367,7 @@ describe("GET /user/expenses", () => {
 });
 
 describe("PATCH /payment/:paymentId", () => {
-    const debtOf = (from: any) => Payment.findOne({ group: group._id, from, status: "pending" });
+    const debtOf = (from: string) => Payment.findOne({ group: group._id, from, status: "pending" });
 
     beforeEach(async () => {
         await post(`/group/${group._id}/expenses`, jorgeToken, {
@@ -387,8 +390,8 @@ describe("PATCH /payment/:paymentId", () => {
         expect(response.body.from.name).toBe("Mamá");
 
         await reload();
-        expect(group.balance.find((b: any) => b.member.toString() === mamaId).amount).toBe(0);
-        expect(group.balance.find((b: any) => b.member.toString() === jorgeId).amount).toBe(10);
+        expect(group.balance.find((b) => b.member.toString() === mamaId)!.amount).toBe(0);
+        expect(group.balance.find((b) => b.member.toString() === jorgeId)!.amount).toBe(10);
     });
 
     it("lets a member settle a debt between two members without an account", async () => {

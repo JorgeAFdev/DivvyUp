@@ -1,14 +1,16 @@
 import supertest from "supertest";
 import { bootstrapApp } from "../bootstrap.js";
+import type { HydratedDocument } from "mongoose";
 import { disconnectDB, connectDB } from "../mongo/connection/index.js";
 import User from "../schemas/user.schema.js";
+import type { UserDoc, UserMethods } from "../schemas/user.schema.js";
 
 const app = bootstrapApp();
 const fakeRequest = supertest(app);
 
 const credentials = { email: "jorge@user.com", password: "Password1" };
 
-let jorge: any;
+let jorge: HydratedDocument<UserDoc, UserMethods>;
 
 beforeAll(async () => {
     await connectDB();
@@ -91,7 +93,7 @@ describe("POST /auth/register", () => {
 });
 
 describe("POST /auth/register password strength", () => {
-    const register = (password: any) =>
+    const register = (password: string) =>
         fakeRequest.post("/auth/register").send({ name: "Ana", email: "ana@user.com", password });
 
     const rejected = [
