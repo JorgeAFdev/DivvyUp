@@ -17,7 +17,10 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json .
 COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
 
-# No --prod here: the build needs typescript, which is a devDependency.
+# No --prod here: the build needs typescript, which is a devDependency. But the
+# devDeps include mongodb-memory-server, whose postinstall would download a
+# ~120 MB mongod binary into this throwaway layer just to let tsc run.
+ENV MONGOMS_DISABLE_POSTINSTALL=1
 RUN pnpm install --frozen-lockfile --filter=@monorepo/backend...
 
 COPY backend/tsconfig.json backend/tsconfig.build.json ./backend/
