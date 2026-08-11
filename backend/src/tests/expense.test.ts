@@ -1,4 +1,4 @@
-import Decimal from "decimal.js";
+import { Decimal } from "decimal.js";
 import supertest from "supertest";
 import { bootstrapApp } from "../bootstrap.js";
 import { disconnectDB, connectDB } from "../mongo/connection/index.js";
@@ -10,28 +10,28 @@ import User from "../schemas/user.schema.js";
 const app = bootstrapApp();
 const fakeRequest = supertest(app);
 
-const auth = (token) => ({ Authorization: `Bearer ${token}` });
+const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
-const post = (path, token, body) => fakeRequest.post(path).set(auth(token)).send(body);
-const patch = (path, token, body) => fakeRequest.patch(path).set(auth(token)).send(body);
-const get = (path, token) => fakeRequest.get(path).set(auth(token));
+const post = (path: string, token: string, body?: any) => fakeRequest.post(path).set(auth(token)).send(body);
+const patch = (path: string, token: string, body?: any) => fakeRequest.patch(path).set(auth(token)).send(body);
+const get = (path: string, token: string) => fakeRequest.get(path).set(auth(token));
 
 // bootstrapApp() has no Socket.IO, so notifications need a stub to land somewhere.
-let emitted = [];
+let emitted: any[] = [];
 app.set("socketio", {
-    to: (room) => ({ emit: (event, payload) => emitted.push({ room, event, payload }) }),
+    to: (room: string) => ({ emit: (event: string, payload: any) => emitted.push({ room, event, payload }) }),
 });
 
-const idsOf = (group) => group.members.map((m) => m._id.toString());
+const idsOf = (group: any) => group.members.map((m: any) => m._id.toString());
 
-let jorge;
-let ana;
-let jorgeToken;
-let anaToken;
-let group;
-let jorgeId;
-let mamaId;
-let anaId;
+let jorge: any;
+let ana: any;
+let jorgeToken: any;
+let anaToken: any;
+let group: any;
+let jorgeId: any;
+let mamaId: any;
+let anaId: any;
 
 const reload = async () => {
     group = await Group.findById(group._id);
@@ -81,7 +81,7 @@ describe("POST /group/:groupId/expenses", () => {
         expect(response.body.group).toBe(group._id.toString());
 
         await reload();
-        const balance = group.balance.find((b) => b.member.toString() === mamaId);
+        const balance = group.balance.find((b: any) => b.member.toString() === mamaId);
         expect(balance.amount).toBe(20);
     });
 
@@ -96,7 +96,7 @@ describe("POST /group/:groupId/expenses", () => {
             participants: [jorgeId, mamaId, anaId],
         });
 
-        expect(emitted.map((e) => e.room)).toEqual([`user:${ana._id.toString()}`]);
+        expect(emitted.map((e: any) => e.room)).toEqual([`user:${ana._id.toString()}`]);
         expect(emitted[0].payload.type).toBe("EXPENSE_CREATED");
     });
 
@@ -108,10 +108,10 @@ describe("POST /group/:groupId/expenses", () => {
             participants: [jorgeId, mamaId, anaId],
         });
 
-        expect(response.body.participants.map((p) => p.amountOwed)).toEqual([3.34, 3.33, 3.33]);
+        expect(response.body.participants.map((p: any) => p.amountOwed)).toEqual([3.34, 3.33, 3.33]);
 
         await reload();
-        const amounts = group.balance.map((b) => b.amount);
+        const amounts = group.balance.map((b: any) => b.amount);
         expect(amounts).toEqual([6.66, -3.33, -3.33]);
         expect(new Decimal(0).plus(amounts[0]).plus(amounts[1]).plus(amounts[2]).toNumber()).toBe(0);
 
@@ -240,8 +240,8 @@ describe("PATCH /group/:groupId/expenses/:expenseId", () => {
         expect(response.body.participants).toHaveLength(2);
 
         await reload();
-        expect(group.balance.find((b) => b.member.toString() === mamaId).amount).toBe(10);
-        expect(group.balance.find((b) => b.member.toString() === anaId).amount).toBe(0);
+        expect(group.balance.find((b: any) => b.member.toString() === mamaId).amount).toBe(10);
+        expect(group.balance.find((b: any) => b.member.toString() === anaId).amount).toBe(0);
     });
 });
 
@@ -258,7 +258,7 @@ describe("GET /group/:groupId/expenses", () => {
 
         expect(response.status).toBe(200);
         expect(response.body[0].paidBy.name).toBe("Mamá");
-        expect(response.body[0].participants.map((p) => p.member.name)).toEqual(["Jorge", "Mamá", "Ana"]);
+        expect(response.body[0].participants.map((p: any) => p.member.name)).toEqual(["Jorge", "Mamá", "Ana"]);
     });
 
     it("returns an empty list for a group with no expenses", async () => {
@@ -291,7 +291,7 @@ describe("DELETE /group/:groupId/expenses/:expenseId", () => {
         expect(response.status).toBe(200);
 
         await reload();
-        expect(group.balance.every((b) => b.amount === 0)).toBe(true);
+        expect(group.balance.every((b: any) => b.amount === 0)).toBe(true);
         expect(await Payment.find({ group: group._id, status: "pending" })).toHaveLength(0);
     });
 });
@@ -310,7 +310,7 @@ describe("GET /user/expenses", () => {
             description: "Fin de semana",
             members: [{ name: "Luis" }],
         });
-        const [jorgeInTrip, luis] = second.body.members.map((m) => m._id);
+        const [jorgeInTrip, luis] = second.body.members.map((m: any) => m._id);
         await post(`/group/${second.body._id}/expenses`, jorgeToken, {
             description: "Gasolina",
             totalAmount: 50,
@@ -321,12 +321,12 @@ describe("GET /user/expenses", () => {
         const response = await get("/user/expenses", jorgeToken);
 
         expect(response.status).toBe(200);
-        expect(response.body.map((g) => g.groupName).sort()).toEqual(["Piso", "Viaje"]);
+        expect(response.body.map((g: any) => g.groupName).sort()).toEqual(["Piso", "Viaje"]);
         // Members travel once per group, not once per expense.
-        expect(response.body.every((g) => g.members.length > 0)).toBe(true);
-        expect(response.body.flatMap((g) => g.expenses).every((e) => e.group !== undefined && !e.group.members)).toBe(true);
-        expect(response.body.every((g) => g.expenses.length === 1)).toBe(true);
-        expect(response.body.flatMap((g) => g.expenses).map((e) => e.paidBy.name).sort()).toEqual(["Luis", "Mamá"]);
+        expect(response.body.every((g: any) => g.members.length > 0)).toBe(true);
+        expect(response.body.flatMap((g: any) => g.expenses).every((e: any) => e.group !== undefined && !e.group.members)).toBe(true);
+        expect(response.body.every((g: any) => g.expenses.length === 1)).toBe(true);
+        expect(response.body.flatMap((g: any) => g.expenses).map((e: any) => e.paidBy.name).sort()).toEqual(["Luis", "Mamá"]);
     });
 
     it("leaves out the expenses the user has nothing to do with", async () => {
@@ -364,7 +364,7 @@ describe("GET /user/expenses", () => {
 });
 
 describe("PATCH /payment/:paymentId", () => {
-    const debtOf = (from) => Payment.findOne({ group: group._id, from, status: "pending" });
+    const debtOf = (from: any) => Payment.findOne({ group: group._id, from, status: "pending" });
 
     beforeEach(async () => {
         await post(`/group/${group._id}/expenses`, jorgeToken, {
@@ -377,7 +377,7 @@ describe("PATCH /payment/:paymentId", () => {
     });
 
     it("lets the creditor settle a debt owed to them", async () => {
-        const debt = await debtOf(mamaId);
+        const debt = (await debtOf(mamaId))!;
 
         const response = await patch(`/payment/${debt._id}`, jorgeToken);
 
@@ -387,8 +387,8 @@ describe("PATCH /payment/:paymentId", () => {
         expect(response.body.from.name).toBe("Mamá");
 
         await reload();
-        expect(group.balance.find((b) => b.member.toString() === mamaId).amount).toBe(0);
-        expect(group.balance.find((b) => b.member.toString() === jorgeId).amount).toBe(10);
+        expect(group.balance.find((b: any) => b.member.toString() === mamaId).amount).toBe(0);
+        expect(group.balance.find((b: any) => b.member.toString() === jorgeId).amount).toBe(10);
     });
 
     it("lets a member settle a debt between two members without an account", async () => {
@@ -400,7 +400,7 @@ describe("PATCH /payment/:paymentId", () => {
             participants: [mamaId, anaId],
         });
 
-        const debt = await debtOf(anaId);
+        const debt = (await debtOf(anaId))!;
         expect(debt.to.toString()).toBe(mamaId);
 
         const response = await patch(`/payment/${debt._id}`, jorgeToken);
@@ -413,7 +413,7 @@ describe("PATCH /payment/:paymentId", () => {
         await post(`/group/join/${group.inviteCode}`, anaToken, { memberId: anaId });
         await reload();
 
-        const debt = await debtOf(mamaId);
+        const debt = (await debtOf(mamaId))!;
         const response = await patch(`/payment/${debt._id}`, anaToken);
 
         expect(response.status).toBe(403);
@@ -424,21 +424,21 @@ describe("PATCH /payment/:paymentId", () => {
         await reload();
         emitted = [];
 
-        const debt = await debtOf(mamaId);
+        const debt = (await debtOf(mamaId))!;
         await patch(`/payment/${debt._id}`, jorgeToken);
 
         expect(emitted).toHaveLength(0);
 
-        const anasDebt = await debtOf(anaId);
+        const anasDebt = (await debtOf(anaId))!;
         await patch(`/payment/${anasDebt._id}`, anaToken);
 
-        expect(emitted.map((e) => e.room)).toEqual([`user:${jorge._id.toString()}`]);
+        expect(emitted.map((e: any) => e.room)).toEqual([`user:${jorge._id.toString()}`]);
         expect(emitted[0].payload.type).toBe("DEBT_SETTLED");
         expect(emitted[0].payload.message).toContain("has settled their debt with");
     });
 
     it("rejects someone who is not a member of the group", async () => {
-        const debt = await debtOf(mamaId);
+        const debt = (await debtOf(mamaId))!;
 
         const response = await patch(`/payment/${debt._id}`, anaToken);
 
@@ -446,7 +446,7 @@ describe("PATCH /payment/:paymentId", () => {
     });
 
     it("refuses to settle a cancelled debt", async () => {
-        const debt = await debtOf(mamaId);
+        const debt = (await debtOf(mamaId))!;
         await Payment.findByIdAndUpdate(debt._id, { status: "cancelled" });
 
         const response = await patch(`/payment/${debt._id}`, jorgeToken);
@@ -455,7 +455,7 @@ describe("PATCH /payment/:paymentId", () => {
     });
 
     it("refuses to settle the same debt twice", async () => {
-        const debt = await debtOf(mamaId);
+        const debt = (await debtOf(mamaId))!;
         await patch(`/payment/${debt._id}`, jorgeToken);
         emitted = [];
 

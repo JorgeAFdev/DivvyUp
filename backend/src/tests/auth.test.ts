@@ -8,7 +8,7 @@ const fakeRequest = supertest(app);
 
 const credentials = { email: "jorge@user.com", password: "Password1" };
 
-let jorge;
+let jorge: any;
 
 beforeAll(async () => {
     await connectDB();
@@ -80,7 +80,7 @@ describe("POST /auth/register", () => {
             .post("/auth/register")
             .send({ name: "Ana", email: "ana@user.com", password: "Password1" });
 
-        const stored = await User.findOne({ email: "ana@user.com" }).select("+password");
+        const stored = (await User.findOne({ email: "ana@user.com" }).select("+password"))!;
         expect(stored.password).not.toBe("Password1");
 
         const response = await fakeRequest
@@ -91,7 +91,7 @@ describe("POST /auth/register", () => {
 });
 
 describe("POST /auth/register password strength", () => {
-    const register = (password) =>
+    const register = (password: any) =>
         fakeRequest.post("/auth/register").send({ name: "Ana", email: "ana@user.com", password });
 
     const rejected = [
@@ -175,14 +175,14 @@ describe("PATCH /user/update", () => {
 
 describe("the password field", () => {
     it("stays out of a plain query", async () => {
-        const found = await User.findOne({ email: credentials.email });
+        const found = (await User.findOne({ email: credentials.email }))!;
 
         expect(found.email).toBe(credentials.email);
         expect(found.password).toBeUndefined();
     });
 
     it("comes back with select('+password'), which is what login needs", async () => {
-        const found = await User.findOne({ email: credentials.email }).select("+password");
+        const found = (await User.findOne({ email: credentials.email }).select("+password"))!;
 
         expect(found.password).toEqual(expect.any(String));
         await expect(found.comparePassword(credentials.password)).resolves.toBe(true);

@@ -19,15 +19,15 @@ const setUpGroup = () =>
         ],
     });
 
-const memberIds = (group) => group.members.map((m) => m._id);
+const memberIds = (group: any) => group.members.map((m: any) => m._id);
 
-const amountOf = (group, memberId) =>
-    group.balance.find((b) => b.member.toString() === memberId.toString()).amount;
+const amountOf = (group: any, memberId: any) =>
+    group.balance.find((b: any) => b.member.toString() === memberId.toString()).amount;
 
-let group;
-let jorge;
-let mama;
-let ana;
+let group: any;
+let jorge: any;
+let mama: any;
+let ana: any;
 
 beforeAll(async () => {
     await connectDB();
@@ -56,10 +56,10 @@ describe("Group engine", () => {
             const balance = await updateBalance(group);
 
             expect(balance).toHaveLength(3);
-            expect(balance.map((b) => b.member.toString())).toEqual(
+            expect(balance.map((b: any) => b.member.toString())).toEqual(
                 [jorge, mama, ana].map((id) => id.toString()),
             );
-            expect(balance.every((b) => b.amount === 0)).toBe(true);
+            expect(balance.every((b: any) => b.amount === 0)).toBe(true);
         });
 
         it("makes a member without an account the creditor of what they paid", async () => {
@@ -75,7 +75,7 @@ describe("Group engine", () => {
                 ],
             });
 
-            const updated = await Group.findById(group._id);
+            const updated = (await Group.findById(group._id))!;
 
             expect(amountOf(updated, mama)).toBe(20);
             expect(amountOf(updated, jorge)).toBe(-10);
@@ -95,7 +95,7 @@ describe("Group engine", () => {
                 ],
             });
 
-            const updated = await Group.findById(group._id);
+            const updated = (await Group.findById(group._id))!;
 
             expect(amountOf(updated, jorge)).toBe(6.67);
             expect(amountOf(updated, ana)).toBe(-3.34);
@@ -119,7 +119,7 @@ describe("Group engine", () => {
                 { status: "paid", paidAt: new Date() },
             );
 
-            const settled = await Group.findById(group._id);
+            const settled = (await Group.findById(group._id))!;
             await updateBalance(settled);
 
             expect(amountOf(settled, jorge)).toBe(0);
@@ -186,7 +186,7 @@ describe("Group engine", () => {
                 { status: "paid", paidAt: new Date() },
             );
 
-            const settled = await Group.findById(group._id);
+            const settled = (await Group.findById(group._id))!;
             await updateBalance(settled);
             await generateDebts(settled);
 
@@ -202,7 +202,7 @@ describe("Group engine", () => {
 
     describe("memberOf", () => {
         it("finds the member a user is linked to", () => {
-            expect(memberOf(group, jorgeUserId)._id.toString()).toBe(jorge.toString());
+            expect(memberOf(group, jorgeUserId)!._id.toString()).toBe(jorge.toString());
         });
 
         it("returns undefined for a user who is not a member", () => {
@@ -224,11 +224,11 @@ describe("Group engine", () => {
                 participants: [{ member: ana, amountOwed: 20 }],
             });
 
-            const updated = await Group.findById(group._id);
+            const updated = (await Group.findById(group._id))!;
             const debts = await Payment.find({ group: group._id, status: "pending" });
 
             const [balance] = hydrateMembers(updated, updated.balance, ["member"]).filter(
-                (b) => b.member._id.toString() === mama.toString(),
+                (b: any) => b.member._id.toString() === mama.toString(),
             );
             const [debt] = hydrateMembers(updated, debts, ["from", "to"]);
             const [hydrated] = hydrateMembers(updated, [expense], ["paidBy", "participants.member"]);
