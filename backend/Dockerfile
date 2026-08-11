@@ -48,4 +48,6 @@ ENV NODE_ENV=production
 WORKDIR /app/backend
 
 EXPOSE 8080
-CMD ["node", "dist/index.js"]
+# --enable-source-maps so a production stack trace points at the .ts line;
+# tsconfig.build.json emits the .js.map files next to dist/.
+CMD ["node", "--enable-source-maps", "dist/index.js"]

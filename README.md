@@ -115,7 +115,7 @@ splitwise/
 │   │   ├── services/       # Core business logic
 │   │   ├── socket/         # WebSocket server and event handlers
 │   │   ├── tests/          # Unit/integration tests
-│   │   └── index.js
+│   │   └── index.ts
 │   ├── Dockerfile
 │   └── .env                # Environment variables (backend)
 │   └── package.json        

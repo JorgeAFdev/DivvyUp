@@ -2,8 +2,8 @@
 // test against the running backend, and there is no endpoint to delete a user,
 // so the only way back is here.
 //
-//   node scripts/clean-e2e.js          # dry run, counts only
-//   node scripts/clean-e2e.js --yes    # actually deletes
+//   pnpm clean:e2e          # dry run, counts only
+//   pnpm clean:e2e --yes    # actually deletes
 //
 // Only accounts whose email is <letters><timestamp>@test.com go, which is the
 // shape every spec builds with Date.now(). javi@divvyup.test and
@@ -15,7 +15,7 @@ const SPEC_EMAIL = /^[a-zA-Z]+\d{10,}@test\.com$/;
 const commit = process.argv.includes('--yes');
 
 (async () => {
-    await mongoose.connect(process.env.MONGO_URL);
+    await mongoose.connect(process.env.MONGO_URL as string);
     const db = mongoose.connection;
 
     // The one mistake this script must never make. Local and Koyeb share the
