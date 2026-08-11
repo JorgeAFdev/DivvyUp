@@ -6,12 +6,20 @@ import type { ExpenseHydrated } from "../schemas/expense.schema.js";
 import Group from "../schemas/group.schema.js";
 import type { GroupHydrated } from "../schemas/group.schema.js";
 import { MEMBER_FIELDS, MEMBER_PATHS, memberOf, hydrateMembers, linkedUserIds } from "../utils/members.js";
+import type { Hydrated } from "../utils/members.js";
 import { sendNotificationToUser, notificationTypes } from "../services/notifications.js";
 
 const CENT = new Decimal("0.01");
 
-const expenseResponse = (group: GroupHydrated, expenses: ExpenseHydrated | ExpenseHydrated[]) =>
-    hydrateMembers(group, expenses, MEMBER_PATHS);
+type HydratedExpense = Hydrated<ExpenseHydrated, (typeof MEMBER_PATHS)[number]>;
+
+function expenseResponse(group: GroupHydrated, expenses: ExpenseHydrated): HydratedExpense;
+function expenseResponse(group: GroupHydrated, expenses: ExpenseHydrated[]): HydratedExpense[];
+function expenseResponse(group: GroupHydrated, expenses: ExpenseHydrated | ExpenseHydrated[]) {
+    return Array.isArray(expenses)
+        ? hydrateMembers(group, expenses, MEMBER_PATHS)
+        : hydrateMembers(group, expenses, MEMBER_PATHS);
+}
 
 const validateExpense = ({ group, paidBy, participants, totalAmount }: { group: GroupHydrated; paidBy: unknown; participants: unknown; totalAmount: number }) => {
     const memberIds = new Set(group.members.map((member) => member._id.toString()));
