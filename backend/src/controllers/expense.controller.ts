@@ -1,15 +1,17 @@
-import Decimal from "decimal.js";
+import { Decimal } from "decimal.js";
+import type { Request, Response } from "express";
+import mongoose from "mongoose";
 import Expense from "../schemas/expense.schema.js";
 import Group from "../schemas/group.schema.js";
-import mongoose from "mongoose";
+import type { GroupHydrated } from "../schemas/group.schema.js";
 import { MEMBER_FIELDS, MEMBER_PATHS, memberOf, hydrateMembers, linkedUserIds } from "../utils/members.js";
 import { sendNotificationToUser, notificationTypes } from "../services/notifications.js";
 
 const CENT = new Decimal("0.01");
 
-const expenseResponse = (group, expenses) => hydrateMembers(group, expenses, MEMBER_PATHS);
+const expenseResponse = (group: GroupHydrated, expenses: unknown) => hydrateMembers(group, expenses, MEMBER_PATHS);
 
-const validateExpense = ({ group, paidBy, participants, totalAmount }) => {
+const validateExpense = ({ group, paidBy, participants, totalAmount }: { group: GroupHydrated; paidBy: unknown; participants: unknown; totalAmount: number }) => {
     const memberIds = new Set(group.members.map((member) => member._id.toString()));
 
     // A single checkbox makes react-hook-form send a boolean instead of a list,
@@ -23,7 +25,7 @@ const validateExpense = ({ group, paidBy, participants, totalAmount }) => {
     if (!memberIds.has(String(paidBy))) {
         return "Payer is not part of the group";
     }
-    if (participants.some((participant) => !memberIds.has(String(participant)))) {
+    if (participants.some((participant: unknown) => !memberIds.has(String(participant)))) {
         return "One or more participants are not part of the group";
     }
     if (!Number.isFinite(Number(totalAmount))) {
@@ -46,7 +48,7 @@ const validateExpense = ({ group, paidBy, participants, totalAmount }) => {
 // An even split rarely divides into whole cents, so the shares are floored and
 // the leftover cents are handed out one each, from the top of the list. Splitting
 // with toFixed(2) instead left the group's balance off by those cents forever.
-const splitEvenly = (participants, totalAmount) => {
+const splitEvenly = (participants: unknown[], totalAmount: number) => {
     const total = new Decimal(totalAmount);
     const share = total.dividedBy(participants.length).toDecimalPlaces(2, Decimal.ROUND_DOWN);
     const leftoverCents = total.minus(share.times(participants.length)).times(100).round().toNumber();
@@ -57,7 +59,7 @@ const splitEvenly = (participants, totalAmount) => {
     }));
 };
 
-const createExpense = async (req, res) => {
+const createExpense = async (req: Request, res: Response) => {
     try {
         const { id: userId } = req.jwtPayload;
         const { groupId } = req.params;
@@ -111,7 +113,7 @@ const createExpense = async (req, res) => {
     }
 };
 
-const updateExpense = async (req, res) => {
+const updateExpense = async (req: Request, res: Response) => {
     try {
         const { id: userId } = req.jwtPayload;
         const { expenseId, groupId } = req.params;
@@ -160,7 +162,7 @@ const updateExpense = async (req, res) => {
     }
 }
 
-const getExpensesByGroupId = async (req, res) => {
+const getExpensesByGroupId = async (req: Request, res: Response) => {
     try {
         const { id: userId } = req.jwtPayload;
         const { groupId } = req.params;
@@ -187,7 +189,7 @@ const getExpensesByGroupId = async (req, res) => {
     }
 };
 
-const getExpensesByUserId = async (req, res) => {
+const getExpensesByUserId = async (req: Request, res: Response) => {
     try {
         const { id: userId } = req.jwtPayload;
 
@@ -208,7 +210,7 @@ const getExpensesByUserId = async (req, res) => {
 
         const expenses = await Expense.find({
             $or: groups.flatMap((group) => {
-                const me = memberOf(group, userId)._id;
+                const me = memberOf(group, userId)!._id;
                 return [
                     { group: group._id, paidBy: me },
                     { group: group._id, "participants.member": me },
@@ -236,7 +238,7 @@ const getExpensesByUserId = async (req, res) => {
     }
 };
 
-const deleteExpense = async (req, res) => {
+const deleteExpense = async (req: Request, res: Response) => {
     try {
         const { id: userId } = req.jwtPayload;
         const { groupId, expenseId } = req.params;

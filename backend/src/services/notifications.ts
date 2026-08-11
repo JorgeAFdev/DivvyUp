@@ -4,7 +4,9 @@ const notificationTypes = {
     DEBT_SETTLED: 'DEBT_SETTLED'
 };
 
-const sendNotificationToUser = (io, userId, type, message, data = {}) => {
+import type { Server } from 'socket.io';
+
+const sendNotificationToUser = (io: Server, userId: string, type: string, message: string, data: Record<string, unknown> = {}) => {
     io.to(`user:${userId}`).emit('notification', {
         type,
         message,

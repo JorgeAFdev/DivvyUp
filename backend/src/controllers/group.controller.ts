@@ -1,3 +1,4 @@
+import type { Request, Response } from "express";
 import Expense from "../schemas/expense.schema.js";
 import Group from "../schemas/group.schema.js";
 import Payment from "../schemas/payment.schema.js";
@@ -7,14 +8,14 @@ import { MEMBER_FIELDS, MEMBER_PATHS, memberOf, hydrateMembers } from "../utils/
 import { updateBalance, generateDebts } from "../services/ledger.js";
 
 
-const cleanName = (name) => (typeof name === "string" ? name.trim() : "");
+const cleanName = (name: unknown) => (typeof name === "string" ? name.trim() : "");
 
-const hasDuplicateNames = (names) => {
+const hasDuplicateNames = (names: string[]) => {
   const normalized = names.map((name) => name.toLowerCase());
   return new Set(normalized).size !== normalized.length;
 };
 
-const validateGroupBody = ({ name, description, members }) => {
+const validateGroupBody = ({ name, description, members }: { name?: string; description?: string; members?: any[] }) => {
   if (!name || !description || !members || members.length === 0) {
     return "incomplete data";
   }
@@ -29,7 +30,7 @@ const validateGroupBody = ({ name, description, members }) => {
   return null;
 };
 
-const createGroup = async (req, res) => {
+const createGroup = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { name, description, members } = req.body;
@@ -46,7 +47,7 @@ const createGroup = async (req, res) => {
 
     const formattedMembers = [
       { name: cleanName(creator.name), user: creator._id },
-      ...members.map((member) => ({ name: cleanName(member.name) })),
+      ...members.map((member: any) => ({ name: cleanName(member.name) })),
     ];
 
     if (hasDuplicateNames(formattedMembers.map((member) => member.name))) {
@@ -64,7 +65,7 @@ const createGroup = async (req, res) => {
   }
 };
 
-const updateGroup = async (req, res) => {
+const updateGroup = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
@@ -89,7 +90,7 @@ const updateGroup = async (req, res) => {
       return res.status(403).json({ error: "You don't have permission to edit this group" });
     }
 
-    if (hasDuplicateNames(members.map((member) => cleanName(member.name)))) {
+    if (hasDuplicateNames(members.map((member: any) => cleanName(member.name)))) {
       return res.status(400).json({ error: "Duplicate members are not allowed" });
     }
 
@@ -112,7 +113,7 @@ const updateGroup = async (req, res) => {
     }
 
     const removed = group.members.filter((member) => !keptIds.has(member._id.toString()));
-    const membershipChanged = removed.length > 0 || members.some((entry) => !entry._id);
+    const membershipChanged = removed.length > 0 || members.some((entry: any) => !entry._id);
 
     if (removed.length > 0) {
       const removedIds = removed.map((member) => member._id);
@@ -150,7 +151,7 @@ const updateGroup = async (req, res) => {
     group.set({
       name,
       description,
-      members: members.map((entry) => {
+      members: members.map((entry: any) => {
         const current = entry._id && currentById.get(entry._id.toString());
         return current
           ? { _id: current._id, name: cleanName(entry.name), user: current.user }
@@ -174,7 +175,7 @@ const updateGroup = async (req, res) => {
   }
 };
 
-const getUserGroups = async (req, res) => {
+const getUserGroups = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
 
@@ -191,7 +192,7 @@ const getUserGroups = async (req, res) => {
   }
 };
 
-const getGroupById = async (req, res) => {
+const getGroupById = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
@@ -214,7 +215,7 @@ const getGroupById = async (req, res) => {
   }
 };
 
-const deleteGroup = async (req, res) => {
+const deleteGroup = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
@@ -240,7 +241,7 @@ const deleteGroup = async (req, res) => {
 };
 
 
-const getGroupDetails = async (req, res) => {
+const getGroupDetails = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
@@ -282,7 +283,7 @@ const getGroupDetails = async (req, res) => {
 // Public on purpose, and deliberately not the same handler as the one below:
 // the list of unclaimed members is the part that must stay behind the token,
 // and a condition inside one handler is one bug away from leaking it.
-const getInviteName = async (req, res) => {
+const getInviteName = async (req: Request, res: Response) => {
   try {
     const { inviteCode } = req.params;
 
@@ -298,7 +299,7 @@ const getInviteName = async (req, res) => {
   }
 };
 
-const getGroupByInviteCode = async (req, res) => {
+const getGroupByInviteCode = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { inviteCode } = req.params;
@@ -323,7 +324,7 @@ const getGroupByInviteCode = async (req, res) => {
   }
 };
 
-const joinGroup = async (req, res) => {
+const joinGroup = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { inviteCode } = req.params;
@@ -351,7 +352,7 @@ const joinGroup = async (req, res) => {
         return res.status(409).json({ error: "That member is already linked to an account" });
       }
 
-      member.user = userId;
+      member.user = new mongoose.Types.ObjectId(userId);
       await group.save();
     } else if (cleanName(name)) {
       const names = group.members.map((member) => member.name).concat(cleanName(name));
@@ -374,7 +375,7 @@ const joinGroup = async (req, res) => {
   }
 };
 
-const regenerateInviteCode = async (req, res) => {
+const regenerateInviteCode = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;

@@ -7,7 +7,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadToCloudinary = async (fileBuffer) => {
+const uploadToCloudinary = async (fileBuffer: Buffer): Promise<string> => {
   return new Promise((resolve, reject) => {
     if (!fileBuffer || fileBuffer.length === 0) {
       return reject(new Error('El archivo está vacío'));
@@ -16,7 +16,7 @@ const uploadToCloudinary = async (fileBuffer) => {
     const stream = cloudinary.uploader.upload_stream(
       { folder: 'divvyup/users' },
       (error, result) => {
-        if (error) {
+        if (error || !result) {
           console.error('Error subiendo la imagen a Cloudinary:', error);
           return reject(new Error('Error subiendo la imagen'));
         }

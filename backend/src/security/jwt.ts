@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
+import type { Request, Response, NextFunction } from 'express';
 
-const jwtMiddleware = (req, res, next) => {
+const jwtMiddleware = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers["authorization"];
   
     
@@ -13,14 +14,14 @@ const jwtMiddleware = (req, res, next) => {
   
     try {
       
-      tokenPayload = jwt.verify(token, process.env.jwt_secret);
-      
+      tokenPayload = jwt.verify(token, process.env.jwt_secret as string);
+
     } catch (error) {
       return res.status(401).json({error: "Unauthorized"});
     }
-  
+
     // Guardamos los datos del token dentro de req.jwtPayload
-    req.jwtPayload = tokenPayload;
+    req.jwtPayload = tokenPayload as Request['jwtPayload'];
     next();
   };
   
