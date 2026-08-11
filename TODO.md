@@ -251,27 +251,22 @@ que la pasada mecánica se verificara en verde sin ruido de tipos.
 **Decidido el 04-08-2026: sí.** El proyecto es lo bastante pequeño como para que la migración no sea
 tediosa, y es lo que hace que Zod (punto 11) aporte tipos y no sólo validación en runtime.
 
-**Plan cerrado el 11-08-2026 — el detalle completo está en
-[docs/ts-migration.md](docs/ts-migration.md).** En corto:
+**Backend HECHO el 11-08-2026 (PR #103 + #104), desplegado y verificado en producción. Queda el
+frontend.** El plan completo y las decisiones están en [docs/ts-migration.md](docs/ts-migration.md);
+las reglas del backend TS viven en `CLAUDE.md`.
 
-- **Backend primero; el frontend, aparte y después.**
-- **Dos PRs de backend, en orden:** primero un **refactor JS-only** que saca `updateBalance` y
-  `generateDebts` de `group.schema.js` a funciones sueltas en `services/` (deja el schema solo con
-  estructura y hace viable `InferSchemaType`); luego la **migración TS big-bang** con `strict: true`,
-  sin `allowJs`, `InferSchemaType<typeof Schema>` para Mongoose, dev con `tsx watch`, producción con
-  `tsc` → `dist/` en un Dockerfile multi-stage, y una puerta `tsc --noEmit` en un GitHub Action nuevo
-  en cada PR.
-
-**Estado actual (verificado):**
-
-- Ni `typescript` ni `tsconfig.json` en ningún workspace. Nada empezado.
-- Backend: 25 ficheros en `src/` (+ 5 tests). Frontend: JSX con `prop-types` como devDependency, que
-  TS deja obsoleto en cuanto entra.
-- El backend se despliega en Docker sin paso de build (`COPY backend/src` + `node src/index.js`). El
-  plan mete `tsc` → `dist/` en multi-stage; se descartó `--experimental-strip-types` por atar la
-  imagen a la bandera y prohibir enums (que el punto 15 querría para los códigos de error).
-- Cloudflare Pages compila el front con Vite, que ya entiende TS sin configurar nada, pero **no
-  comprueba tipos** — por eso el `tsc --noEmit` del Action es la única puerta real.
+- **Backend (hecho):** los 25 ficheros de `src` + 5 tests a `.ts`, `strict: true`, sin `allowJs`.
+  Mongoose vía `InferSchemaType<typeof Schema>` (+ un tipo hidratado por el 5º genérico del modelo
+  para que `findById`/`create`/`find` devuelvan subdocumentos tipados). El motor de balances salió a
+  `services/ledger.ts` en el PR previo (#103). Dev con `tsx watch`, producción con `tsc` → `dist/` en
+  Dockerfile multi-stage (la imagen no lleva toolchain TS), y `tsconfig.base.json` en la raíz. La
+  puerta `tsc --noEmit` corre en cada PR (`.github/workflows/typecheck.yaml`) — el primer check de PR
+  del repo. `clean-e2e` también pasó a TS y lo cubre el typecheck.
+- **Frontend (pendiente, su propia sesión):** extiende el mismo `tsconfig.base.json`
+  (`moduleResolution: Bundler`, `lib: DOM`, `jsx: react-jsx`, `noEmit`). Decisiones abiertas:
+  jest → vitest o `@babel/preset-typescript`, retirar `prop-types`, rigor de `.jsx` → `.tsx` con MUI y
+  react-hook-form tipados, y si se engancha al mismo Action de `typecheck` (Vite nunca comprueba
+  tipos).
 
 ## 15. Contrato de errores por código, como en Cartobol
 

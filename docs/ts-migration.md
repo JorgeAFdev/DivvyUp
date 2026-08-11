@@ -3,6 +3,14 @@
 Plan acordado el 11-08-2026 para el punto 14 del `TODO.md`. **Backend primero; el
 frontend es un esfuerzo aparte y posterior.** El backend va en **dos PRs, en este orden**.
 
+> **Estado: backend HECHO el 11-08-2026** — PR A (#103, refactor del motor) y PR B (#104, migración TS)
+> mergeados, imagen desplegada en Coolify y verificada en producción (`https://divvyup-api.jorgeaf.dev`).
+> El plan de abajo describe lo ejecutado. Sobre lo escrito aquí se aplicaron además dos rondas de code
+> review: entre otras cosas, el tipado de Mongoose acabó usando un tipo hidratado (5º genérico del
+> modelo) para que los subdocumentos lleven `_id`/métodos; `hydrateMembers` es genérico con los paths
+> validados contra el tipo; `req.jwtPayload` se declara **requerido** (el `jwtMiddleware` lo garantiza,
+> sin `!` ni wrappers); y `clean-e2e` pasó a TS. El **frontend sigue pendiente** (sección final).
+
 ## PR A — Refactor del motor (JS-only, prólogo)
 
 Sacar `updateBalance` y `generateDebts` de `group.schema.js` a **funciones sueltas en
