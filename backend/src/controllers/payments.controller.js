@@ -3,6 +3,7 @@ import Group from "../schemas/group.schema.js";
 import Payment from "../schemas/payment.schema.js";
 import { MEMBER_FIELDS, memberOf, hydrateMembers, linkedUserIds } from "../utils/members.js";
 import { sendNotificationToUser, notificationTypes } from "../services/notifications.js";
+import { updateBalance, generateDebts } from "../services/ledger.js";
 
 const pay = async (req, res) => {
   try {
@@ -58,8 +59,8 @@ const pay = async (req, res) => {
         })
       });
 
-    await group.updateBalance();
-    await group.generateDebts();
+    await updateBalance(group);
+    await generateDebts(group);
 
     res.status(200).json(hydrateMembers(group, payment, ["from", "to"]));
   } catch (error) {

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { updateBalance, generateDebts } from "../services/ledger.js";
 const Schema = mongoose.Schema;
 
 const ExpenseSchema = new Schema(
@@ -39,8 +40,8 @@ const ExpenseSchema = new Schema(
 const updateGroupDetails = async function (expense) {
     const Group = mongoose.model('Group')
     const group = await Group.findById(expense.group);
-    await group.updateBalance();
-    await group.generateDebts();
+    await updateBalance(group);
+    await generateDebts(group);
 };
 
 ExpenseSchema.post('save', updateGroupDetails);
