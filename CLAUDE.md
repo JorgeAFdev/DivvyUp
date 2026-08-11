@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 DivvyUp is a group expense-splitting app (Splitwise-like). pnpm-workspaces monorepo driven by Turborepo 2.x:
-`backend/` (Express + Mongoose + Socket.IO) and `frontend/` (React 18 + Vite). Both ESM.
+`backend/` (Express + Mongoose + Socket.IO) and `frontend/` (React 18 + Vite). Both ESM. The
+backend is **TypeScript** (`strict`); the frontend is still JS/JSX (its migration is TODO #14, backend-first).
 
 **Package manager is pnpm** — pinned via `packageManager` in the root `package.json`. Never run `npm install`; it would recreate `package-lock.json` and fight the pnpm lockfile. Workspace members are declared in `pnpm-workspace.yaml`, not in a `workspaces` field.
 
@@ -24,10 +25,19 @@ docker compose up mongo  # local MongoDB on host port 27035
 
 Backend (`cd backend`):
 ```bash
-pnpm test                                                       # vitest run --coverage
-pnpm exec vitest run src/tests/group.test.js                    # single file
+pnpm dev                                                        # tsx watch src/index.ts (no build step in dev)
+pnpm typecheck                                                  # tsc --noEmit (the PR gate; vitest/tsx strip types, they don't check)
+pnpm build                                                      # tsc -p tsconfig.build.json -> dist/ (excludes tests)
+pnpm test                                                       # vitest run --coverage (compiles TS via esbuild)
+pnpm exec vitest run src/tests/group.test.ts                    # single file
 pnpm exec vitest run -t "get groups by group Id"                # single test
 ```
+
+TypeScript layout: root `tsconfig.base.json` holds the shared options (`strict`, target); `backend/tsconfig.json`
+extends it (NodeNext, `noEmit`, used by `typecheck` and the editor, includes tests); `backend/tsconfig.build.json`
+emits `dist/` and excludes `src/tests`. Relative imports keep the `.js` extension (NodeNext resolves it to the `.ts`
+source). Mongoose types come from `InferSchemaType<typeof Schema>`; the balance/debt engine lives in `services/ledger.ts`,
+not on the document (see [docs/ts-migration.md](docs/ts-migration.md)).
 
 Frontend (`cd frontend`):
 ```bash
@@ -191,6 +201,7 @@ A comment earns its place only when the code cannot say the thing itself: the *w
 ## Testing notes
 
 - Backend tests run on **vitest** (`vitest run --coverage`), configured in `backend/vitest.config.js`. vitest defaults `NODE_ENV` to `test`, which is what `connectDB()` in `mongo/connection/index.js` checks to swap to an in-memory `mongodb-memory-server` URI — so no `cross-env` is needed. `fileParallelism: false` is set because the files share one DB per run: each test file spins its own memory server and connects the module-global mongoose, so running them serially keeps two files from racing on that connection (this is the vitest analog of jest's old `--runInBand`). `globals: true` is set so the tests' bare `describe`/`it`/`expect` need no imports. The `mongodb-memory-server` import is deliberately **lazy** — `await import(...)` inside the `NODE_ENV === 'test'` branch: it is a devDependency and absent from the production image, so a top-level import crashes the container at boot.
+- **`.github/workflows/typecheck.yaml` runs `tsc --noEmit` on every PR** that touches `backend/**` or the root/base manifests — the repo's first PR gate (before this, nothing ran in PR CI; the deploy workflow only fires on push to `main`). It exists because vitest and `tsx` strip types without checking them, so green tests are not a type check.
 - Any backend test hitting a route needs an `Authorization: Bearer` header — almost every route carries `jwtMiddleware`. The signing secret is set once in `backend/vitest.setup.js` (`setupFiles`), not per test file: `jwt.js` and `user.schema.js` read `process.env.jwt_secret` at **call time**, not at import, so the value only has to exist before the first request — no import-order dance. (Under ESM the old before-the-requires trick would not have worked anyway: `import`s are hoisted above any top-level statement.)
 - `pnpm test` in `frontend/` is **green**: 3 suites, 36 tests — `components/icon`, `components/header` and `context/darkModeContext`. It used to exit 1 on two commented-out templates that contained no tests at all, which is why `--passWithNoTests` is deliberately absent: with it, a suite that stops running by accident looks the same as a suite that passes. Nothing runs jest in CI either — the deploy workflow is path-filtered to `backend/**` and Cloudflare Pages only runs `vite build` — so a frontend test guards intent, not the pipeline.
 - `icon.test.jsx` asserts that each variant renders an SVG **different from `add`'s**, not that it renders something. `Icon` resolves `iconsByVariant[variant] || MdAddCircleOutline`, so a variant that does not exist — or whose import broke — silently becomes the add icon everywhere it is used, with no error. Checking for "an SVG" would not catch that.
@@ -198,13 +209,13 @@ A comment earns its place only when the code cannot say the thing itself: the *w
 - `vitest.workspace.js` wires the Storybook test addon (Vitest + Playwright/chromium) separately from the jest setup — two independent frontend test runners coexist.
 - **Cypress is the only real net the frontend has** — 7 specs, 13 tests, all green, and nothing else runs against the built app. Between them they cover login and a failed login, the profile form, creating/editing/deleting a group, the 409 when dropping a member who is in an expense, resetting and sharing the invite link, the whole life of an expense with its balance and debts, `/my-expenses`, and both halves of the join flow. Run it against a running app; it writes to whatever `MONGO_URL` points at, so check that it says `/test`.
 - Specs seed through the API and drop the session into `localStorage`, never through the UI: helpers are in `cypress/support/api.js` (the three oldest specs still carry their own copy). **Anything derived from a seeded value has to hang off a `cy.then()`** — interpolating an id straight into `cy.visit()` reads it at queue time, before the request that fills it has answered, and you get `/groups/undefined/expenses`.
-- **Cypress writes to the real database, not to `mongodb-memory-server`.** The in-memory swap only happens under `NODE_ENV === 'test'`, which only the backend's own `pnpm test` sets; the dev server runs plain `nodemon src/index.js`, so a spec run registers ~10 real accounts in `/test` and nothing cleans them up. `pnpm --filter @monorepo/backend clean:e2e` counts them (dry run; `--yes` deletes) and cascades to their groups, expenses and payments. It matches only `<letters><timestamp>@test.com`, which is the shape the specs build with `Date.now()`, and it refuses to run against any database that is not `test`.
+- **Cypress writes to the real database, not to `mongodb-memory-server`.** The in-memory swap only happens under `NODE_ENV === 'test'`, which only the backend's own `pnpm test` sets; the dev server runs plain `tsx watch src/index.ts`, so a spec run registers ~10 real accounts in `/test` and nothing cleans them up. `pnpm --filter @monorepo/backend clean:e2e` counts them (dry run; `--yes` deletes) and cascades to their groups, expenses and payments. It matches only `<letters><timestamp>@test.com`, which is the shape the specs build with `Date.now()`, and it refuses to run against any database that is not `test`.
 
 ## Deployment
 
 Push to `main` triggers `.github/workflows/prod-deploy.yaml`: builds `backend/Dockerfile`, pushes `ghcr.io/divvyup-app/splitwise:latest`, then triggers a redeploy on **Coolify** and **polls** `GET /api/v1/deployments/{uuid}` until `finished`/`failed`, so a broken image fails the job instead of going green on acceptance. Path-filtered to `backend/**` plus the root manifests and lockfile, so docs-only merges no longer cycle production.
 
-**The Docker build context is the repo root, not `backend/`** (`docker build . --file backend/Dockerfile`). pnpm needs `pnpm-lock.yaml` and `pnpm-workspace.yaml` to install deterministically, and both live at the root. The image installs with `--prod --filter=@monorepo/backend...`, so anything the backend requires at runtime must be a real `dependency` — a devDependency imported at module top level will crash the container.
+**The Docker build context is the repo root, not `backend/`** (`docker build . --file backend/Dockerfile`). pnpm needs `pnpm-lock.yaml` and `pnpm-workspace.yaml` to install deterministically, and both live at the root. **The Dockerfile is multi-stage**: a `build` stage installs *with* devDependencies (it needs `typescript`), copies `tsconfig.base.json` + the two backend tsconfigs + `src`, and runs `pnpm build` (`tsc` → `dist/`); the `runtime` stage installs `--prod --filter=@monorepo/backend...` and copies only `dist/` from the build stage, then runs `node dist/index.js`. So the final image carries no TypeScript toolchain, and anything the backend requires **at runtime** must be a real `dependency` — a devDependency imported at module top level will crash the container. The build stage compiles `src` minus `src/tests`, so a type error in shipped code fails the image build; a type error in a test is caught only by the `Typecheck` PR gate (`tsconfig.json` includes tests, the build config does not).
 
 The backend runs at `https://divvyup-api.jorgeaf.dev` on a self-hosted **Coolify** (OVH VPS-1 2027), which handles TLS (Traefik + Let's Encrypt) and the reverse proxy — a custom domain is free and automatic there, which is what took DivvyUp off Koyeb (custom domain was paid). Migrated off Koyeb on 2026-08-11; Koyeb is decommissioned. Coolify only pulls and runs the GHCR image, so no build happens on the VPS. **Two tokens, don't confuse them:** `coolify-ghcr-pull` is a GitHub PAT (`read:packages`) living on the VPS via `docker login` (`/root/.docker/config.json`) that lets Coolify pull the private image; `COOLIFY_TOKEN` is a Coolify API token, a repo secret, used by the workflow to trigger the deploy. The panel is at `coolify.jorgeaf.dev` (2FA); direct `IP:8000` access is blocked by hand because **Docker bypasses `ufw`** — iptables raw `PREROUTING` on 8000/8080/6001/6002 plus a `block-coolify-ports` systemd oneshot to survive reboot. Backend env vars replicate what Koyeb had: `MONGO_URL` (with `/prod` in the path, **not** empty or MongoDB reads `test`), `jwt_secret`, `CLIENT_URL`, the three Cloudinary keys, `RESEND_API_KEY`, `RESEND_FROM`.
 
