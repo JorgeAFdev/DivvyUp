@@ -251,27 +251,27 @@ que la pasada mecánica se verificara en verde sin ruido de tipos.
 **Decidido el 04-08-2026: sí.** El proyecto es lo bastante pequeño como para que la migración no sea
 tediosa, y es lo que hace que Zod (punto 11) aporte tipos y no sólo validación en runtime.
 
+**Plan cerrado el 11-08-2026 — el detalle completo está en
+[docs/ts-migration.md](docs/ts-migration.md).** En corto:
+
+- **Backend primero; el frontend, aparte y después.**
+- **Dos PRs de backend, en orden:** primero un **refactor JS-only** que saca `updateBalance` y
+  `generateDebts` de `group.schema.js` a funciones sueltas en `services/` (deja el schema solo con
+  estructura y hace viable `InferSchemaType`); luego la **migración TS big-bang** con `strict: true`,
+  sin `allowJs`, `InferSchemaType<typeof Schema>` para Mongoose, dev con `tsx watch`, producción con
+  `tsc` → `dist/` en un Dockerfile multi-stage, y una puerta `tsc --noEmit` en un GitHub Action nuevo
+  en cada PR.
+
 **Estado actual (verificado):**
 
 - Ni `typescript` ni `tsconfig.json` en ningún workspace. Nada empezado.
-- Backend: 28 ficheros en `src/`. Frontend: JSX con `prop-types` como devDependency, que TS deja
-  obsoleto en cuanto entra.
-- El backend se despliega en Docker: con TS aparece un paso de build que hoy no existe, y el
-  `COPY backend/src ./backend/src` del Dockerfile pasa a copiar el compilado, no el fuente.
-  Alternativa sin build: dejar que el runtime ejecute TS directamente, que Node 22+ ya hace con
-  `--experimental-strip-types`, pero eso ata la imagen a esa bandera.
-- Cloudflare Pages compila el front con Vite, que ya entiende TS sin configurar nada. Ese lado es
-  gratis.
-
-**A decidir:**
-
-- **Alcance y orden.** Los tres paquetes de golpe, o backend primero (donde Zod aporta más) y front
-  después. Migrar `.jsx` a `.tsx` con MUI y react-hook-form tipados es donde está el trabajo de
-  verdad.
-- **Cuánto rigor**: `strict: true` desde el principio duele más al migrar pero es lo único que
-  justifica la tarea. `allowJs` permite convivencia fichero a fichero y hace la migración gradual.
-- El `Decimal` de decimal.js y los `ObjectId` de Mongoose son los dos puntos donde los tipos se
-  vuelven incómodos. Merece la pena mirarlos antes de comprometerse con `strict`.
+- Backend: 25 ficheros en `src/` (+ 5 tests). Frontend: JSX con `prop-types` como devDependency, que
+  TS deja obsoleto en cuanto entra.
+- El backend se despliega en Docker sin paso de build (`COPY backend/src` + `node src/index.js`). El
+  plan mete `tsc` → `dist/` en multi-stage; se descartó `--experimental-strip-types` por atar la
+  imagen a la bandera y prohibir enums (que el punto 15 querría para los códigos de error).
+- Cloudflare Pages compila el front con Vite, que ya entiende TS sin configurar nada, pero **no
+  comprueba tipos** — por eso el `tsc --noEmit` del Action es la única puerta real.
 
 ## 15. Contrato de errores por código, como en Cartobol
 
