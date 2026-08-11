@@ -12,34 +12,44 @@ With DivvyUp, you can create groups, add expenses with multiple participants, an
 
 ## 🛠️ Tech Stack
 
+The project is a **pnpm-workspaces monorepo** driven by **Turborepo**. Both workspaces are ESM.
+
 ### Frontend
-- **React 18**
-- **VITE**
-- **React Router DOM**
+- **React 18** + **Vite**
+- **React Router DOM 7**
+- **TanStack Query (React Query) v5**
+- **React Hook Form**
+- **MUI (Material UI)**
 - **CSS Modules**
 - **Axios**
 - **React Toastify**
-- **MUI (Material UI)**
 - **React Tooltip**
 - **Socket.io Client**
 
 ### Backend
-- **Node.js**
-- **Express**
-- **MongoDB** (with **Mongoose**)
-- **jsonwebtoken**
-- **Socket.io**
-- **Nodemon**
+- **Node.js** + **Express**
+- **TypeScript** (`strict`)
+- **MongoDB** with **Mongoose** (`InferSchemaType`)
+- **decimal.js** — all monetary math (never native floats)
+- **jsonwebtoken** — header-based `Bearer` auth
+- **Socket.io** — real-time notifications
+- **Cloudinary** (profile images) + **Multer**
+- **Resend** — transactional email
 
-### Tools
-- **Insomnia/Thunder Client** (for testing APIs)
-- **MongoDB Compass**
-- **npm (package management)**
+### Tooling
+- **pnpm** (package manager, pinned via `packageManager`)
+- **Turborepo** (task pipeline)
+- **tsx** (dev) / **tsc** (build to `dist/`)
+- **Vitest** + **Supertest** (backend), **Jest** + **Cypress** + **Storybook** (frontend)
+- **Docker** (backend image) + **MongoDB Atlas**
 
 ### Deployment
-- 🌐 Frontend: [Cloudflare Pages](https://pages.cloudflare.com/)
-- 🌐 Backend: [Koyeb](https://www.koyeb.com/)
-- 🛢️ Database: [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+- 🌐 **Frontend** → [Cloudflare Pages](https://pages.cloudflare.com/), live at **https://divvyup.jorgeaf.dev**
+- 🌐 **Backend** → self-hosted **[Coolify](https://coolify.io/)** on an OVH VPS, live at **https://divvyup-api.jorgeaf.dev**
+- 🛢️ **Database** → [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+- 📦 **Image registry** → GitHub Container Registry (`ghcr.io`)
+
+**How it ships.** A push to `main` that touches the backend triggers a GitHub Action: it builds the multi-stage `backend/Dockerfile`, pushes `ghcr.io/divvyup-app/splitwise:latest`, then triggers a Coolify redeploy and polls it to `finished`/`failed`, so a broken image fails the job instead of going green. The frontend is built by Cloudflare Pages straight from the repo (`vite build`).
 
 ---
 
@@ -51,9 +61,9 @@ Follow the steps below to run the project locally.
 ### 1. Clone the Repository and install dependencies
 
 ```bash
-git clone https://github.com/nds-fsd/splitwise.git
-cd splitwise
-npm install
+git clone https://github.com/DivvyUp-app/DivvyUp.git
+cd DivvyUp
+pnpm install
 ```
 
 ### 2. Environment Variables
@@ -91,34 +101,34 @@ CLIENT_URL=http://localhost:3000
 
 This project is a **monorepo** that contains both the **frontend** and **backend** in the same repository. You can start both simultaneously with a single command.
 
-From the root directory:
+From the root directory (Turborepo starts both: frontend on `:3000`, backend on `:3001`):
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 
 ## 📁 Project Structure
 
 ```
-splitwise/
+DivvyUp/
 │
-├── backend/                # Backend built with Node.js, Express and MongoDB
+├── backend/                # Backend built with Node.js, Express and MongoDB (TypeScript)
 │   ├── src/
-│   │   ├── config/         # Configuration files
+│   │   ├── config/         # Cloudinary and Multer setup
 │   │   ├── controllers/    # Route controller logic
-│   │   ├── middlewares/    # Custom Express middleware
 │   │   ├── mongo/          # MongoDB connection
 │   │   ├── routers/        # Express route definitions
 │   │   ├── schemas/        # Mongoose models
-│   │   ├── security/       # JWT utils and auth logic
-│   │   ├── services/       # Core business logic
+│   │   ├── security/       # JWT middleware
+│   │   ├── services/       # Core domain logic (ledger, email, notifications)
 │   │   ├── socket/         # WebSocket server and event handlers
-│   │   ├── tests/          # Unit/integration tests
+│   │   ├── types/          # Ambient type declarations
+│   │   ├── tests/          # Vitest suites
 │   │   └── index.ts
-│   ├── Dockerfile
-│   └── .env                # Environment variables (backend)
-│   └── package.json        
+│   ├── Dockerfile          # Multi-stage: tsc -> dist/, runtime ships dist only
+│   ├── tsconfig*.json
+│   └── package.json
 │
 ├── frontend/               # Frontend built with React + Vite
 │   ├── public/             # Static assets (e.g., favicon, logo)
@@ -158,7 +168,7 @@ splitwise/
 
 ## 🌐 Live Demo
 
-You can try the project live here: [https://divvyup-8wi.pages.dev/](https://divvyup-8wi.pages.dev/) 
+You can try the project live here: **[https://divvyup.jorgeaf.dev](https://divvyup.jorgeaf.dev)**
 
 ---
 
