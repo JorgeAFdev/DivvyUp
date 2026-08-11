@@ -37,8 +37,26 @@ jobs:
           docker build . --file backend/Dockerfile --tag ghcr.io/divvyup-app/splitwise:latest
           docker push ghcr.io/divvyup-app/splitwise:latest
 
-      - name: 'Trigger Coolify redeploy'
+      - name: 'Trigger Coolify redeploy and wait'
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: |
-          curl --fail --silent --show-error \
+          set -euo pipefail
+          resp=$(curl --fail --silent --show-error \
             "https://coolify.jorgeaf.dev/api/v1/deploy?uuid=uset5w5tsg77ctdfczsp0hse&force=false" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+            -H "Authorization: Bearer $COOLIFY_TOKEN")
+          dep=$(echo "$resp" | jq -r '.deployments[0].deployment_uuid')
+          [ -n "$dep" ] && [ "$dep" != "null" ] || { echo "no deployment_uuid: $resp"; exit 1; }
+          echo "polling deployment $dep ..."
+          for i in $(seq 1 60); do
+            status=$(curl --fail --silent --show-error \
+              "https://coolify.jorgeaf.dev/api/v1/deployments/$dep" \
+              -H "Authorization: Bearer $COOLIFY_TOKEN" | jq -r '.status')
+            echo "attempt $i: $status"
+            case "$status" in
+              finished)          echo "deploy OK"; exit 0 ;;
+              failed|cancelled*) echo "deploy failed: $status"; exit 1 ;;
+            esac
+            sleep 5
+          done
+          echo "timed out waiting for deployment"; exit 1
