@@ -4,6 +4,7 @@ import Payment from "../schemas/payment.schema.js";
 import User from "../schemas/user.schema.js";
 import mongoose from "mongoose";
 import { MEMBER_FIELDS, MEMBER_PATHS, memberOf, hydrateMembers } from "../utils/members.js";
+import { updateBalance, generateDebts } from "../services/ledger.js";
 
 
 const cleanName = (name) => (typeof name === "string" ? name.trim() : "");
@@ -53,7 +54,7 @@ const createGroup = async (req, res) => {
     }
 
     const group = await Group.create({ name, description, members: formattedMembers });
-    await group.updateBalance();
+    await updateBalance(group);
     await group.populate("members.user", MEMBER_FIELDS);
 
     res.status(201).json(group);
@@ -158,11 +159,11 @@ const updateGroup = async (req, res) => {
     });
 
     await group.save();
-    await group.updateBalance();
+    await updateBalance(group);
     // Regenerating deletes and re-creates every pending Payment, so a rename
     // would 404 anyone who already had a debt open on screen.
     if (membershipChanged) {
-      await group.generateDebts();
+      await generateDebts(group);
     }
     await group.populate("members.user", MEMBER_FIELDS);
 
@@ -360,7 +361,7 @@ const joinGroup = async (req, res) => {
 
       group.members.push({ name: cleanName(name), user: userId });
       await group.save();
-      await group.updateBalance();
+      await updateBalance(group);
     } else {
       return res.status(400).json({ error: "A memberId or a name is required" });
     }

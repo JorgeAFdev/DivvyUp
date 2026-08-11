@@ -4,6 +4,7 @@ import Group from "../schemas/group.schema.js";
 import Expense from "../schemas/expense.schema.js";
 import Payment from "../schemas/payment.schema.js";
 import { memberOf, hydrateMembers } from "../utils/members.js";
+import { updateBalance, generateDebts } from "../services/ledger.js";
 
 const jorgeUserId = new mongoose.Types.ObjectId();
 
@@ -52,7 +53,7 @@ describe("Group engine", () => {
 
     describe("updateBalance", () => {
         it("starts every member at 0, keyed by member id", async () => {
-            const balance = await group.updateBalance();
+            const balance = await updateBalance(group);
 
             expect(balance).toHaveLength(3);
             expect(balance.map((b) => b.member.toString())).toEqual(
@@ -119,7 +120,7 @@ describe("Group engine", () => {
             );
 
             const settled = await Group.findById(group._id);
-            await settled.updateBalance();
+            await updateBalance(settled);
 
             expect(amountOf(settled, jorge)).toBe(0);
             expect(amountOf(settled, mama)).toBe(10);
@@ -186,8 +187,8 @@ describe("Group engine", () => {
             );
 
             const settled = await Group.findById(group._id);
-            await settled.updateBalance();
-            await settled.generateDebts();
+            await updateBalance(settled);
+            await generateDebts(settled);
 
             const pending = await Payment.find({ group: group._id, status: "pending" });
             const paid = await Payment.find({ group: group._id, status: "paid" });
