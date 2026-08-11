@@ -2,6 +2,7 @@ import { Decimal } from "decimal.js";
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import Expense from "../schemas/expense.schema.js";
+import type { ExpenseHydrated } from "../schemas/expense.schema.js";
 import Group from "../schemas/group.schema.js";
 import type { GroupHydrated } from "../schemas/group.schema.js";
 import { MEMBER_FIELDS, MEMBER_PATHS, memberOf, hydrateMembers, linkedUserIds } from "../utils/members.js";
@@ -9,7 +10,8 @@ import { sendNotificationToUser, notificationTypes } from "../services/notificat
 
 const CENT = new Decimal("0.01");
 
-const expenseResponse = (group: GroupHydrated, expenses: unknown) => hydrateMembers(group, expenses, MEMBER_PATHS);
+const expenseResponse = (group: GroupHydrated, expenses: ExpenseHydrated | ExpenseHydrated[]) =>
+    hydrateMembers(group, expenses, MEMBER_PATHS);
 
 const validateExpense = ({ group, paidBy, participants, totalAmount }: { group: GroupHydrated; paidBy: unknown; participants: unknown; totalAmount: number }) => {
     const memberIds = new Set(group.members.map((member) => member._id.toString()));
@@ -61,7 +63,7 @@ const splitEvenly = (participants: unknown[], totalAmount: number) => {
 
 const createExpense = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload;
+        const { id: userId } = req.jwtPayload!;
         const { groupId } = req.params;
         const { description, totalAmount, paidBy, participants } = req.body;
 
@@ -115,7 +117,7 @@ const createExpense = async (req: Request, res: Response) => {
 
 const updateExpense = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload;
+        const { id: userId } = req.jwtPayload!;
         const { expenseId, groupId } = req.params;
         const { description, totalAmount, paidBy, participants } = req.body;
 
@@ -155,6 +157,14 @@ const updateExpense = async (req: Request, res: Response) => {
             { new: true }
         );
 
+        // Null when the expense was deleted between the findOne above and this
+        // update (two clients, one editing and one deleting). Without the guard
+        // the typed expenseResponse would not compile, and the client would get
+        // 200 {} instead of a 404.
+        if (!updatedExpense) {
+            return res.status(404).json({ error: "Expense not found in this group" });
+        }
+
         return res.status(200).json(expenseResponse(group, updatedExpense));
     } catch (error) {
         console.log(error);
@@ -164,7 +174,7 @@ const updateExpense = async (req: Request, res: Response) => {
 
 const getExpensesByGroupId = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload;
+        const { id: userId } = req.jwtPayload!;
         const { groupId } = req.params;
 
         if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
@@ -191,7 +201,7 @@ const getExpensesByGroupId = async (req: Request, res: Response) => {
 
 const getExpensesByUserId = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload;
+        const { id: userId } = req.jwtPayload!;
 
         if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ error: "Invalid user ID" });
@@ -240,7 +250,7 @@ const getExpensesByUserId = async (req: Request, res: Response) => {
 
 const deleteExpense = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload;
+        const { id: userId } = req.jwtPayload!;
         const { groupId, expenseId } = req.params;
 
         if (!mongoose.Types.ObjectId.isValid(groupId) || !mongoose.Types.ObjectId.isValid(expenseId)) {

@@ -51,7 +51,10 @@ type ExpenseModel = Model<ExpenseDoc, {}, {}, {}, ExpenseHydrated>;
 const updateGroupDetails = async function (expense: ExpenseHydrated) {
     const Group = mongoose.model('Group');
     const group = await Group.findById(expense.group) as GroupHydrated | null;
-    if (!group) return;
+    // Loud on purpose: these hooks are the only thing keeping balances and debts
+    // in sync, so a missing group must not pass as a silent no-op. Rejecting here
+    // rejects the save()/findOneAndUpdate() that triggered it (see CLAUDE.md).
+    if (!group) throw new Error(`updateGroupDetails: group ${expense.group} not found`);
     await updateBalance(group);
     await generateDebts(group);
 };
