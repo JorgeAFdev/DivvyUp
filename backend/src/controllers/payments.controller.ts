@@ -1,3 +1,4 @@
+import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import Group from "../schemas/group.schema.js";
 import Payment from "../schemas/payment.schema.js";
@@ -5,7 +6,7 @@ import { MEMBER_FIELDS, memberOf, hydrateMembers, linkedUserIds } from "../utils
 import { sendNotificationToUser, notificationTypes } from "../services/notifications.js";
 import { updateBalance, generateDebts } from "../services/ledger.js";
 
-const pay = async (req, res) => {
+const pay = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { paymentId } = req.params;

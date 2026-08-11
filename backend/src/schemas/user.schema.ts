@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { HydratedDocument, InferSchemaType, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -32,6 +32,15 @@ const userSchema = new mongoose.Schema({
     { timestamps: true }
 );
 
+export type UserDoc = InferSchemaType<typeof userSchema>;
+
+export interface UserMethods {
+    comparePassword(inputPassword: string): Promise<boolean>;
+    generateJWT(): string;
+}
+
+type UserModel = Model<UserDoc, {}, UserMethods>;
+
 userSchema.pre('save', async function (next) {
     if (this.isModified('password')) {
         const salt = await bcrypt.genSalt(10);
@@ -40,11 +49,11 @@ userSchema.pre('save', async function (next) {
     next()
 });
 
-userSchema.methods.comparePassword = async function (inputPassword) {
+userSchema.methods.comparePassword = async function (this: HydratedDocument<UserDoc>, inputPassword: string) {
     return await bcrypt.compare(inputPassword, this.password);
 
 };
-userSchema.methods.generateJWT = function () {
+userSchema.methods.generateJWT = function (this: HydratedDocument<UserDoc>) {
     const today = new Date();
     const expirationDay = new Date();
 
@@ -55,14 +64,13 @@ userSchema.methods.generateJWT = function () {
         name: this.name,
         email: this.email
     }
-    return jwt.sign(payload, process.env.jwt_secret, {
+    return jwt.sign(payload, process.env.jwt_secret as string, {
 
     });
 };
 
 
 
-const User = mongoose.model('User', userSchema);
+const User = mongoose.model<UserDoc, UserModel>('User', userSchema);
 
 export default User;
-

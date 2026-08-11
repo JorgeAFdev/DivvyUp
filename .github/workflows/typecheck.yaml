@@ -1,0 +1,40 @@
+name: Typecheck
+
+on:
+  pull_request:
+    # The backend is the only TypeScript workspace today. The root manifests and
+    # the shared base config are watched because each one changes what tsc sees.
+    paths:
+      - 'backend/**'
+      - 'tsconfig.base.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.npmrc'
+      - '.github/workflows/typecheck.yaml'
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v4
+
+      - name: 'Setup pnpm'
+        uses: pnpm/action-setup@v4
+
+      - name: 'Setup Node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # No --prod: tsc lives in the backend devDependencies. Skip
+      # mongodb-memory-server's mongod download; only tsc runs here.
+      - name: 'Install backend'
+        run: pnpm install --frozen-lockfile --filter=@monorepo/backend...
+        env:
+          MONGOMS_DISABLE_POSTINSTALL: '1'
+
+      - name: 'Typecheck backend'
+        run: pnpm --filter=@monorepo/backend typecheck

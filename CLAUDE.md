@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 DivvyUp is a group expense-splitting app (Splitwise-like). pnpm-workspaces monorepo driven by Turborepo 2.x:
-`backend/` (Express + Mongoose + Socket.IO) and `frontend/` (React 18 + Vite). Both ESM.
+`backend/` (Express + Mongoose + Socket.IO) and `frontend/` (React 18 + Vite). Both ESM. The
+backend is **TypeScript** (`strict`); the frontend is still JS/JSX (its migration is TODO #14, backend-first).
 
 **Package manager is pnpm** — pinned via `packageManager` in the root `package.json`. Never run `npm install`; it would recreate `package-lock.json` and fight the pnpm lockfile. Workspace members are declared in `pnpm-workspace.yaml`, not in a `workspaces` field.
 
@@ -24,10 +25,19 @@ docker compose up mongo  # local MongoDB on host port 27035
 
 Backend (`cd backend`):
 ```bash
-pnpm test                                                       # vitest run --coverage
-pnpm exec vitest run src/tests/group.test.js                    # single file
+pnpm dev                                                        # tsx watch src/index.ts (no build step in dev)
+pnpm typecheck                                                  # tsc --noEmit (the PR gate; vitest/tsx strip types, they don't check)
+pnpm build                                                      # tsc -p tsconfig.build.json -> dist/ (excludes tests)
+pnpm test                                                       # vitest run --coverage (compiles TS via esbuild)
+pnpm exec vitest run src/tests/group.test.ts                    # single file
 pnpm exec vitest run -t "get groups by group Id"                # single test
 ```
+
+TypeScript layout: root `tsconfig.base.json` holds the shared options (`strict`, target); `backend/tsconfig.json`
+extends it (NodeNext, `noEmit`, used by `typecheck` and the editor, includes tests); `backend/tsconfig.build.json`
+emits `dist/` and excludes `src/tests`. Relative imports keep the `.js` extension (NodeNext resolves it to the `.ts`
+source). Mongoose types come from `InferSchemaType<typeof Schema>`; the balance/debt engine lives in `services/ledger.ts`,
+not on the document (see [docs/ts-migration.md](docs/ts-migration.md)).
 
 Frontend (`cd frontend`):
 ```bash
@@ -64,7 +74,7 @@ Joining a group is one field — `members[i].user = userId` — so nothing is ev
 
 Consequences worth knowing before touching anything here:
 
-- **`populate` cannot resolve a ref that points inside another document's subdocument array.** `balance[].member`, `debt.from` and `participants[].member` therefore have no `ref` at all; the join is done by hand with `hydrateMembers(group, target, paths)` in `utils/members.js`, and `MEMBER_PATHS` is where an expense keeps its member ids. The only surviving `populate` is `members.user`, always with the `MEMBER_FIELDS` projection (`'name profilePicture'`, email deliberately left out) — widening it is how the password hash used to reach every group member.
+- **`populate` cannot resolve a ref that points inside another document's subdocument array.** `balance[].member`, `debt.from` and `participants[].member` therefore have no `ref` at all; the join is done by hand with `hydrateMembers(group, target, paths)` in `utils/members.ts`, and `MEMBER_PATHS` is where an expense keeps its member ids. The only surviving `populate` is `members.user`, always with the `MEMBER_FIELDS` projection (`'name profilePicture'`, email deliberately left out) — widening it is how the password hash used to reach every group member.
 - **Permission checks use `memberOf(group, userId)`**, which returns the member (not a boolean) because callers need its `_id`. It never matches a member without an account.
 - `Group.inviteCode` is 16 random bytes, unique-indexed, generated in `pre('validate')`. It is the whole authentication of the join flow, so it is regenerable and never guessable. `GET /group/invite/:code` is public and answers only `{ name }`; the list of unclaimed members stays behind the token in `GET /group/join/:code`.
 - The invite URL is built in the **frontend** from `window.location.origin`, not from `CLIENT_URL`.
@@ -78,47 +88,49 @@ Contract rules that came out of building this and that new code has to keep:
 
 Why the model looks like this, what was discarded (shadow users, a `GuestMember` collection, per-member email tokens) and why is in [docs/archive/miembros-invitados.md](docs/archive/miembros-invitados.md).
 
-### The balance/debt engine lives in the Mongoose models, not in controllers
+### The balance/debt engine lives in `services/ledger.ts`, off the document
 
-`backend/src/schemas/group.schema.js` holds the core domain logic as instance methods:
+`backend/src/services/ledger.ts` holds the core domain logic as two plain functions that take a hydrated group and were moved off the Mongoose document so the schema is only its persisted structure (which is what lets `InferSchemaType` describe it):
 
-- `updateBalance()` — seeds every member at 0, replays every `Expense` in the group (credit the payer the full amount, debit each participant their `amountOwed`), then applies `Payment`s with `status: 'paid'`. Indexed by member `_id`, and it carries no `populate`: names take no part in the arithmetic. Result is persisted to `group.balance`.
-- `generateDebts()` — deletes all `status: 'pending'` Payments for the group and greedily re-derives them by matching negative balances (debtors) against positive ones (creditors).
+- `updateBalance(group)` — seeds every member at 0, replays every `Expense` in the group (credit the payer the full amount, debit each participant their `amountOwed`), then applies `Payment`s with `status: 'paid'`. Indexed by member `_id`, and it carries no `populate`: names take no part in the arithmetic. Result is persisted to `group.balance`.
+- `generateDebts(group)` — deletes all `status: 'pending'` Payments for the group and greedily re-derives them by matching negative balances (debtors) against positive ones (creditors).
+
+`ledger.ts` reaches `Expense` by name (`mongoose.model('Expense')`) to stay off the `expense.schema → ledger` import edge; `Payment` has no such edge and is imported directly.
 
 **"Debts" are not a separate collection — a debt is a `Payment` with `status: 'pending'`.** Settling one flips it to `'paid'`, which changes the balance on the next recalculation.
 
-`expense.schema.js` registers `post('save' | 'findOneAndUpdate' | 'findOneAndDelete')` hooks that load the group and call both methods. Consequence: any expense mutation must go through document `save()` or those specific query helpers, or balances and debts will silently drift. Bulk operations (`updateMany`, `insertMany`) bypass the hooks.
+`expense.schema.ts` registers `post('save' | 'findOneAndUpdate' | 'findOneAndDelete')` hooks that load the group and call both functions (throwing if the group no longer resolves, so the drift below fails loudly). Consequence: any expense mutation must go through document `save()` or those specific query helpers, or balances and debts will silently drift. Bulk operations (`updateMany`, `insertMany`) bypass the hooks.
 
 ### Money is `decimal.js`, never native floats
 
 **Every monetary calculation goes through `decimal.js`** (a real `dependency` of the backend). No `+`/`-`/`/` on amounts, no `Math.round(x * 100) / 100`, no `toFixed(2)` to "round" — those are what let a group's balance stop netting to zero.
 
 - Accumulate as `Decimal`, convert once at the boundary: MongoDB stores `Number`, so the last step is `.toDecimalPlaces(2).toNumber()`. `updateBalance()` and `generateDebts()` do exactly that.
-- Splitting an expense floors each share (`ROUND_DOWN`) and hands the leftover cents out one each from the top of the participant list (`splitEvenly` in `expense.controller.js`). Dividing evenly and rounding each share independently loses or invents cents: 10 € between 3 gave three shares of 3.33 against a 10 € credit, leaving the group permanently 1 cent out.
+- Splitting an expense floors each share (`ROUND_DOWN`) and hands the leftover cents out one each from the top of the participant list (`splitEvenly` in `expense.controller.ts`). Dividing evenly and rounding each share independently loses or invents cents: 10 € between 3 gave three shares of 3.33 against a 10 € credit, leaving the group permanently 1 cent out.
 - Watch the predicates: `isPositive()` is **true for zero** and `isNegative()` is true for `-0`, so comparisons that must exclude zero use `.greaterThan(0)` / `.lessThan(0)`.
 
 ### Two Express app factories — pick the right one
 
-- `src/index.js` is the real server: mounts the router at **`/api`**, creates the HTTP server, attaches Socket.IO, connects the DB, listens.
-- `src/bootstrap.js` (`bootstrapApp()`) is the test-only app: mounts the same router at **`/`**, no socket, no DB connect.
+- `src/index.ts` is the real server: mounts the router at **`/api`**, creates the HTTP server, attaches Socket.IO, connects the DB, listens.
+- `src/bootstrap.ts` (`bootstrapApp()`) is the test-only app: mounts the same router at **`/`**, no socket, no DB connect.
 
 So request paths in tests have no `/api` prefix, and `req.app.get('socketio')` is `undefined` under `bootstrapApp()` — notification calls in controllers will throw unless the socket is stubbed. Keep the two files in sync when adding global middleware.
 
 ### Real-time notifications
 
-`socket.server.js` puts each client into a room named `user:<userId>` when it emits `register`. The `io` instance is stashed with `app.set('socketio', io)` and controllers retrieve it via `req.app.get('socketio')`, then call `sendNotificationToUser(io, userId, type, message, data)` from `services/notifications.js`, which emits a `notification` event to that room. Frontend side is `components/notifications/notifications.jsx` — a render-null component that opens the socket and pipes events into react-toastify.
+`socket.server.ts` puts each client into a room named `user:<userId>` when it emits `register`. The `io` instance is stashed with `app.set('socketio', io)` and controllers retrieve it via `req.app.get('socketio')`, then call `sendNotificationToUser(io, userId, type, message, data)` from `services/notifications.ts`, which emits a `notification` event to that room. Frontend side is `components/notifications/notifications.jsx` — a render-null component that opens the socket and pipes events into react-toastify.
 
-Notifications only go to members with a linked `user` — `linkedUserIds()` in `utils/members.js` filters them — since emitting to a member without an account means emitting into an empty room.
+Notifications only go to members with a linked `user` — `linkedUserIds()` in `utils/members.ts` filters them — since emitting to a member without an account means emitting into an empty room.
 
 ### Auth
 
-`user.schema.js` owns password hashing (`pre('save')` bcrypt), `comparePassword()`, and `generateJWT()` (payload `{id, name, email}`, signed with `process.env.jwt_secret`, **no expiry option is passed** despite the unused `expirationDay` calculation).
+`user.schema.ts` owns password hashing (`pre('save')` bcrypt), `comparePassword()`, and `generateJWT()` (payload `{id, name, email}`, signed with `process.env.jwt_secret`, **no expiry option is passed** despite the unused `expirationDay` calculation).
 
 **`password` is declared `select: false`**, and login is the only place that asks for the hash, with `.select('+password')`. That is the field being protected rather than each call being protected: `updateUser` returns the whole document from `findByIdAndUpdate` and used to hand the caller's own bcrypt hash to the browser and to the logs, and the projection alone closed it without touching that controller.
 
-Registration validates in `registrationErrors()` before touching the DB, so a 400 leaves from where the request is read and `catch` still means a real failure. **Do not move the strength rule onto Mongoose `minlength`:** its default message quotes the value it rejected, which puts the plaintext password in the response body and the logs. Tests pin that no error response ever contains it. The regex is currently spelled in both `auth.routes.js` and `registerForm.jsx` — point 11 of the TODO is what removes the duplication.
+Registration validates in `registrationErrors()` before touching the DB, so a 400 leaves from where the request is read and `catch` still means a real failure. **Do not move the strength rule onto Mongoose `minlength`:** its default message quotes the value it rejected, which puts the plaintext password in the response body and the logs. Tests pin that no error response ever contains it. The regex is currently spelled in both `auth.routes.ts` and `registerForm.jsx` — point 11 of the TODO is what removes the duplication.
 
-`security/jwt.js` exports `jwtMiddleware`, which verifies the `Authorization: Bearer` header and sets `req.jwtPayload`. Nearly every route is wrapped in it; `auth.routes.js` (register/login) is not.
+`security/jwt.ts` exports `jwtMiddleware`, which verifies the `Authorization: Bearer` header and sets `req.jwtPayload`. Nearly every route is wrapped in it; `auth.routes.ts` (register/login) is not.
 
 Frontend stores `{token, user}` as JSON in `localStorage` under the key `user-session`. `utils/localStorage.js` is the only place that key appears; `context/userContextAuth.jsx` (`useAuth()`) exposes `token`/`login`/`logout`; routes in `App.jsx` gate on `token` with `<Navigate to="/login" />`.
 
@@ -178,9 +190,9 @@ Transitions come off one knob, `--transition-base`. Set it only on the element t
 
 ### Backend request flow
 
-`routers/router.js` mounts `/group` twice (expense routes and group routes both live under it), plus `/user`, `/auth`, `/payment`. All validation is inline in the controllers — there is no `middlewares/` directory any more (its three helpers were only ever wired to routes that got deleted); `notes.txt` still tracks moving validation out.
+`routers/router.ts` mounts `/group` twice (expense routes and group routes both live under it), plus `/user`, `/auth`, `/payment`. All validation is inline in the controllers — there is no `middlewares/` directory any more (its three helpers were only ever wired to routes that got deleted); `notes.txt` still tracks moving validation out.
 
-Profile images: multer with `memoryStorage()` → `config/cloudinary.config.js` → `uploadToCloudinary(buffer)` returns the secure URL stored on `user.profilePicture`. It is optional everywhere — registration works without one and `updateUser` only touches the field when a file arrives. With no picture the UI falls back to the name's initials (`initialsOf()`), which is also what a member without an account gets.
+Profile images: multer with `memoryStorage()` → `config/cloudinary.config.ts` → `uploadToCloudinary(buffer)` returns the secure URL stored on `user.profilePicture`. It is optional everywhere — registration works without one and `updateUser` only touches the field when a file arrives. With no picture the UI falls back to the name's initials (`initialsOf()`), which is also what a member without an account gets.
 
 An empty result is a `200 []`, not a 404: that goes for `getUserGroups`, `getExpensesByUserId` and `getExpensesByGroupId`.
 
@@ -190,21 +202,22 @@ A comment earns its place only when the code cannot say the thing itself: the *w
 
 ## Testing notes
 
-- Backend tests run on **vitest** (`vitest run --coverage`), configured in `backend/vitest.config.js`. vitest defaults `NODE_ENV` to `test`, which is what `connectDB()` in `mongo/connection/index.js` checks to swap to an in-memory `mongodb-memory-server` URI — so no `cross-env` is needed. `fileParallelism: false` is set because the files share one DB per run: each test file spins its own memory server and connects the module-global mongoose, so running them serially keeps two files from racing on that connection (this is the vitest analog of jest's old `--runInBand`). `globals: true` is set so the tests' bare `describe`/`it`/`expect` need no imports. The `mongodb-memory-server` import is deliberately **lazy** — `await import(...)` inside the `NODE_ENV === 'test'` branch: it is a devDependency and absent from the production image, so a top-level import crashes the container at boot.
-- Any backend test hitting a route needs an `Authorization: Bearer` header — almost every route carries `jwtMiddleware`. The signing secret is set once in `backend/vitest.setup.js` (`setupFiles`), not per test file: `jwt.js` and `user.schema.js` read `process.env.jwt_secret` at **call time**, not at import, so the value only has to exist before the first request — no import-order dance. (Under ESM the old before-the-requires trick would not have worked anyway: `import`s are hoisted above any top-level statement.)
+- Backend tests run on **vitest** (`vitest run --coverage`), configured in `backend/vitest.config.js`. vitest defaults `NODE_ENV` to `test`, which is what `connectDB()` in `mongo/connection/index.ts` checks to swap to an in-memory `mongodb-memory-server` URI — so no `cross-env` is needed. `fileParallelism: false` is set because the files share one DB per run: each test file spins its own memory server and connects the module-global mongoose, so running them serially keeps two files from racing on that connection (this is the vitest analog of jest's old `--runInBand`). `globals: true` is set so the tests' bare `describe`/`it`/`expect` need no imports. The `mongodb-memory-server` import is deliberately **lazy** — `await import(...)` inside the `NODE_ENV === 'test'` branch: it is a devDependency and absent from the production image, so a top-level import crashes the container at boot.
+- **`.github/workflows/typecheck.yaml` runs `tsc --noEmit` on every PR** that touches `backend/**` or the root/base manifests — the repo's first PR gate (before this, nothing ran in PR CI; the deploy workflow only fires on push to `main`). It exists because vitest and `tsx` strip types without checking them, so green tests are not a type check.
+- Any backend test hitting a route needs an `Authorization: Bearer` header — almost every route carries `jwtMiddleware`. The signing secret is set once in `backend/vitest.setup.js` (`setupFiles`), not per test file: `jwt.ts` and `user.schema.ts` read `process.env.jwt_secret` at **call time**, not at import, so the value only has to exist before the first request — no import-order dance. (Under ESM the old before-the-requires trick would not have worked anyway: `import`s are hoisted above any top-level statement.)
 - `pnpm test` in `frontend/` is **green**: 3 suites, 36 tests — `components/icon`, `components/header` and `context/darkModeContext`. It used to exit 1 on two commented-out templates that contained no tests at all, which is why `--passWithNoTests` is deliberately absent: with it, a suite that stops running by accident looks the same as a suite that passes. Nothing runs jest in CI either — the deploy workflow is path-filtered to `backend/**` and Cloudflare Pages only runs `vite build` — so a frontend test guards intent, not the pipeline.
 - `icon.test.jsx` asserts that each variant renders an SVG **different from `add`'s**, not that it renders something. `Icon` resolves `iconsByVariant[variant] || MdAddCircleOutline`, so a variant that does not exist — or whose import broke — silently becomes the add icon everywhere it is used, with no error. Checking for "an SVG" would not catch that.
 - jsdom needs two shims for the frontend suites. `jest.setup.js` defines `TextEncoder`/`TextDecoder` from `node:util`: `react-router` 7 reads them at import time, so **any** test that renders a router fails to even load the suite without them. And a test that renders `Header` has to stub `window.matchMedia` itself — MUI's `useMediaQuery` is what decides whether the header is collapsed, and jsdom ships no `matchMedia` at all.
 - `vitest.workspace.js` wires the Storybook test addon (Vitest + Playwright/chromium) separately from the jest setup — two independent frontend test runners coexist.
 - **Cypress is the only real net the frontend has** — 7 specs, 13 tests, all green, and nothing else runs against the built app. Between them they cover login and a failed login, the profile form, creating/editing/deleting a group, the 409 when dropping a member who is in an expense, resetting and sharing the invite link, the whole life of an expense with its balance and debts, `/my-expenses`, and both halves of the join flow. Run it against a running app; it writes to whatever `MONGO_URL` points at, so check that it says `/test`.
 - Specs seed through the API and drop the session into `localStorage`, never through the UI: helpers are in `cypress/support/api.js` (the three oldest specs still carry their own copy). **Anything derived from a seeded value has to hang off a `cy.then()`** — interpolating an id straight into `cy.visit()` reads it at queue time, before the request that fills it has answered, and you get `/groups/undefined/expenses`.
-- **Cypress writes to the real database, not to `mongodb-memory-server`.** The in-memory swap only happens under `NODE_ENV === 'test'`, which only the backend's own `pnpm test` sets; the dev server runs plain `nodemon src/index.js`, so a spec run registers ~10 real accounts in `/test` and nothing cleans them up. `pnpm --filter @monorepo/backend clean:e2e` counts them (dry run; `--yes` deletes) and cascades to their groups, expenses and payments. It matches only `<letters><timestamp>@test.com`, which is the shape the specs build with `Date.now()`, and it refuses to run against any database that is not `test`.
+- **Cypress writes to the real database, not to `mongodb-memory-server`.** The in-memory swap only happens under `NODE_ENV === 'test'`, which only the backend's own `pnpm test` sets; the dev server runs plain `tsx watch src/index.ts`, so a spec run registers ~10 real accounts in `/test` and nothing cleans them up. `pnpm --filter @monorepo/backend clean:e2e` counts them (dry run; `--yes` deletes) and cascades to their groups, expenses and payments. It matches only `<letters><timestamp>@test.com`, which is the shape the specs build with `Date.now()`, and it refuses to run against any database that is not `test`.
 
 ## Deployment
 
 Push to `main` triggers `.github/workflows/prod-deploy.yaml`: builds `backend/Dockerfile`, pushes `ghcr.io/divvyup-app/splitwise:latest`, then triggers a redeploy on **Coolify** and **polls** `GET /api/v1/deployments/{uuid}` until `finished`/`failed`, so a broken image fails the job instead of going green on acceptance. Path-filtered to `backend/**` plus the root manifests and lockfile, so docs-only merges no longer cycle production.
 
-**The Docker build context is the repo root, not `backend/`** (`docker build . --file backend/Dockerfile`). pnpm needs `pnpm-lock.yaml` and `pnpm-workspace.yaml` to install deterministically, and both live at the root. The image installs with `--prod --filter=@monorepo/backend...`, so anything the backend requires at runtime must be a real `dependency` — a devDependency imported at module top level will crash the container.
+**The Docker build context is the repo root, not `backend/`** (`docker build . --file backend/Dockerfile`). pnpm needs `pnpm-lock.yaml` and `pnpm-workspace.yaml` to install deterministically, and both live at the root. **The Dockerfile is multi-stage**: a `build` stage installs *with* devDependencies (it needs `typescript`), copies `tsconfig.base.json` + the two backend tsconfigs + `src`, and runs `pnpm build` (`tsc` → `dist/`); the `runtime` stage installs `--prod --filter=@monorepo/backend...` and copies only `dist/` from the build stage, then runs `node dist/index.js`. So the final image carries no TypeScript toolchain, and anything the backend requires **at runtime** must be a real `dependency` — a devDependency imported at module top level will crash the container. The build stage compiles `src` minus `src/tests`, so a type error in shipped code fails the image build; a type error in a test is caught only by the `Typecheck` PR gate (`tsconfig.json` includes tests, the build config does not).
 
 The backend runs at `https://divvyup-api.jorgeaf.dev` on a self-hosted **Coolify** (OVH VPS-1 2027), which handles TLS (Traefik + Let's Encrypt) and the reverse proxy — a custom domain is free and automatic there, which is what took DivvyUp off Koyeb (custom domain was paid). Migrated off Koyeb on 2026-08-11; Koyeb is decommissioned. Coolify only pulls and runs the GHCR image, so no build happens on the VPS. **Two tokens, don't confuse them:** `coolify-ghcr-pull` is a GitHub PAT (`read:packages`) living on the VPS via `docker login` (`/root/.docker/config.json`) that lets Coolify pull the private image; `COOLIFY_TOKEN` is a Coolify API token, a repo secret, used by the workflow to trigger the deploy. The panel is at `coolify.jorgeaf.dev` (2FA); direct `IP:8000` access is blocked by hand because **Docker bypasses `ufw`** — iptables raw `PREROUTING` on 8000/8080/6001/6002 plus a `block-coolify-ports` systemd oneshot to survive reboot. Backend env vars replicate what Koyeb had: `MONGO_URL` (with `/prod` in the path, **not** empty or MongoDB reads `test`), `jwt_secret`, `CLIENT_URL`, the three Cloudinary keys, `RESEND_API_KEY`, `RESEND_FROM`.
 
@@ -219,4 +232,4 @@ Frontend deploys on **Cloudflare Pages** (project `divvyup`, live at `https://di
 
 Netlify is gone: its GitHub access was revoked in July 2026, so the three always-failing PR checks no longer appear — a red check on a PR now means something real.
 
-**`CLIENT_URL` is the front origin the backend allows in CORS**, and **both** CORS layers use it: the Socket.IO CORS (`socket/socket.server.js`) and the REST CORS (`index.js`, `cors({ origin: process.env.CLIENT_URL })`). Compared exactly, no trailing slash; it is `https://divvyup.jorgeaf.dev`. Preview deployments get their own subdomain and will not pass that check. `credentials: true` is deliberately out until the Better Auth cookie work (auth is header-based `Bearer` today, so an open-vs-locked CORS leaks nothing, but `*` is incompatible with credentials so it was locked ahead of that). `bootstrap.js` (test app) keeps an open `cors()` on purpose — CORS is browser-enforced and supertest sends no `Origin`.
+**`CLIENT_URL` is the front origin the backend allows in CORS**, and **both** CORS layers use it: the Socket.IO CORS (`socket/socket.server.ts`) and the REST CORS (`index.ts`, `cors({ origin: process.env.CLIENT_URL })`). Compared exactly, no trailing slash; it is `https://divvyup.jorgeaf.dev`. Preview deployments get their own subdomain and will not pass that check. `credentials: true` is deliberately out until the Better Auth cookie work (auth is header-based `Bearer` today, so an open-vs-locked CORS leaks nothing, but `*` is incompatible with credentials so it was locked ahead of that). `bootstrap.ts` (test app) keeps an open `cors()` on purpose — CORS is browser-enforced and supertest sends no `Origin`.

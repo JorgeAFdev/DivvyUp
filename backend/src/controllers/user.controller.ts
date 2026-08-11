@@ -1,10 +1,11 @@
+import type { Request, Response } from 'express';
 import User from '../schemas/user.schema.js';
 import uploadToCloudinary from '../config/cloudinary.config.js';
 
-const updateUser = async (req, res) => {
+const updateUser = async (req: Request, res: Response) => {
     try {
         const { id } = req.jwtPayload;
-        const changes = { name: req.body.name, email: req.body.email };
+        const changes: { name: string; email: string; profilePicture?: string } = { name: req.body.name, email: req.body.email };
 
         // Without this guard, an edit with no new file sets profilePicture
         // to undefined and wipes it.

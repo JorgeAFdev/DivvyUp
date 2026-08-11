@@ -1,19 +1,22 @@
 import supertest from "supertest";
 import { bootstrapApp } from "../bootstrap.js";
 import { disconnectDB, connectDB } from "../mongo/connection/index.js";
+import type { HydratedDocument } from "mongoose";
 import Group from "../schemas/group.schema.js";
+import type { GroupHydrated } from "../schemas/group.schema.js";
 import Expense from "../schemas/expense.schema.js";
 import Payment from "../schemas/payment.schema.js";
 import User from "../schemas/user.schema.js";
+import type { UserDoc, UserMethods } from "../schemas/user.schema.js";
 
 const app = bootstrapApp();
 const fakeRequest = supertest(app);
 
-const auth = (token) => ({ Authorization: `Bearer ${token}` });
+const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
-const post = (path, token, body) => fakeRequest.post(path).set(auth(token)).send(body);
-const put = (path, token, body) => fakeRequest.put(path).set(auth(token)).send(body);
-const get = (path, token) => fakeRequest.get(path).set(auth(token));
+const post = (path: string, token: string, body?: any) => fakeRequest.post(path).set(auth(token)).send(body);
+const put = (path: string, token: string, body?: any) => fakeRequest.put(path).set(auth(token)).send(body);
+const get = (path: string, token: string) => fakeRequest.get(path).set(auth(token));
 
 const groupBody = {
     name: "Piso",
@@ -21,9 +24,9 @@ const groupBody = {
     members: [{ name: "Mamá" }, { name: "Ana" }],
 };
 
-const idsOf = (group) => group.members.map((m) => m._id.toString());
+const idsOf = (group: GroupHydrated) => group.members.map((m) => m._id.toString());
 
-const dinnerFor = (group) => {
+const dinnerFor = (group: GroupHydrated) => {
     const [jorge, mama, ana] = idsOf(group);
     return {
         description: "Cena",
@@ -38,11 +41,11 @@ const dinnerFor = (group) => {
     };
 };
 
-let jorge;
-let ana;
-let jorgeToken;
-let anaToken;
-let group;
+let jorge: HydratedDocument<UserDoc, UserMethods>;
+let ana: HydratedDocument<UserDoc, UserMethods>;
+let jorgeToken: string;
+let anaToken: string;
+let group: GroupHydrated;
 
 beforeAll(async () => {
     await connectDB();
@@ -55,7 +58,7 @@ beforeAll(async () => {
 beforeEach(async () => {
     await Promise.all([Group.deleteMany({}), Expense.deleteMany({}), Payment.deleteMany({})]);
     const response = await post("/group", jorgeToken, groupBody);
-    group = await Group.findById(response.body._id);
+    group = (await Group.findById(response.body._id))!;
 });
 
 afterAll(async () => {
@@ -67,12 +70,12 @@ describe("POST /group", () => {
         const response = await post("/group", jorgeToken, groupBody);
 
         expect(response.status).toBe(201);
-        expect(response.body.members.map((m) => m.name)).toEqual(["Jorge", "Mamá", "Ana"]);
+        expect(response.body.members.map((m: any) => m.name)).toEqual(["Jorge", "Mamá", "Ana"]);
         expect(response.body.members[0].user._id).toBe(jorge._id.toString());
         expect(response.body.members[1].user).toBeNull();
         expect(response.body.inviteCode).toHaveLength(22);
         expect(response.body.balance).toHaveLength(3);
-        expect(response.body.balance.every((b) => b.amount === 0)).toBe(true);
+        expect(response.body.balance.every((b: any) => b.amount === 0)).toBe(true);
     });
 
     it("rejects duplicate names, ignoring case and surrounding spaces", async () => {
@@ -152,7 +155,7 @@ describe("PUT /group/:groupId", () => {
         expect(response.body.members[1]._id).toBe(mamaId);
         expect(response.body.members[1].name).toBe("Mamá Pili");
 
-        const balance = response.body.balance.find((b) => b.member === mamaId);
+        const balance = response.body.balance.find((b: any) => b.member === mamaId);
         expect(balance.amount).toBe(-10);
 
         const debts = await Payment.find({ group: group._id, from: mamaId });
@@ -239,7 +242,7 @@ describe("PUT /group/:groupId", () => {
 
         expect(response.status).toBe(400);
 
-        const untouched = await Group.findById(group._id);
+        const untouched = (await Group.findById(group._id))!;
         expect(untouched.members).toHaveLength(3);
     });
 
@@ -360,11 +363,11 @@ describe("GET /group/user", () => {
         await post(`/group/join/${group.inviteCode}`, anaToken, { memberId: anaId });
 
         const response = await get("/group/user", jorgeToken);
-        const linked = response.body[0].members.filter((m) => m.user);
+        const linked = response.body[0].members.filter((m: any) => m.user);
 
         expect(linked).toHaveLength(2);
-        expect(linked.every((m) => m.user.email === undefined)).toBe(true);
-        expect(linked.every((m) => m.user.password === undefined)).toBe(true);
+        expect(linked.every((m: any) => m.user.email === undefined)).toBe(true);
+        expect(linked.every((m: any) => m.user.password === undefined)).toBe(true);
         expect(linked[0].user.name).toBe("Jorge");
     });
 });
@@ -385,7 +388,7 @@ describe("GET /group/:groupId/groupDetails", () => {
         expect(response.body.debts).toHaveLength(2);
         expect(response.body.debts[0].to.name).toBe("Jorge");
 
-        const mama = response.body.balance.find((b) => b.member._id === mamaId);
+        const mama = response.body.balance.find((b: any) => b.member._id === mamaId);
         expect(mama.amount).toBe(-10);
         expect(mama.member.name).toBe("Mamá");
         expect(mama.member.user).toBeNull();
@@ -417,7 +420,7 @@ describe("GET /group/join/:inviteCode", () => {
 
         expect(response.status).toBe(200);
         expect(response.body.name).toBe("Piso");
-        expect(response.body.members.map((m) => m.name)).toEqual(["Mamá", "Ana"]);
+        expect(response.body.members.map((m: any) => m.name)).toEqual(["Mamá", "Ana"]);
         expect(response.body.alreadyMember).toBe(false);
     });
 
@@ -498,9 +501,9 @@ describe("POST /group/join/:inviteCode", () => {
         expect(response.body.members).toHaveLength(4);
         expect(response.body.members[3].user._id).toBe(ana._id.toString());
 
-        const updated = await Group.findById(group._id);
+        const updated = (await Group.findById(group._id))!;
         const entry = updated.balance.find((b) => b.member.toString() === updated.members[3]._id.toString());
-        expect(entry.amount).toBe(0);
+        expect(entry!.amount).toBe(0);
     });
 
     it("refuses a name already taken in the group", async () => {

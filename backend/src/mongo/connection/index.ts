@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 let dbUrl = process.env.MONGO_URL;
-let mongodb;
+let mongodb: { getUri: () => string; stop: () => Promise<unknown> } | undefined;
 
 export const connectDB = async () => {
   mongoose.set('strictQuery', false);
@@ -16,7 +16,7 @@ export const connectDB = async () => {
       console.log(dbUrl);
     }
 
-    await mongoose.connect(dbUrl);
+    await mongoose.connect(dbUrl as string);
     const mongo = mongoose.connection;
     mongo.on('error', (error) => console.error(error));
   } catch (e) {

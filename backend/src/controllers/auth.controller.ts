@@ -1,3 +1,4 @@
+import type { Request, Response } from 'express';
 import User from '../schemas/user.schema.js';
 import uploadToCloudinary from '../config/cloudinary.config.js';
 
@@ -7,7 +8,7 @@ const EMAIL_PATTERN = /.+@.+\..+/;
 // Checked here rather than on the schema so a bad request answers 400 where it
 // is read, instead of reaching save() and coming back as a ValidationError the
 // catch would have to tell apart from a real failure.
-const registrationErrors = ({ name, email, password }) => {
+const registrationErrors = ({ name, email, password }: { name?: string; email?: string; password?: string }) => {
     const errors = [];
 
     if (!name || name.length < 3) errors.push('Name must be at least 3 characters long');
@@ -26,7 +27,7 @@ const registrationErrors = ({ name, email, password }) => {
     return errors;
 };
 
-const register = async (req, res) => {
+const register = async (req: Request, res: Response) => {
     try {
         const { email, name, password } = req.body;
         let profilePicture = '';
@@ -68,7 +69,7 @@ const register = async (req, res) => {
     }
 };
 
-const login = async (req, res) => {
+const login = async (req: Request, res: Response) => {
     try {
         const { email, password } = req.body;
 

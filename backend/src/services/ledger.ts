@@ -1,17 +1,21 @@
-import mongoose from 'mongoose';
-import Decimal from 'decimal.js';
+import mongoose, { Types } from 'mongoose';
+import { Decimal } from 'decimal.js';
+import Payment from '../schemas/payment.schema.js';
+import type { GroupHydrated } from '../schemas/group.schema.js';
+import type { ExpenseDoc } from '../schemas/expense.schema.js';
 
-const toStoredAmount = (amount) => amount.toDecimalPlaces(2).toNumber();
+const toStoredAmount = (amount: Decimal) => amount.toDecimalPlaces(2).toNumber();
 
-export const updateBalance = async (group) => {
-  const Expense = mongoose.model('Expense');
-  const Payment = mongoose.model('Payment');
+// Expense is reached by name to stay off the expense.schema -> ledger import
+// edge (that cycle is real); Payment has no such edge, so it is imported directly.
+const expenseModel = () => mongoose.model<ExpenseDoc>('Expense');
 
-  const expenses = await Expense.find({ group: group._id });
+export const updateBalance = async (group: GroupHydrated) => {
+  const expenses = await expenseModel().find({ group: group._id });
   const completedPayments = await Payment.find({ group: group._id, status: 'paid' });
 
-  const balance = {};
-  const entryFor = (memberId) => {
+  const balance: Record<string, { member: Types.ObjectId; amount: Decimal }> = {};
+  const entryFor = (memberId: Types.ObjectId) => {
     const key = memberId.toString();
     balance[key] = balance[key] ?? { member: memberId, amount: new Decimal(0) };
     return balance[key];
@@ -33,26 +37,26 @@ export const updateBalance = async (group) => {
 
   completedPayments.forEach((payment) => {
     const { from, to, amount } = payment;
-    if (balance[from]) {
-      balance[from].amount = balance[from].amount.plus(amount);
+    const fromKey = from.toString();
+    const toKey = to.toString();
+    if (balance[fromKey]) {
+      balance[fromKey].amount = balance[fromKey].amount.plus(amount);
     }
 
-    if (balance[to]) {
-      balance[to].amount = balance[to].amount.minus(amount);
+    if (balance[toKey]) {
+      balance[toKey].amount = balance[toKey].amount.minus(amount);
     }
   });
 
   group.balance = Object.values(balance).map(({ member, amount }) => ({
     member,
     amount: toStoredAmount(amount),
-  }));
+  })) as typeof group.balance;
   await group.save();
   return group.balance;
 };
 
-export const generateDebts = async (group) => {
-  const Payment = mongoose.model('Payment');
-
+export const generateDebts = async (group: GroupHydrated) => {
   await Payment.deleteMany({ group: group._id, status: 'pending' });
 
   const balanceCopy = group.balance.map(({ member, amount }) => ({ member, amount: new Decimal(amount) }));
