@@ -17,7 +17,7 @@ on:
       - '.github/workflows/prod-deploy.yaml'
 
 jobs:
-  build-deploy-to-koyeb:
+  build-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
@@ -42,12 +42,3 @@ jobs:
           curl --fail --silent --show-error \
             "https://coolify.jorgeaf.dev/api/v1/deploy?uuid=uset5w5tsg77ctdfczsp0hse&force=false" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
-
-      - name: Install and configure the Koyeb CLI
-        uses: koyeb-community/install-koyeb-cli@v2
-        with:
-          api_token: '${{ secrets.KOYEB_TOKEN }}'
-          github_token: '${{ secrets.GITHUB_TOKEN }}'
-
-      - name: Deploy to Koyeb
-        run: koyeb service redeploy wandering-nert/splitwise --wait
