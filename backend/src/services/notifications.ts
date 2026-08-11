@@ -1,10 +1,10 @@
+import type { Server } from 'socket.io';
+
 const notificationTypes = {
     GROUP_CREATED: 'GROUP_CREATED',
     EXPENSE_CREATED: 'EXPENSE_CREATED',
     DEBT_SETTLED: 'DEBT_SETTLED'
 };
-
-import type { Server } from 'socket.io';
 
 const sendNotificationToUser = (io: Server, userId: string, type: string, message: string, data: Record<string, unknown> = {}) => {
     io.to(`user:${userId}`).emit('notification', {

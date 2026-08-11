@@ -360,7 +360,7 @@ const joinGroup = async (req: Request, res: Response) => {
         return res.status(400).json({ error: "Duplicate members are not allowed" });
       }
 
-      group.members.push({ name: cleanName(name), user: userId });
+      group.members.push({ name: cleanName(name), user: new mongoose.Types.ObjectId(userId) });
       await group.save();
       await updateBalance(group);
     } else {
