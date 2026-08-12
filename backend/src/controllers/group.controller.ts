@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import type { InviteName, InviteCode } from "@monorepo/shared";
 import Expense from "../schemas/expense.schema.js";
 import Group from "../schemas/group.schema.js";
 import Payment from "../schemas/payment.schema.js";
@@ -292,7 +293,7 @@ const getInviteName = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "This invite link is no longer valid" });
     }
 
-    res.status(200).json({ name: group.name });
+    res.status(200).json({ name: group.name } satisfies InviteName);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error getting invite" });
@@ -396,7 +397,7 @@ const regenerateInviteCode = async (req: Request, res: Response) => {
     group.inviteCode = Group.newInviteCode();
     await group.save();
 
-    res.status(200).json({ inviteCode: group.inviteCode });
+    res.status(200).json({ inviteCode: group.inviteCode } satisfies InviteCode);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error regenerating the invite code" });
