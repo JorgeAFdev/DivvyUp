@@ -5,8 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 DivvyUp is a group expense-splitting app (Splitwise-like). pnpm-workspaces monorepo driven by Turborepo 2.x:
-`backend/` (Express + Mongoose + Socket.IO) and `frontend/` (React 18 + Vite). Both ESM. The
-backend is **TypeScript** (`strict`); the frontend is still JS/JSX (its migration is TODO #14, backend-first).
+`backend/` (Express + Mongoose + Socket.IO), `frontend/` (React 18 + Vite) and `packages/shared`
+(the serialized API contract, see below). All ESM. The backend is **TypeScript** (`strict`); the frontend is
+still JS/JSX (its migration is TODO #14, backend-first).
 
 **Package manager is pnpm** — pinned via `packageManager` in the root `package.json`. Never run `npm install`; it would recreate `package-lock.json` and fight the pnpm lockfile. Workspace members are declared in `pnpm-workspace.yaml`, not in a `workspaces` field.
 
@@ -66,6 +67,33 @@ There is no lint script and no eslint config file, despite eslint deps in the ro
 Both databases carry the same two throwaway accounts, `javi@divvyup.test` and `ana@divvyup.test` (password in `notes.txt`), so the invite flow can be exercised end to end without registering anything. Backend tests never touch either: `connectDB()` swaps to `mongodb-memory-server` under `NODE_ENV=test`.
 
 ## Architecture
+
+### `packages/shared` is the serialized API contract
+
+A compiled TS package (`@monorepo/shared`) holding the **JSON shapes the endpoints send** —
+`Group`, `Member`, `Expense`/`HydratedExpense`, `Payment`/`HydratedPayment`, `GroupDetails`,
+`AuthResponse`, etc. in `src/domain.ts`. These are the *serialized* types: every id and date is a
+`string` (an `ObjectId` serializes to hex and a `Date` to ISO through `res.json`), amounts are
+`number`. They are **not** the backend's Mongoose types, which keep `ObjectId`/`Date`/`Decimal` —
+the contract deliberately describes what ships, so it is the one definition both the frontend
+(consumer) and the backend (which types its responses against it) read.
+
+- **It is additive.** The backend keeps `InferSchemaType` as the source of its own document
+  structure; the contract sits at the response boundary. The backend adopts it gradually: today
+  only the trivially-serialized responses use it (`{ name } satisfies InviteName`,
+  `{ inviteCode } satisfies InviteCode`), because a raw Mongoose document is not assignable to a
+  string-id contract type without an explicit serializer — those land in a follow-up that maps
+  each controller's response field-by-field.
+- **Consumed via `dist/`, not source.** Compiled with `tsc` (`build` → `dist/` with `.d.ts`),
+  imported as `@monorepo/shared`. Turborepo's `build`/`typecheck`/`dev` carry `dependsOn: ["^build"]`
+  so a consumer never typechecks or runs against a stale contract, and the Dockerfile builds
+  `shared` before the backend and copies its `dist/` into both stages.
+- **Type-only for the backend, for now.** The backend imports it with `import type`, so the
+  imports erase and nothing from `shared` is required at runtime; it is a runtime `dependency`
+  (and in the image) regardless, so the shared Zod validators of TODO #11 can add runtime code
+  later without re-plumbing Docker or the manifests.
+- The typecheck gate (`typecheck.yaml`) runs `shared` and `backend` as a matrix; `shared` builds
+  first in each job because the backend resolves it from `dist/`.
 
 ### A group member is a name, not an account
 
