@@ -9,7 +9,13 @@ frontend es un esfuerzo aparte y posterior.** El backend va en **dos PRs, en est
 > review: entre otras cosas, el tipado de Mongoose acabó usando un tipo hidratado (5º genérico del
 > modelo) para que los subdocumentos lleven `_id`/métodos; `hydrateMembers` es genérico con los paths
 > validados contra el tipo; `req.jwtPayload` se declara **requerido** (el `jwtMiddleware` lo garantiza,
-> sin `!` ni wrappers); y `clean-e2e` pasó a TS. El **frontend sigue pendiente** (sección final).
+> sin `!` ni wrappers); y `clean-e2e` pasó a TS.
+
+> **Estado del frontend (12-08-2026) — en curso.** Progreso por PR (ver [sección final](#frontend-plan-ratificado-el-12-08-2026)):
+> - ✅ **PR0** — jest → vitest (PR #105, mergeado).
+> - ✅ **PR1** — `packages/shared` + wiring Turbo/Docker/matrix, backend consume el contrato como tipos (PR #106).
+> - ⏳ **PR1.5** — serializadores del backend (doc→contrato campo a campo), tras PR2–PR4.
+> - ⏳ **PR2** — `utils/*.js` → `.ts` · **PR3** — `hooks`/`theme` · **PR4a** — `components` · **PR4b** — `pages`+`App` · **PR5** — cierre.
 
 ## PR A — Refactor del motor (JS-only, prólogo)
 
