@@ -4,7 +4,7 @@ import { AuthProvider } from '../../context/userContextAuth';
 import { DarkModeContextProvider } from '../../context/darkModeContext';
 import Header, { MOBILE_QUERY } from './header';
 
-jest.mock('../notifications/notifications', () => () => null);
+vi.mock('../notifications/notifications', () => ({ default: () => null }));
 
 const matchMediaAs = (viewport) => (query) => ({
     matches: viewport === 'mobile' && query === MOBILE_QUERY,
@@ -18,7 +18,7 @@ const matchMediaAs = (viewport) => (query) => ({
 });
 
 const renderHeader = ({ viewport = 'desktop', logged = true } = {}) => {
-    window.matchMedia = jest.fn().mockImplementation(matchMediaAs(viewport));
+    window.matchMedia = vi.fn().mockImplementation(matchMediaAs(viewport));
 
     if (logged) {
         localStorage.setItem('user-session', JSON.stringify({

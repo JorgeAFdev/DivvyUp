@@ -32,7 +32,7 @@ describe('The icon component', () => {
     });
 
     it('calls handleClick when clicked', () => {
-        const handleClick = jest.fn();
+        const handleClick = vi.fn();
         const { container } = render(<Icon variant="dots" handleClick={handleClick} />);
 
         fireEvent.click(svgOf(container));
