@@ -70,12 +70,57 @@ la estructura persistida.
   comprobación forzada es teatro: vitest y Vite despojan tipos sin comprobar, y el `tsc` del
   build solo cubre código de producción al hacer merge.
 
-## Frontend (aparcado)
+## Frontend (plan ratificado el 12-08-2026)
 
-Explícitamente después, en su propia sesión. Extiende el mismo `tsconfig.base.json` con
-`moduleResolution: Bundler`, `lib: [DOM]`, `jsx: react-jsx`, `noEmit`. Decisiones abiertas:
+Migración a TS del frontend **por fases en 7 PRs**, no big-bang: son 72 ficheros y el tipado
+de MUI / react-hook-form / react-router es el trabajo de verdad, así que cada PR convierte una
+capa y queda revisable. Durante la transición el `tsconfig` del frontend lleva `allowJs: true`
++ `checkJs: false` (el `.jsx`/`.js` sin convertir se permite pero no se chequea); se retira en
+el último PR. Cada fichero convertido nace en `strict`.
 
-- jest → vitest, o `@babel/preset-typescript` para que babel-jest entienda TS.
-- Retirar `prop-types` (TS lo deja obsoleto).
-- Rigor de `.jsx` → `.tsx` con MUI y react-hook-form tipados, que es el trabajo de verdad.
-- Si el frontend se engancha al mismo Action de `typecheck` (Vite nunca comprueba tipos).
+**Decisiones:**
+
+- **Runner: jest → vitest.** Unifica con el backend (un solo runner en el monorepo) y vitest
+  entiende TS/TSX vía esbuild sin config extra. El swap va como **PR prólogo JS-only** (PR0),
+  con todo aún en `.jsx` y en verde, aislando el cambio de runner del de lenguaje — misma
+  filosofía que el PR A del backend. Convive con el proyecto vitest de Storybook ya existente
+  (`vitest.workspace.js`) como un segundo proyecto con nombre; `pnpm test` corre solo el de
+  unidad (`--project unit`, jsdom), no el de navegador.
+- **Exigencia: la misma vara que el backend.** El `tsconfig` del frontend extiende
+  `tsconfig.base.json` (solo `strict` + `isolatedModules`) y añade lo suyo: `moduleResolution:
+  Bundler`, `jsx: react-jsx`, `lib` con `DOM`, `noEmit`. Sin flags más severos
+  (`noUncheckedIndexedAccess`, etc.): "tipado serio sin `any`" se sostiene por disciplina y por
+  el gate de typecheck, no por más config sobre 52 componentes.
+- **Gate de typecheck: matrix.** `typecheck.yaml` pasa a un matrix `[backend, frontend]` (más
+  `shared`), con el path filter ampliado a `frontend/**`. Vite nunca comprueba tipos, así que
+  el `tsc --noEmit` del frontend es su propia puerta de PR.
+- **Tipos de dominio: `packages/shared`.** Un paquete **compilado** del monorepo con el
+  **contrato API serializado** — las shapes JSON que devuelven los endpoints (`_id` y fechas
+  como `string`, montos `number`), no los tipos Mongoose, que llevan `ObjectId`/`Date`/`Decimal`.
+  Es **aditivo**: el backend mantiene `InferSchemaType` como fuente interna del schema y además
+  **tipa las respuestas de sus controllers contra el contrato**, así el drift entre lo que
+  serializa y lo que el frontend espera se pilla en compilación. El frontend lo importa en
+  `utils/*Api` → hooks → componentes. Se consume vía **`dist/` compilado** (Turborepo
+  `dependsOn: ^build`, watch en `turbo dev`) y el Dockerfile copia `shared` en ambos stages. Por
+  ahora **solo tipos**; el TODO #11 (Zod compartido, dedupe del regex de password) se hará luego
+  sobre esta infra ya montada.
+- **Cypress se queda en JS.** La migración se centra en la app (`src`); los specs no son código
+  de producción y meterían config TS de Cypress por una capa que no es la app.
+- **`prop-types` fuera.** Se retira inline al convertir cada componente a `.tsx`; el devDep se
+  dropea en el último PR.
+
+**Secuencia de PRs:**
+
+1. **PR0 — vitest (JS-only).** Los 3 suites (`header`, `icon`, `darkModeContext`) pasan de jest
+   a vitest sin tocar el lenguaje; jest y babel fuera.
+2. **PR1 — `packages/shared` (fundacional).** Paquete compilado con el contrato de tipos;
+   Turborepo, Docker (copiar `shared` en build+runtime) y el matrix de typecheck; el backend
+   adopta el contrato en sus responses. No toca aún la app frontend.
+3. **PR2 — `utils/*.js` → `.ts` (11).** `tsconfig` del frontend (`allowJs`/`checkJs:false`),
+   `vite-env.d.ts` para `import.meta.env`; el frontend entra al matrix.
+4. **PR3 — `hooks/*` + `theme` → `.ts` (9).** react-query tipado sobre el contrato de `shared`.
+5. **PR4a — `components/**` → `.tsx` (35).** MUI y react-hook-form tipados; `prop-types` fuera.
+6. **PR4b — `pages/**` + `App.jsx` + `main.jsx` → `.tsx` (9).** Importan componentes ya tipados;
+   aquí caen el routing y los providers.
+7. **PR5 — cierre.** Tests (3) y stories (2) → `.tsx`, se quita `allowJs` y se dropea el devDep
+   `prop-types`. Frontend 100% TS estricto.
