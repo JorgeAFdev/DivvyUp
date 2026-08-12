@@ -9,7 +9,13 @@ frontend es un esfuerzo aparte y posterior.** El backend va en **dos PRs, en est
 > review: entre otras cosas, el tipado de Mongoose acabó usando un tipo hidratado (5º genérico del
 > modelo) para que los subdocumentos lleven `_id`/métodos; `hydrateMembers` es genérico con los paths
 > validados contra el tipo; `req.jwtPayload` se declara **requerido** (el `jwtMiddleware` lo garantiza,
-> sin `!` ni wrappers); y `clean-e2e` pasó a TS. El **frontend sigue pendiente** (sección final).
+> sin `!` ni wrappers); y `clean-e2e` pasó a TS.
+
+> **Estado del frontend (12-08-2026) — en curso.** Progreso por PR (ver [sección final](#frontend-plan-ratificado-el-12-08-2026)):
+> - ✅ **PR0** — jest → vitest (PR #105, mergeado).
+> - ✅ **PR1** — `packages/shared` + wiring Turbo/Docker/matrix, backend consume el contrato como tipos (PR #106).
+> - ⏳ **PR1.5** — serializadores del backend (doc→contrato campo a campo), tras PR2–PR4.
+> - ⏳ **PR2** — `utils/*.js` → `.ts` · **PR3** — `hooks`/`theme` · **PR4a** — `components` · **PR4b** — `pages`+`App` · **PR5** — cierre.
 
 ## PR A — Refactor del motor (JS-only, prólogo)
 
@@ -114,8 +120,16 @@ el último PR. Cada fichero convertido nace en `strict`.
 1. **PR0 — vitest (JS-only).** Los 3 suites (`header`, `icon`, `darkModeContext`) pasan de jest
    a vitest sin tocar el lenguaje; jest y babel fuera.
 2. **PR1 — `packages/shared` (fundacional).** Paquete compilado con el contrato de tipos;
-   Turborepo, Docker (copiar `shared` en build+runtime) y el matrix de typecheck; el backend
-   adopta el contrato en sus responses. No toca aún la app frontend.
+   Turborepo (`dependsOn: ^build`), Docker (copiar `shared` en build+runtime) y el matrix de
+   typecheck (`shared` + `backend`). El backend lo consume ya como **tipos** (`import type` +
+   `satisfies` en las respuestas triviales ya serializadas), sin serializar aún. No toca la app
+   frontend.
+   - **PR1.5 — adopción completa del backend.** Serializadores en los 5 controllers que mapean
+     doc→contrato campo a campo (`res.json(serializeX(doc))`), tipando las respuestas contra el
+     contrato para pillar drift en compilación. Va aparte porque cambia la serialización de
+     runtime (deja de mandar `__v`, fija el output) y obliga a re-verificar los 106 tests vitest
+     + 13 Cypress — separarlo del andamiaje del paquete lo mantiene revisable. Se hace tras PR2–PR4,
+     ya con las shapes validadas por el uso real del frontend.
 3. **PR2 — `utils/*.js` → `.ts` (11).** `tsconfig` del frontend (`allowJs`/`checkJs:false`),
    `vite-env.d.ts` para `import.meta.env`; el frontend entra al matrix.
 4. **PR3 — `hooks/*` + `theme` → `.ts` (9).** react-query tipado sobre el contrato de `shared`.

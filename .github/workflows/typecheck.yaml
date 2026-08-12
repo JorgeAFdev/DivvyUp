@@ -2,10 +2,12 @@ name: Typecheck
 
 on:
   pull_request:
-    # The backend is the only TypeScript workspace today. The root manifests and
+    # The TypeScript workspaces today are the backend and packages/shared; the
+    # frontend joins the matrix once its migration starts. The root manifests and
     # the shared base config are watched because each one changes what tsc sees.
     paths:
       - 'backend/**'
+      - 'packages/shared/**'
       - 'tsconfig.base.json'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -16,6 +18,18 @@ on:
 jobs:
   typecheck:
     runs-on: ubuntu-latest
+    name: 'Typecheck ${{ matrix.workspace }}'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - workspace: shared
+            install: '--filter=@monorepo/shared...'
+          - workspace: backend
+            # shared is selected too so its build toolchain (tsc) installs; the
+            # backend imports its types, so shared must be buildable here.
+            install: '--filter=@monorepo/backend... --filter=@monorepo/shared'
+
     steps:
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -29,12 +43,16 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      # No --prod: tsc lives in the backend devDependencies. Skip
-      # mongodb-memory-server's mongod download; only tsc runs here.
-      - name: 'Install backend'
-        run: pnpm install --frozen-lockfile --filter=@monorepo/backend...
+      # No --prod: tsc lives in devDependencies. Skip mongodb-memory-server's
+      # mongod download; only tsc runs here.
+      - name: 'Install'
+        run: pnpm install --frozen-lockfile ${{ matrix.install }}
         env:
           MONGOMS_DISABLE_POSTINSTALL: '1'
 
-      - name: 'Typecheck backend'
-        run: pnpm --filter=@monorepo/backend typecheck
+      # The backend resolves @monorepo/shared from its dist/, so build it first.
+      - name: 'Build shared'
+        run: pnpm --filter=@monorepo/shared build
+
+      - name: 'Typecheck ${{ matrix.workspace }}'
+        run: pnpm --filter=@monorepo/${{ matrix.workspace }} typecheck

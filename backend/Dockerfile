@@ -16,16 +16,23 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
 COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
+COPY packages/shared/package.json ./packages/shared/
 
 # No --prod here: the build needs typescript, which is a devDependency. But the
 # devDeps include mongodb-memory-server, whose postinstall would download a
 # ~120 MB mongod binary into this throwaway layer just to let tsc run.
+# @monorepo/shared is selected explicitly so its own devDeps (tsc) install too;
+# --filter=backend... alone would link it as a dep without its build toolchain.
 ENV MONGOMS_DISABLE_POSTINSTALL=1
-RUN pnpm install --frozen-lockfile --filter=@monorepo/backend...
+RUN pnpm install --frozen-lockfile --filter=@monorepo/backend... --filter=@monorepo/shared
 
+COPY packages/shared/tsconfig.json packages/shared/tsconfig.build.json ./packages/shared/
+COPY packages/shared/src ./packages/shared/src
 COPY backend/tsconfig.json backend/tsconfig.build.json ./backend/
 COPY backend/src ./backend/src
 
+# shared before backend: the backend imports its types, so its dist must exist first.
+RUN pnpm --filter=@monorepo/shared build
 RUN pnpm --filter=@monorepo/backend build
 
 # --- runtime stage: prod deps + compiled dist only, no TypeScript toolchain ---
@@ -39,9 +46,11 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
+COPY packages/shared/package.json ./packages/shared/
 
 RUN pnpm install --frozen-lockfile --prod --filter=@monorepo/backend...
 
+COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/backend/dist ./backend/dist
 
 ENV NODE_ENV=production
