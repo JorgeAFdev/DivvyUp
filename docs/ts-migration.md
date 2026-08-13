@@ -16,8 +16,9 @@ frontend es un esfuerzo aparte y posterior.** El backend va en **dos PRs, en est
 > - ✅ **PR1** — `packages/shared` + wiring Turbo/Docker/matrix, backend consume el contrato como tipos (PR #106).
 > - ✅ **PR2** — `utils/*.js` → `.ts` tipados contra el contrato; toolchain del frontend y frontend en el matrix de typecheck (PR #107).
 > - ✅ **PR3** — `hooks/*` + `theme` → `.ts`; react-query tipado (datos del contrato, variables de mutación con los input DTOs) (PR #108).
+> - ✅ **PR4a** — `components/**` → `.tsx` (35); `apiErrorMessage` + `@types/react`; verificado con 13/13 Cypress e2e (PR #109).
 > - ⏳ **PR1.5** — serializadores del backend (doc→contrato campo a campo), tras PR2–PR4.
-> - ⏳ **PR4a** — `components` · **PR4b** — `pages`+`App`+providers · **PR5** — cierre.
+> - ⏳ **PR4b** — `pages`+`App`+providers (incl. `userContextAuth`, `useConfirmationToast`) · **PR5** — cierre.
 
 ## PR A — Refactor del motor (JS-only, prólogo)
 
