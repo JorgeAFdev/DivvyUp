@@ -4,16 +4,24 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useRegister } from '../../hooks/useSession';
 import { toast } from 'react-toastify';
 import { nextDestination } from '../../utils/nextDestination';
+import { apiErrorMessage } from '../../utils/apiError';
 import { PASSWORD_HINT, PASSWORD_MESSAGE, PASSWORD_PATTERN } from '../../utils/validation';
 
+interface RegisterFormValues {
+    name: string;
+    email: string;
+    password: string;
+    profilePicture: FileList;
+}
+
 const RegisterForm = () => {
-    const { register, handleSubmit, watch, formState: { errors } } = useForm();
+    const { register, handleSubmit, watch, formState: { errors } } = useForm<RegisterFormValues>();
 
     const navigate = useNavigate();
     const { search } = useLocation();
     const mutation = useRegister();
 
-    const onSubmit = (data) => {
+    const onSubmit = (data: RegisterFormValues) => {
         mutation.mutate(
             { ...data, profilePicture: data.profilePicture?.[0] },
             {
@@ -21,7 +29,7 @@ const RegisterForm = () => {
                     navigate(nextDestination(search));
                 },
                 onError: (error) => {
-                    toast.error(error.response?.data?.error || 'Registration failed. Please try again.');
+                    toast.error(apiErrorMessage(error, 'Registration failed. Please try again.'));
                 },
             },
         );

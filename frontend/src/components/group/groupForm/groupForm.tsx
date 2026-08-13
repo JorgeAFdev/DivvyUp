@@ -1,8 +1,31 @@
 import { useFieldArray, useForm } from "react-hook-form";
+import type { Member } from "@monorepo/shared";
+import type { GroupInput } from "../../../utils/groupApi";
 import styles from "./groupform.module.css";
 import { IoCloseOutline } from "react-icons/io5";
 
-const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers, lockedMemberId }) => {
+interface GroupFormMember {
+    _id?: string;
+    name: string;
+    hasAccount?: boolean;
+}
+
+interface GroupFormValues {
+    name: string;
+    description: string;
+    members: GroupFormMember[];
+}
+
+interface GroupFormProps {
+    onClose: () => void;
+    onSubmit: (data: GroupInput) => void;
+    title: string;
+    defaultValues?: { name?: string; description?: string };
+    groupMembers?: Member[];
+    lockedMemberId?: string;
+}
+
+const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers, lockedMemberId }: GroupFormProps) => {
     // An existing group cannot go down to a single member: with one participant
     // the expense form sends a boolean instead of a list.
     const minMembers = groupMembers ? 2 : 1;
@@ -11,7 +34,7 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
         handleSubmit,
         control,
         formState: { errors },
-    } = useForm({
+    } = useForm<GroupFormValues>({
         defaultValues: {
             name: defaultValues.name,
             description: defaultValues.description,
@@ -26,7 +49,7 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
         name: "members",
     });
 
-    const handleFormSubmit = (data) => {
+    const handleFormSubmit = (data: GroupFormValues) => {
         onSubmit({
             ...data,
             members: data.members.map(({ _id, name }) => (_id ? { _id, name } : { name })),
@@ -108,7 +131,7 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
                                 </div>
                             </div>
                             {errors.members?.[index]?.name && (
-                                <span className={styles.errorText}>{errors.members[index].name.message}</span>
+                                <span className={styles.errorText}>{errors.members[index]?.name?.message}</span>
                             )}
                         </div>
                     ))}

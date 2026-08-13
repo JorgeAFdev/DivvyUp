@@ -4,23 +4,25 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLogin } from '../../hooks/useSession';
 import { toast } from 'react-toastify';
 import { nextDestination } from '../../utils/nextDestination';
+import type { LoginCredentials } from '../../utils/authApi';
+import { apiErrorMessage } from '../../utils/apiError';
 import { PASSWORD_MESSAGE, PASSWORD_PATTERN } from '../../utils/validation';
 
 
-const Login = ({ forceUpdate }) => {
-  const { register, handleSubmit, formState: { errors } } = useForm({});
+const Login = ({ forceUpdate }: { forceUpdate?: () => void }) => {
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginCredentials>({});
   const navigate = useNavigate();
   const { search } = useLocation();
 
   const login = useLogin();
 
-  const onSubmit = (data) => {
+  const onSubmit = (data: LoginCredentials) => {
     login.mutate(data, {
       onSuccess: () => {
         navigate(nextDestination(search));
       },
       onError: (error) => {
-        toast.error(error.response?.data?.error || 'Login failed. Please try again.');
+        toast.error(apiErrorMessage(error, 'Login failed. Please try again.'));
       },
     });
   };

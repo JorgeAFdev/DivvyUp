@@ -1,13 +1,21 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
+import type { AuthResponse, SessionUser } from "@monorepo/shared";
 import { useUpdateProfile } from "../../hooks/useProfile";
 import { getStorageObject, setStorageObject } from "../../utils/localStorage";
+import { apiErrorMessage } from "../../utils/apiError";
 import styles from "./userEditForm.module.css";
 import { IoCloseOutline } from "react-icons/io5";
 
-const UserEditForm = ({ user, onClose }) => {
-    const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm();
+interface UserEditFormValues {
+    name: string;
+    email: string;
+    profilePicture: FileList;
+}
+
+const UserEditForm = ({ user, onClose }: { user: SessionUser; onClose: () => void }) => {
+    const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<UserEditFormValues>();
 
     const mutation = useUpdateProfile();
 
@@ -18,7 +26,7 @@ const UserEditForm = ({ user, onClose }) => {
         }
     }, [user, setValue]);
 
-    const onSubmit = (data) => {
+    const onSubmit = (data: UserEditFormValues) => {
         mutation.mutate(
             { ...data, profilePicture: data.profilePicture?.[0] },
             {
@@ -26,7 +34,7 @@ const UserEditForm = ({ user, onClose }) => {
                     // The profile screen reads the user straight from the session, not
                     // from a query, so the new data has to land there and the page has
                     // to be repainted with it.
-                    const session = getStorageObject('user-session') || {};
+                    const session = getStorageObject<AuthResponse>('user-session') || {};
                     setStorageObject(JSON.stringify({ ...session, user: updatedUser.user }));
 
                     toast.success("¡Usuario actualizado con éxito! 🎉");
@@ -34,7 +42,7 @@ const UserEditForm = ({ user, onClose }) => {
                     window.location.reload();
                 },
                 onError: (error) => {
-                    toast.error(error.response?.data?.error || "Hubo un error al actualizar el usuario.");
+                    toast.error(apiErrorMessage(error, "Hubo un error al actualizar el usuario."));
                 },
             },
         );

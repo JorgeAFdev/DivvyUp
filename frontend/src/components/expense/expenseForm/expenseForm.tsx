@@ -1,27 +1,49 @@
-import React from "react";
 import { useForm } from "react-hook-form";
+import type { HydratedExpense, Member } from "@monorepo/shared";
+import type { ExpenseInput } from "../../../utils/expenseApi";
 import styles from "./expenseform.module.css";
 import { IoCloseOutline } from "react-icons/io5";
 
-const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers }) => {
+interface ExpenseFormValues {
+    description: string;
+    totalAmount: string;
+    paidBy: string;
+    participants: string[];
+}
+
+interface ExpenseFormProps {
+    onClose: () => void;
+    onSubmit: (data: ExpenseInput) => void;
+    title: string;
+    defaultValues?: Partial<HydratedExpense>;
+    groupMembers: Member[];
+}
+
+const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers }: ExpenseFormProps) => {
     const {
         register,
         handleSubmit,
-        watch,
         formState: { errors },
-    } = useForm({
+    } = useForm<ExpenseFormValues>({
         defaultValues: {
             description: defaultValues.description,
-            totalAmount: defaultValues.totalAmount,
-            paidBy: defaultValues?.paidBy?._id,
-            participants: defaultValues?.participants,
+            totalAmount: defaultValues.totalAmount != null ? String(defaultValues.totalAmount) : undefined,
+            paidBy: defaultValues.paidBy?._id,
+            participants: defaultValues.participants
+                ?.map((p) => p.member?._id)
+                .filter((id): id is string => Boolean(id)),
         }
     });
 
-    const paidBy = watch("paidBy");
-
-    const handleFormSubmit = (data) => {
-        onSubmit(data);
+    // The text input holds a string; the contract wants a number. decimal.js on
+    // the backend parses either, so the single conversion happens here.
+    const handleFormSubmit = (data: ExpenseFormValues) => {
+        onSubmit({
+            description: data.description,
+            totalAmount: Number(data.totalAmount),
+            paidBy: data.paidBy,
+            participants: data.participants,
+        });
     };
 
     return (
@@ -98,7 +120,7 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
                         <div className={styles.participant} key={member._id}>
                             <input
                                 type="checkbox"
-                                defaultChecked={defaultValues.participants ? defaultValues.participants.some((p) => p.member._id === member._id) : true}
+                                defaultChecked={defaultValues.participants ? defaultValues.participants.some((p) => p.member?._id === member._id) : true}
                                 value={member._id}
                                 id={`participant-${member._id}`}
                                 {...register('participants', { required: 'At least one participant must be selected' })} />
