@@ -2,11 +2,12 @@ name: Typecheck
 
 on:
   pull_request:
-    # The TypeScript workspaces today are the backend and packages/shared; the
-    # frontend joins the matrix once its migration starts. The root manifests and
-    # the shared base config are watched because each one changes what tsc sees.
+    # The TypeScript workspaces are packages/shared, the backend and the frontend
+    # (mid-migration, allowJs). The root manifests and the shared base config are
+    # watched because each one changes what tsc sees.
     paths:
       - 'backend/**'
+      - 'frontend/**'
       - 'packages/shared/**'
       - 'tsconfig.base.json'
       - 'package.json'
@@ -29,6 +30,10 @@ jobs:
             # shared is selected too so its build toolchain (tsc) installs; the
             # backend imports its types, so shared must be buildable here.
             install: '--filter=@monorepo/backend... --filter=@monorepo/shared'
+          - workspace: frontend
+            # Same reason as backend: the frontend imports the contract's types,
+            # so shared has to be buildable in this job.
+            install: '--filter=@monorepo/frontend... --filter=@monorepo/shared'
 
     steps:
       - name: 'Checkout'
