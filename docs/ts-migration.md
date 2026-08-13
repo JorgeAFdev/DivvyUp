@@ -14,8 +14,9 @@ frontend es un esfuerzo aparte y posterior.** El backend va en **dos PRs, en est
 > **Estado del frontend (12-08-2026) — en curso.** Progreso por PR (ver [sección final](#frontend-plan-ratificado-el-12-08-2026)):
 > - ✅ **PR0** — jest → vitest (PR #105, mergeado).
 > - ✅ **PR1** — `packages/shared` + wiring Turbo/Docker/matrix, backend consume el contrato como tipos (PR #106).
+> - ✅ **PR2** — `utils/*.js` → `.ts` tipados contra el contrato; toolchain del frontend y frontend en el matrix de typecheck (PR #107).
 > - ⏳ **PR1.5** — serializadores del backend (doc→contrato campo a campo), tras PR2–PR4.
-> - ⏳ **PR2** — `utils/*.js` → `.ts` · **PR3** — `hooks`/`theme` · **PR4a** — `components` · **PR4b** — `pages`+`App` · **PR5** — cierre.
+> - ⏳ **PR3** — `hooks`/`theme` · **PR4a** — `components` · **PR4b** — `pages`+`App` · **PR5** — cierre.
 
 ## PR A — Refactor del motor (JS-only, prólogo)
 
