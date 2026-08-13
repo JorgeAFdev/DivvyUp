@@ -15,7 +15,7 @@ export interface UpdateProfileResponse {
 
 export const updateUser = async (
     { name, email, profilePicture }: UpdateProfileInput,
-    token: string,
+    token: string | null,
 ): Promise<UpdateProfileResponse> => {
     const formData = new FormData();
     formData.append('name', name);
