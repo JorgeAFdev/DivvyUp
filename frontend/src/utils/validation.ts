@@ -1,4 +1,4 @@
-// Mirrors PASSWORD_PATTERN in backend/src/routers/auth.routes.js. Keeping the
+// Mirrors PASSWORD_PATTERN in backend/src/routers/auth.routes.ts. Keeping the
 // two in step by hand is what TODO 11 replaces with a shared package.
 export const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
