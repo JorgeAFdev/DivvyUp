@@ -5,12 +5,13 @@ import {
     deleteGroupExpense,
     getAllUserExpenses,
     updateGroupExpense,
+    type ExpenseInput,
 } from '../utils/expenseApi';
 import { queryKeys } from './queryKeys';
 
 // An expense moves the group balance and the debts derived from it, and it also
 // shows up in /my-expenses, so every mutation drops both caches.
-const useInvalidateExpenses = (groupId) => {
+const useInvalidateExpenses = (groupId: string) => {
     const queryClient = useQueryClient();
 
     return () => {
@@ -30,27 +31,27 @@ export const useUserExpenses = () => {
     });
 };
 
-export const useCreateExpense = (groupId) => {
+export const useCreateExpense = (groupId: string) => {
     const { token } = useAuth();
     const invalidate = useInvalidateExpenses(groupId);
 
     return useMutation({
-        mutationFn: (data) => createGroupExpense(groupId, data, token),
+        mutationFn: (data: ExpenseInput) => createGroupExpense(groupId, data, token),
         onSuccess: invalidate,
     });
 };
 
-export const useUpdateExpense = (groupId, expenseId) => {
+export const useUpdateExpense = (groupId: string, expenseId: string) => {
     const { token } = useAuth();
     const invalidate = useInvalidateExpenses(groupId);
 
     return useMutation({
-        mutationFn: (data) => updateGroupExpense(groupId, expenseId, data, token),
+        mutationFn: (data: ExpenseInput) => updateGroupExpense(groupId, expenseId, data, token),
         onSuccess: invalidate,
     });
 };
 
-export const useDeleteExpense = (groupId, expenseId) => {
+export const useDeleteExpense = (groupId: string, expenseId: string) => {
     const { token } = useAuth();
     const invalidate = useInvalidateExpenses(groupId);
 

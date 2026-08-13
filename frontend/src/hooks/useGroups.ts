@@ -6,6 +6,7 @@ import {
     getGroupByUserId,
     regenerateInviteCode,
     updateGroup,
+    type GroupInput,
 } from '../utils/groupApi';
 import { queryKeys } from './queryKeys';
 
@@ -24,17 +25,17 @@ export const useCreateGroup = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data) => createGroup(data, token),
+        mutationFn: (data: GroupInput) => createGroup(data, token),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.groups() }),
     });
 };
 
-export const useUpdateGroup = (groupId) => {
+export const useUpdateGroup = (groupId: string) => {
     const { token } = useAuth();
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data) => updateGroup(groupId, data, token),
+        mutationFn: (data: GroupInput) => updateGroup(groupId, data, token),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.groups() });
             queryClient.invalidateQueries({ queryKey: queryKeys.groupDetails(groupId) });
@@ -42,7 +43,7 @@ export const useUpdateGroup = (groupId) => {
     });
 };
 
-export const useDeleteGroup = (groupId) => {
+export const useDeleteGroup = (groupId: string) => {
     const { token } = useAuth();
     const queryClient = useQueryClient();
 
@@ -55,7 +56,7 @@ export const useDeleteGroup = (groupId) => {
     });
 };
 
-export const useRegenerateInviteCode = (groupId) => {
+export const useRegenerateInviteCode = (groupId: string) => {
     const { token } = useAuth();
     const queryClient = useQueryClient();
 
