@@ -9,12 +9,14 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:storybook": "vitest run --config vitest.storybook.config.js",
+    "typecheck": "tsc --noEmit",
     "cy:open": "npx cypress open",
     "cy:run": "npx cypress run",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@monorepo/shared": "workspace:*",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/material": "^6.4.4",
@@ -50,6 +52,7 @@
     "playwright": "^1.51.0",
     "prop-types": "^15.8.1",
     "storybook": "^8.6.4",
+    "typescript": "^5.7.3",
     "vite": "^5.0.2",
     "vitest": "^3.0.8"
   }
