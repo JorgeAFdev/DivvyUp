@@ -3,7 +3,7 @@ import { useAuth } from '../context/userContextAuth';
 import { getGroupDetails } from '../utils/groupApi';
 import { queryKeys } from './queryKeys';
 
-export const useGroupDetails = (groupId) => {
+export const useGroupDetails = (groupId: string) => {
     const { token } = useAuth();
 
     return useQuery({
