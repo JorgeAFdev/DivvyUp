@@ -1,5 +1,14 @@
 import { toast } from 'react-toastify';
-import { Button } from '@mui/material';
+import { Button, type ButtonProps } from '@mui/material';
+
+interface ConfirmationToastOptions {
+    message?: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    cancelText?: string;
+    confirmButtonProps?: ButtonProps;
+    cancelButtonProps?: ButtonProps;
+}
 
 export const useConfirmationToast = () => {
     const showConfirmationToast = ({
@@ -9,7 +18,9 @@ export const useConfirmationToast = () => {
         cancelText = "Cancel",
         confirmButtonProps = {},
         cancelButtonProps = {}
-    }) => {
+    }: ConfirmationToastOptions) => {
+        const { sx: confirmSx, ...confirmRest } = confirmButtonProps;
+        const { sx: cancelSx, ...cancelRest } = cancelButtonProps;
         toast.info(
             <div>
                 <p>{message}</p>
@@ -22,15 +33,17 @@ export const useConfirmationToast = () => {
                             toast.dismiss();
                             onConfirm();
                         }}
-                        {...confirmButtonProps}
-                        sx={{
-                            backgroundColor: "primary.dark",
-                            borderRadius: "8px",
-                            textTransform: "none",
-                            fontWeight: "bold",
-                            "&:hover": { backgroundColor: "primary.main" },
-                            ...confirmButtonProps.sx
-                        }}
+                        {...confirmRest}
+                        sx={[
+                            {
+                                backgroundColor: "primary.dark",
+                                borderRadius: "8px",
+                                textTransform: "none",
+                                fontWeight: "bold",
+                                "&:hover": { backgroundColor: "primary.main" },
+                            },
+                            ...(confirmSx ? (Array.isArray(confirmSx) ? confirmSx : [confirmSx]) : []),
+                        ]}
                     >
                         {confirmText}
                     </Button>
@@ -41,13 +54,15 @@ export const useConfirmationToast = () => {
                         onClick={() => {
                             toast.dismiss();
                         }}
-                        {...cancelButtonProps}
-                        sx={{
-                            borderRadius: "8px",
-                            textTransform: "none",
-                            fontWeight: "bold",
-                            ...cancelButtonProps.sx
-                        }}
+                        {...cancelRest}
+                        sx={[
+                            {
+                                borderRadius: "8px",
+                                textTransform: "none",
+                                fontWeight: "bold",
+                            },
+                            ...(cancelSx ? (Array.isArray(cancelSx) ? cancelSx : [cancelSx]) : []),
+                        ]}
                     >
                         {cancelText}
                     </Button>

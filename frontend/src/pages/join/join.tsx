@@ -4,11 +4,13 @@ import { Button } from '@mui/material';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/userContextAuth';
 import { useInvite, useJoinGroup } from '../../hooks/useInvite';
+import type { JoinGroupInput } from '../../utils/groupApi';
+import { apiErrorMessage } from '../../utils/apiError';
 import InviteLanding from './inviteLanding';
 import styles from './join.module.css';
 
 const Join = () => {
-    const { inviteCode } = useParams();
+    const { inviteCode = '' } = useParams();
     const { token } = useAuth();
     const navigate = useNavigate();
 
@@ -19,14 +21,14 @@ const Join = () => {
 
     const mutation = useJoinGroup(inviteCode);
 
-    const join = (body) => {
+    const join = (body: JoinGroupInput) => {
         mutation.mutate(body, {
             onSuccess: (joined) => {
                 toast.success(`You are now part of ${joined.name}`);
                 navigate(`/groups/${joined._id}/expenses`);
             },
             onError: (mutationError) => {
-                toast.error(mutationError.response?.data?.error || 'Could not join this group');
+                toast.error(apiErrorMessage(mutationError, 'Could not join this group'));
             },
         });
     };
@@ -44,11 +46,15 @@ const Join = () => {
             <div className={styles.card}>
                 <h2 className={styles.title}>This invite link is not valid</h2>
                 <p className={styles.text}>
-                    {error.response?.data?.error || 'Ask whoever shared it for the current link.'}
+                    {apiErrorMessage(error, 'Ask whoever shared it for the current link.')}
                 </p>
                 <Button variant="contained" onClick={() => navigate('/groups')}>Go to my groups</Button>
             </div>
         );
+    }
+
+    if (!group) {
+        return null;
     }
 
     if (group.alreadyMember) {

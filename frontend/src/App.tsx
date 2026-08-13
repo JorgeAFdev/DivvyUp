@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import "./App.css";
 import Layout from "./components/layout/layout";
@@ -23,7 +23,7 @@ function App() {
       <DarkModeContextProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Layout forceUpdate={() => setForceUpdate(!forceUpdate)} />}>
+            <Route path="/" element={<Layout />}>
               <Route path="/login" element={<Login forceUpdate={() => setForceUpdate(!forceUpdate)} />} />
               <Route path="/register" element={<RegisterForm />} />
               <Route path="/profile" element={<RequireAuth><User /></RequireAuth>} />

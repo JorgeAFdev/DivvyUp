@@ -1,4 +1,3 @@
-import React from 'react';
 import { getUserSession } from '../../../utils/localStorage';
 import styles from './user.module.css';
 import MemberAvatar from '../../../components/avatar/memberAvatar';

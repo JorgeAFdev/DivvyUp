@@ -7,7 +7,7 @@ import styles from './join.module.css';
 // group name comes from the public endpoint, so a link that was already reset
 // says so here instead of after making them register.
 const InviteLanding = () => {
-    const { inviteCode } = useParams();
+    const { inviteCode = '' } = useParams();
     const next = encodeURIComponent(`/join/${inviteCode}`);
 
     const { data: invite, isLoading, isError } = useInviteName(inviteCode);
@@ -25,6 +25,10 @@ const InviteLanding = () => {
                 </p>
             </div>
         );
+    }
+
+    if (!invite) {
+        return null;
     }
 
     return (

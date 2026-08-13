@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { useGroupDetails } from '../../../hooks/useGroupDetails';
 import { useNavigate, useParams } from 'react-router-dom';
+import { apiErrorMessage } from '../../../utils/apiError';
 import styles from "./groupDetails.module.css"
 import ExpenseList from '../../../components/expense/expenseList/expenseList';
 import CreateExpense from '../../../components/expense/createExpense/createExpense';
@@ -12,13 +13,13 @@ import DebtsList from '../../../components/debts/debtsList';
 const GroupDetails = () => {
     const navigate = useNavigate();
 
-    const { groupId } = useParams();
+    const { groupId = '' } = useParams();
 
     const { data, isLoading, isError, error } = useGroupDetails(groupId);
 
     useEffect(() => {
         if (isError) {
-            toast.error(error.response?.data?.error || 'Could not load group');
+            toast.error(apiErrorMessage(error, 'Could not load group'));
             navigate('/groups');
         }
     }, [isError, error, navigate]);
@@ -28,7 +29,11 @@ const GroupDetails = () => {
     }
 
     if (isError) {
-        return <div className={styles.text}>Error loading data: {error.response?.data?.error || error}</div>;
+        return <div className={styles.text}>Error loading data: {apiErrorMessage(error, 'unknown error')}</div>;
+    }
+
+    if (!data) {
+        return null;
     }
 
     return (
