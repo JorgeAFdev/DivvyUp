@@ -17,8 +17,9 @@ frontend es un esfuerzo aparte y posterior.** El backend va en **dos PRs, en est
 > - ✅ **PR2** — `utils/*.js` → `.ts` tipados contra el contrato; toolchain del frontend y frontend en el matrix de typecheck (PR #107).
 > - ✅ **PR3** — `hooks/*` + `theme` → `.ts`; react-query tipado (datos del contrato, variables de mutación con los input DTOs) (PR #108).
 > - ✅ **PR4a** — `components/**` → `.tsx` (35); `apiErrorMessage` + `@types/react`; verificado con 13/13 Cypress e2e (PR #109).
+> - ✅ **PR4b** — `pages`+`App`+`main`+providers → `.tsx`; `userContextAuth`/`useDarkMode` tipados (fuera el `any` del token, capa API ensanchada a `string | null`); 13/13 Cypress e2e (PR #110).
 > - ⏳ **PR1.5** — serializadores del backend (doc→contrato campo a campo), tras PR2–PR4.
-> - ⏳ **PR4b** — `pages`+`App`+providers (incl. `userContextAuth`, `useConfirmationToast`) · **PR5** — cierre.
+> - ⏳ **PR5** — cierre: los 5 `.jsx` restantes (3 tests + 2 stories) → `.tsx`, quitar `allowJs`, dropear `prop-types`.
 
 ## PR A — Refactor del motor (JS-only, prólogo)
 

@@ -1,14 +1,23 @@
 import { ThemeProvider } from '@mui/material';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createAppTheme } from '../theme/appTheme';
 
-const DarkModeContext = createContext();
+interface DarkModeContextValue {
+    darkMode: boolean;
+    toggleDarkMode: () => void;
+}
 
-export const useDarkMode = () => {
-    return useContext(DarkModeContext);
+const DarkModeContext = createContext<DarkModeContextValue | undefined>(undefined);
+
+export const useDarkMode = (): DarkModeContextValue => {
+    const context = useContext(DarkModeContext);
+    if (context === undefined) {
+        throw new Error('useDarkMode must be used within a DarkModeContextProvider');
+    }
+    return context;
 };
 
-export const DarkModeContextProvider = ({ children }) => {
+export const DarkModeContextProvider = ({ children }: { children: ReactNode }) => {
     const initialDarkMode = localStorage.getItem("darkMode") === 'true';
 
     const [darkMode, setDarkMode] = useState(initialDarkMode);
@@ -19,7 +28,7 @@ export const DarkModeContextProvider = ({ children }) => {
         } else {
             document.body.classList.remove('dark');
         }
-        localStorage.setItem("darkMode", darkMode);
+        localStorage.setItem("darkMode", String(darkMode));
     }, [darkMode]);
 
     const toggleDarkMode = () => setDarkMode(prev => !prev);
