@@ -4,13 +4,14 @@ import styles from './grouplist.module.css';
 import Group from '../group/group';
 import ListSection from '../../listSection/listSection';
 import { useGroups } from '../../../hooks/useGroups';
+import { apiErrorMessage } from '../../../utils/apiError';
 
 const GroupList = () => {
     const { data: groups, isLoading, isError, error } = useGroups();
 
     useEffect(() => {
         if (isError) {
-            toast.error(error.response?.data?.error || 'there was an error loading your groups');
+            toast.error(apiErrorMessage(error, 'there was an error loading your groups'));
         }
     }, [isError, error]);
 

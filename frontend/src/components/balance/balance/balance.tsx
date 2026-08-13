@@ -1,6 +1,7 @@
+import type { HydratedBalanceEntry } from '@monorepo/shared';
 import styles from "./balance.module.css"
 
-const Balance = ({ balance }) => {
+const Balance = ({ balance }: { balance: HydratedBalanceEntry }) => {
     return (
         <li className={styles.card}>
             <div className={styles.name}>

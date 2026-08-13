@@ -1,7 +1,15 @@
-import { Children } from 'react';
+import { Children, type ReactNode } from 'react';
 import styles from './listSection.module.css';
 
-const ListSection = ({ title, emptyMessage, listClassName, className, children }) => {
+interface ListSectionProps {
+    title?: string;
+    emptyMessage?: string;
+    listClassName?: string;
+    className?: string;
+    children?: ReactNode;
+}
+
+const ListSection = ({ title, emptyMessage, listClassName, className, children }: ListSectionProps) => {
     const isEmpty = Children.count(children) === 0;
 
     if (isEmpty && !emptyMessage) return null;

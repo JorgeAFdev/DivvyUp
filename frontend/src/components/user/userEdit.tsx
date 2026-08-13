@@ -1,14 +1,15 @@
 import { useState } from "react";
+import type { SessionUser } from "@monorepo/shared";
 import Modal from "../modal/modal";
 import UserEditForm from "./userEditForm";
-import styles from "./userEditForm.module.css"; // Import CSS Module
+import styles from "./userEditForm.module.css";
 
-const UserEdit = ({ user }) => {
+const UserEdit = ({ user }: { user: SessionUser }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
         <>
-            <button  className={styles.button}  onClick={() => setIsOpen(true) }>Edit profile </button>
+            <button className={styles.button} onClick={() => setIsOpen(true)}>Edit profile </button>
 
             {isOpen && (
                 <Modal>

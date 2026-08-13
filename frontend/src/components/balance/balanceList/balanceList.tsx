@@ -1,8 +1,9 @@
+import type { HydratedBalanceEntry } from '@monorepo/shared';
 import Balance from "../balance/balance";
 import ListSection from "../../listSection/listSection";
 import styles from './balanceList.module.css';
 
-const BalanceList = ({ groupBalance }) => {
+const BalanceList = ({ groupBalance }: { groupBalance?: HydratedBalanceEntry[] }) => {
     return (
         <ListSection
             title="Balance"

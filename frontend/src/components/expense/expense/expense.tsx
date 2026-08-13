@@ -1,13 +1,22 @@
 import { useState } from 'react';
+import type { HydratedExpense, Member } from '@monorepo/shared';
 import styles from './expense.module.css'
 import { toast } from 'react-toastify';
 import ExpenseActions from '../expenseActions/expenseActions';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 import { useDeleteExpense, useUpdateExpense } from '../../../hooks/useExpenses';
+import type { ExpenseInput } from '../../../utils/expenseApi';
+import { apiErrorMessage } from '../../../utils/apiError';
 import { Tooltip } from 'react-tooltip';
 import MemberAvatar from '../../avatar/memberAvatar';
 
-const Expense = ({ expense, groupId, groupMembers }) => {
+interface ExpenseProps {
+    expense: HydratedExpense;
+    groupId: string;
+    groupMembers: Member[];
+}
+
+const Expense = ({ expense, groupId, groupMembers }: ExpenseProps) => {
     const [isEditing, setIsEditing] = useState(false);
 
     const { showConfirmationToast } = useConfirmationToast();
@@ -15,14 +24,14 @@ const Expense = ({ expense, groupId, groupMembers }) => {
     const updateExpense = useUpdateExpense(groupId, expense._id);
     const deleteExpense = useDeleteExpense(groupId, expense._id);
 
-    const handleEditExpense = (data) => {
+    const handleEditExpense = (data: ExpenseInput) => {
         updateExpense.mutate(data, {
             onSuccess: () => {
                 setIsEditing(false);
                 toast.success('Expense succesfully edited');
             },
             onError: (error) => {
-                toast.error(error.response?.data?.error || 'there was an error editing the expense');
+                toast.error(apiErrorMessage(error, 'there was an error editing the expense'));
             },
         });
     }
@@ -40,7 +49,7 @@ const Expense = ({ expense, groupId, groupMembers }) => {
                 toast.success('Expense succesfully deleted');
             },
             onError: (error) => {
-                toast.error(error.response?.data?.error || 'there was an error deleting the expense');
+                toast.error(apiErrorMessage(error, 'there was an error deleting the expense'));
             },
         });
     };
@@ -53,11 +62,11 @@ const Expense = ({ expense, groupId, groupMembers }) => {
                     <div className={styles.paidBy}>
                         <p>Paid by</p>
                         <MemberAvatar
-                            name={expense.paidBy.name}
-                            src={expense.paidBy.user?.profilePicture}
-                            data-tooltip-id={expense.paidBy._id}
+                            name={expense.paidBy?.name ?? ''}
+                            src={expense.paidBy?.user?.profilePicture}
+                            data-tooltip-id={expense.paidBy?._id}
                         />
-                        <Tooltip id={expense.paidBy._id} content={expense.paidBy.name} />
+                        <Tooltip id={expense.paidBy?._id} content={expense.paidBy?.name} />
                     </div>
                 </div>
                 <div className={styles.right}>
