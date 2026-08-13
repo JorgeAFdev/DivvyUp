@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type Dispatch, type MouseEvent, type SetStateAction } from 'react';
+import type { Group } from '@monorepo/shared';
 import Modal from '../../modal/modal';
 import GroupForm from '../groupForm/groupForm';
 import Icon from '../../icon/icon';
@@ -8,12 +9,23 @@ import AppMenu from '../../menu/appMenu';
 import { toast } from 'react-toastify';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 import { useRegenerateInviteCode } from '../../../hooks/useGroups';
+import type { GroupInput } from '../../../utils/groupApi';
 import { inviteLinkFor } from '../../../utils/members';
+import { apiErrorMessage } from '../../../utils/apiError';
 
-const GroupActions = ({ group, myMemberId, editGroup, isEditing, setIsEditing, onDelete }) => {
-    const [anchorEl, setAnchorEl] = useState(null);
+interface GroupActionsProps {
+    group: Group;
+    myMemberId?: string;
+    editGroup: (data: GroupInput) => void;
+    isEditing: boolean;
+    setIsEditing: Dispatch<SetStateAction<boolean>>;
+    onDelete: () => void;
+}
+
+const GroupActions = ({ group, myMemberId, editGroup, isEditing, setIsEditing, onDelete }: GroupActionsProps) => {
+    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const open = Boolean(anchorEl);
-    const handleClick = (event) => {
+    const handleClick = (event: MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
     };
     const handleClose = () => {
@@ -33,7 +45,7 @@ const GroupActions = ({ group, myMemberId, editGroup, isEditing, setIsEditing, o
                 await navigator.share({ title: group.name, text: `Join ${group.name} on DivvyUp`, url });
                 return;
             } catch (error) {
-                if (error.name === 'AbortError') { return; }
+                if (error instanceof Error && error.name === 'AbortError') { return; }
             }
         }
 
@@ -54,7 +66,7 @@ const GroupActions = ({ group, myMemberId, editGroup, isEditing, setIsEditing, o
                         toast.success('New invite link ready to share');
                     },
                     onError: (error) => {
-                        toast.error(error.response?.data?.error || 'there was an error resetting the link');
+                        toast.error(apiErrorMessage(error, 'there was an error resetting the link'));
                     },
                 });
             },

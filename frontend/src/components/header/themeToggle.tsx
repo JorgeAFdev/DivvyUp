@@ -2,8 +2,8 @@ import { IconButton, MenuItem, useTheme } from '@mui/material';
 import { useDarkMode } from '../../context/darkModeContext';
 import Icon from '../icon/icon';
 
-const label = (darkMode) => (darkMode ? 'Light mode' : 'Dark mode');
-const variant = (darkMode) => (darkMode ? 'light' : 'dark');
+const label = (darkMode: boolean) => (darkMode ? 'Light mode' : 'Dark mode');
+const variant = (darkMode: boolean) => (darkMode ? 'light' : 'dark');
 
 export const ThemeToggle = () => {
     const { darkMode, toggleDarkMode } = useDarkMode();

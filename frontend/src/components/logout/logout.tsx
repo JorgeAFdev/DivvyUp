@@ -1,13 +1,13 @@
-import {useNavigate} from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { removeSession, getUserToken } from '../../utils/localStorage';
 
-const Logout = ({forceUpdate}) => {
+const Logout = ({ forceUpdate }: { forceUpdate: () => void }) => {
     const navigate = useNavigate();
     const isLogged = !!getUserToken();
 
     if (!isLogged) {
-        return undefined;
-       } 
+        return null;
+    }
 
     const doLogout = () => {
         removeSession();

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useUserExpenses } from "../../hooks/useExpenses";
 import ExpenseList from "../expense/expenseList/expenseList";
 import { toast } from "react-toastify";
+import { apiErrorMessage } from "../../utils/apiError";
 import styles from './userExpenses.module.css';
 import { Tooltip } from 'react-tooltip';
 
@@ -14,7 +15,7 @@ const UserExpenses = () => {
 
     useEffect(() => {
         if (isError) {
-            toast.error(error?.response?.data?.error || 'Something went wrong');
+            toast.error(apiErrorMessage(error, 'Something went wrong'));
         }
     }, [isError, error]);
 

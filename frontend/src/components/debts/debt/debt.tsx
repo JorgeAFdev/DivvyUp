@@ -1,10 +1,12 @@
 import { Button } from '@mui/material';
+import type { HydratedPayment } from '@monorepo/shared';
 import styles from './debt.module.css'
 import { toast } from 'react-toastify';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 import { useSettleDebt } from '../../../hooks/usePayments';
+import { apiErrorMessage } from '../../../utils/apiError';
 
-const Debt = ({ debt, groupId }) => {
+const Debt = ({ debt, groupId }: { debt: HydratedPayment; groupId: string }) => {
     const { showConfirmationToast } = useConfirmationToast();
     const settleDebt = useSettleDebt(groupId);
 
@@ -21,14 +23,14 @@ const Debt = ({ debt, groupId }) => {
                 toast.success('Debt marked as paid');
             },
             onError: (error) => {
-                toast.error(error.response?.data?.error || 'Something went wrong');
+                toast.error(apiErrorMessage(error, 'Something went wrong'));
             },
         });
     };
 
     return (
         <li className={styles.debt}>
-            <p>{debt.from.name} owes <strong>{debt.amount}€</strong> to {debt.to.name}</p>
+            <p>{debt.from?.name} owes <strong>{debt.amount}€</strong> to {debt.to?.name}</p>
             <Button
                 variant="contained"
                 color="primary"

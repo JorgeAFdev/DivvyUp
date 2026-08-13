@@ -1,15 +1,26 @@
-import { useState } from 'react';
+import { useState, type Dispatch, type MouseEvent, type SetStateAction } from 'react';
+import type { HydratedExpense, Member } from '@monorepo/shared';
 import Modal from '../../modal/modal';
 import ExpenseForm from '../expenseForm/expenseForm';
 import Icon from '../../icon/icon';
 import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
 import AppMenu from '../../menu/appMenu';
+import type { ExpenseInput } from '../../../utils/expenseApi';
 
-const ExpenseActions = ({ groupMembers, handleEditExpense, isEditing, setIsEditing, onDelete, defaultValues }) => {
-    const [anchorEl, setAnchorEl] = useState(null);
+interface ExpenseActionsProps {
+    groupMembers: Member[];
+    handleEditExpense: (data: ExpenseInput) => void;
+    isEditing: boolean;
+    setIsEditing: Dispatch<SetStateAction<boolean>>;
+    onDelete: () => void;
+    defaultValues?: HydratedExpense;
+}
+
+const ExpenseActions = ({ groupMembers, handleEditExpense, isEditing, setIsEditing, onDelete, defaultValues }: ExpenseActionsProps) => {
+    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const open = Boolean(anchorEl);
-    const handleClick = (event) => {
+    const handleClick = (event: MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
     };
     const handleClose = () => {

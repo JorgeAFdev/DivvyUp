@@ -1,6 +1,6 @@
-import { Menu } from '@mui/material';
+import { Menu, type MenuProps } from '@mui/material';
 
-const AppMenu = ({ children, ...props }) => {
+const AppMenu = ({ children, ...props }: MenuProps) => {
     return (
         <Menu {...props}>
             {children}

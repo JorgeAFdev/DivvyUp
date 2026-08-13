@@ -1,15 +1,18 @@
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
+import type { Group as GroupType } from '@monorepo/shared';
 import styles from './group.module.css'
 import { toast } from 'react-toastify';
 import GroupActions from '../groupActions/groupActions';
 import { useNavigate } from 'react-router-dom';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 import { useDeleteGroup, useUpdateGroup } from '../../../hooks/useGroups';
+import type { GroupInput } from '../../../utils/groupApi';
 import { Tooltip } from 'react-tooltip';
 import { getUserSession } from '../../../utils/localStorage';
+import { apiErrorMessage } from '../../../utils/apiError';
 import MemberAvatar from '../../avatar/memberAvatar';
 
-const Group = ({ group }) => {
+const Group = ({ group }: { group: GroupType }) => {
     const [isEditing, setIsEditing] = useState(false);
 
     const navigate = useNavigate();
@@ -20,18 +23,18 @@ const Group = ({ group }) => {
 
     const myMemberId = group.members.find((m) => m.user?._id === getUserSession()?.id)?._id;
 
-    const handleActionsClick = (e) => {
+    const handleActionsClick = (e: MouseEvent) => {
         e.stopPropagation();
     }
 
-    const handleEditGroup = (data) => {
+    const handleEditGroup = (data: GroupInput) => {
         updateGroup.mutate(data, {
             onSuccess: () => {
                 setIsEditing(false);
                 toast.success('Group successfully edited');
             },
             onError: (error) => {
-                toast.error(error.response?.data?.error || 'there was an error editing the group');
+                toast.error(apiErrorMessage(error, 'there was an error editing the group'));
             },
         });
     }
@@ -49,7 +52,7 @@ const Group = ({ group }) => {
                 toast.success('Group succesfully deleted');
             },
             onError: (error) => {
-                toast.error(error.response?.data?.error || 'there was an error deleting the group');
+                toast.error(apiErrorMessage(error, 'there was an error deleting the group'));
             },
         });
     };

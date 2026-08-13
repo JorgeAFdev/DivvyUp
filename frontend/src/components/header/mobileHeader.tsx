@@ -13,7 +13,7 @@ const MobileHeader = () => {
     const theme = useTheme();
     const { pathname } = useLocation();
 
-    const [anchorEl, setAnchorEl] = useState(null);
+    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const isMenuOpen = Boolean(anchorEl);
     const closeMenu = () => setAnchorEl(null);
 

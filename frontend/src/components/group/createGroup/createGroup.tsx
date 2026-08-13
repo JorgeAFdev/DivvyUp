@@ -4,7 +4,8 @@ import Icon from "../../icon/icon";
 import Modal from "../../modal/modal";
 import { toast } from "react-toastify";
 import { useCreateGroup } from "../../../hooks/useGroups";
-
+import type { GroupInput } from "../../../utils/groupApi";
+import { apiErrorMessage } from "../../../utils/apiError";
 
 const CreateGroup = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -13,14 +14,14 @@ const CreateGroup = () => {
 
     const createGroup = useCreateGroup();
 
-    const handleCreateGroup = (data) => {
+    const handleCreateGroup = (data: GroupInput) => {
         createGroup.mutate(data, {
             onSuccess: () => {
                 closeModal();
                 toast.success('Group succesfully created');
             },
             onError: (error) => {
-                toast.error(error.response?.data?.error || 'there was an error creating the group');
+                toast.error(apiErrorMessage(error, 'there was an error creating the group'));
             },
         });
     }
