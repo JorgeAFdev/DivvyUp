@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { removeSession, getUserToken } from '../../utils/localStorage';
 
-const Logout = ({ forceUpdate }: { forceUpdate: () => void }) => {
+const Logout = () => {
     const navigate = useNavigate();
     const isLogged = !!getUserToken();
 
@@ -11,7 +11,6 @@ const Logout = ({ forceUpdate }: { forceUpdate: () => void }) => {
 
     const doLogout = () => {
         removeSession();
-        forceUpdate();
         navigate('/');
         window.location.reload();
     }

@@ -50,7 +50,7 @@ const MobileHeader = () => {
                     <MenuItem component={Link} to="/profile" onClick={closeMenu}>Profile</MenuItem>
                     <ThemeMenuItem />
                     <Divider />
-                    <MenuItem onClick={closeMenu}><Logout forceUpdate={() => { }} /></MenuItem>
+                    <MenuItem onClick={closeMenu}><Logout /></MenuItem>
                 </AppMenu>
             </div>
         </header>

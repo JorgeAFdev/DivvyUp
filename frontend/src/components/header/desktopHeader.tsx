@@ -15,7 +15,7 @@ const DesktopHeader = () => (
         <div className={styles.right}>
             <ThemeToggle />
             <Notifications />
-            <UserMenu forceUpdate={() => { }} />
+            <UserMenu />
         </div>
     </header>
 );

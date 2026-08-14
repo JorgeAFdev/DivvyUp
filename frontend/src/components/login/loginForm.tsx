@@ -9,7 +9,7 @@ import { apiErrorMessage } from '../../utils/apiError';
 import { PASSWORD_MESSAGE, PASSWORD_PATTERN } from '../../utils/validation';
 
 
-const Login = ({ forceUpdate }: { forceUpdate?: () => void }) => {
+const Login = () => {
   const { register, handleSubmit, formState: { errors } } = useForm<LoginCredentials>({});
   const navigate = useNavigate();
   const { search } = useLocation();
