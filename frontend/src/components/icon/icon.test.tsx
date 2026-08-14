@@ -1,12 +1,12 @@
 import { fireEvent, render } from '@testing-library/react';
-import Icon from './icon';
+import Icon, { type IconVariant } from './icon';
 
-const svgOf = (container) => container.querySelector('svg');
+const svgOf = (container: HTMLElement) => container.querySelector('svg');
 
-const htmlFor = (variant) => svgOf(render(<Icon variant={variant} />).container).innerHTML;
+const htmlFor = (variant: string) => svgOf(render(<Icon variant={variant as IconVariant} />).container)!.innerHTML;
 
 // Every variant but 'add', which is the fallback these are compared against.
-const VARIANTS = ['edit', 'delete', 'light', 'dark', 'dots', 'share', 'refresh', 'menu'];
+const VARIANTS: IconVariant[] = ['edit', 'delete', 'light', 'dark', 'dots', 'share', 'refresh', 'menu'];
 
 describe('The icon component', () => {
     it('tags the rendered icon with the variant it was asked for', () => {
@@ -28,14 +28,14 @@ describe('The icon component', () => {
     it('defaults to the add icon with no variant', () => {
         const { container } = render(<Icon />);
 
-        expect(svgOf(container).innerHTML).toBe(htmlFor('add'));
+        expect(svgOf(container)!.innerHTML).toBe(htmlFor('add'));
     });
 
     it('calls handleClick when clicked', () => {
         const handleClick = vi.fn();
         const { container } = render(<Icon variant="dots" handleClick={handleClick} />);
 
-        fireEvent.click(svgOf(container));
+        fireEvent.click(svgOf(container)!);
 
         expect(handleClick).toHaveBeenCalledTimes(1);
     });

@@ -6,7 +6,7 @@ import Header, { MOBILE_QUERY } from './header';
 
 vi.mock('../notifications/notifications', () => ({ default: () => null }));
 
-const matchMediaAs = (viewport) => (query) => ({
+const matchMediaAs = (viewport: 'mobile' | 'desktop') => (query: string): MediaQueryList => ({
     matches: viewport === 'mobile' && query === MOBILE_QUERY,
     media: query,
     addEventListener: () => { },
@@ -17,7 +17,7 @@ const matchMediaAs = (viewport) => (query) => ({
     onchange: null,
 });
 
-const renderHeader = ({ viewport = 'desktop', logged = true } = {}) => {
+const renderHeader = ({ viewport = 'desktop', logged = true }: { viewport?: 'mobile' | 'desktop'; logged?: boolean } = {}) => {
     window.matchMedia = vi.fn().mockImplementation(matchMediaAs(viewport));
 
     if (logged) {

@@ -1,8 +1,9 @@
+import type { Meta, StoryObj } from '@storybook/react';
 import { BrowserRouter } from 'react-router-dom';
 import Header from '../components/header/header';
 import { AuthProvider } from '../context/userContextAuth';
 
-export default {
+const meta: Meta<typeof Header> = {
     component: Header,
     decorators: [
         (Story) => (
@@ -15,21 +16,22 @@ export default {
             <BrowserRouter>
                 <Story />
             </BrowserRouter>
-        )
-    ]
-}
+        ),
+    ],
+};
 
-export const HeaderBasic = {
+export default meta;
 
-}
+type Story = StoryObj<typeof Header>;
 
-export const HeaderWitAvatar = {
+export const HeaderBasic: Story = {};
 
+export const HeaderWitAvatar: Story = {
     decorators: [
         (Story) => (
             <AuthProvider>
                 <Story />
             </AuthProvider>
-        )
-    ]
-}
+        ),
+    ],
+};
