@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DivvyUp is a group expense-splitting app (Splitwise-like). pnpm-workspaces monorepo driven by Turborepo 2.x:
 `backend/` (Express + Mongoose + Socket.IO), `frontend/` (React 18 + Vite) and `packages/shared`
 (the serialized API contract, see below). All ESM. Both `backend/` and `frontend/src` are **TypeScript**
-(`strict`); the TODO #14 migration is done bar its PR1.5 tail (backend response serializers).
+(`strict`); the TODO #14 migration is complete.
 
 **Package manager is pnpm** — pinned via `packageManager` in the root `package.json`. Never run `npm install`; it would recreate `package-lock.json` and fight the pnpm lockfile. Workspace members are declared in `pnpm-workspace.yaml`, not in a `workspaces` field.
 
@@ -79,11 +79,14 @@ the contract deliberately describes what ships, so it is the one definition both
 (consumer) and the backend (which types its responses against it) read.
 
 - **It is additive.** The backend keeps `InferSchemaType` as the source of its own document
-  structure; the contract sits at the response boundary. The backend adopts it gradually: today
-  only the trivially-serialized responses use it (`{ name } satisfies InviteName`,
-  `{ inviteCode } satisfies InviteCode`), because a raw Mongoose document is not assignable to a
-  string-id contract type without an explicit serializer — those land in a follow-up that maps
-  each controller's response field-by-field.
+  structure; the contract sits at the response boundary. Every controller now serializes its
+  response against it: `serializers/contract.ts` maps each Mongoose document to the contract
+  shape field by field — ids to hex strings, dates to ISO, `__v` dropped — and the handlers
+  return `res.json(serializeX(...))`, so a raw document (not assignable to a string-id contract
+  type) never reaches the wire and schema drift fails to compile. The two trivial responses
+  still inline it (`{ name } satisfies InviteName`, `{ inviteCode } satisfies InviteCode`). The
+  serializers read the timestamps `InferSchemaType` drops, which is why the hydrated doc types
+  (`GroupHydrated`, `ExpenseHydrated`, `PaymentHydrated`) restate `createdAt`/`updatedAt`.
 - **Consumed via `dist/`, not source.** Compiled with `tsc` (`build` → `dist/` with `.d.ts`),
   imported as `@monorepo/shared`. Turborepo's `build`/`typecheck`/`dev` carry `dependsOn: ["^build"]`
   so a consumer never typechecks or runs against a stale contract, and the Dockerfile builds
