@@ -11,15 +11,15 @@ frontend es un esfuerzo aparte y posterior.** El backend va en **dos PRs, en est
 > validados contra el tipo; `req.jwtPayload` se declara **requerido** (el `jwtMiddleware` lo garantiza,
 > sin `!` ni wrappers); y `clean-e2e` pasó a TS.
 
-> **Estado del frontend (14-08-2026) — `frontend/src` es 100% TS estricto tras PR5.** Solo queda PR1.5 (backend, independiente). Progreso por PR (ver [sección final](#frontend-plan-ratificado-el-12-08-2026)):
+> **Estado del frontend (14-08-2026) — HECHO.** `frontend/src` es 100% TS estricto: no queda ni un `.js`/`.jsx`, `allowJs`/`checkJs` retirados. La cadena PR0→PR5 está mergeada. Lo único pendiente de todo el punto 14 es **PR1.5** (backend, independiente del frontend). Progreso por PR (ver [sección final](#frontend-plan-ratificado-el-12-08-2026)):
 > - ✅ **PR0** — jest → vitest (PR #105, mergeado).
 > - ✅ **PR1** — `packages/shared` + wiring Turbo/Docker/matrix, backend consume el contrato como tipos (PR #106).
 > - ✅ **PR2** — `utils/*.js` → `.ts` tipados contra el contrato; toolchain del frontend y frontend en el matrix de typecheck (PR #107).
 > - ✅ **PR3** — `hooks/*` + `theme` → `.ts`; react-query tipado (datos del contrato, variables de mutación con los input DTOs) (PR #108).
 > - ✅ **PR4a** — `components/**` → `.tsx` (35); `apiErrorMessage` + `@types/react`; verificado con 13/13 Cypress e2e (PR #109).
 > - ✅ **PR4b** — `pages`+`App`+`main`+providers → `.tsx`; `userContextAuth`/`useDarkMode` tipados (fuera el `any` del token, capa API ensanchada a `string | null`); 13/13 Cypress e2e (PR #110).
-> - ⏳ **PR1.5** — serializadores del backend (doc→contrato campo a campo), tras PR2–PR4.
 > - ✅ **PR5** — cierre: los 5 `.jsx` restantes (3 tests + 2 stories) → `.tsx`, `src/vitest.d.ts` para los globals de test bajo el gate, fuera `allowJs`/`checkJs` y el devDep `prop-types` (PR #111).
+> - ⏳ **PR1.5** — serializadores del backend (doc→contrato campo a campo), independiente; único pendiente.
 
 ## PR A — Refactor del motor (JS-only, prólogo)
 

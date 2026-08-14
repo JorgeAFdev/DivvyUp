@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 DivvyUp is a group expense-splitting app (Splitwise-like). pnpm-workspaces monorepo driven by Turborepo 2.x:
 `backend/` (Express + Mongoose + Socket.IO), `frontend/` (React 18 + Vite) and `packages/shared`
-(the serialized API contract, see below). All ESM. The backend is **TypeScript** (`strict`); the frontend is
-still JS/JSX (its migration is TODO #14, backend-first).
+(the serialized API contract, see below). All ESM. Both `backend/` and `frontend/src` are **TypeScript**
+(`strict`); the TODO #14 migration is done bar its PR1.5 tail (backend response serializers).
 
 **Package manager is pnpm** — pinned via `packageManager` in the root `package.json`. Never run `npm install`; it would recreate `package-lock.json` and fight the pnpm lockfile. Workspace members are declared in `pnpm-workspace.yaml`, not in a `workspaces` field.
 
@@ -43,8 +43,8 @@ not on the document (see [docs/ts-migration.md](docs/ts-migration.md)).
 Frontend (`cd frontend`):
 ```bash
 pnpm build               # vite build -> dist/
-pnpm test                # vitest run (jsdom unit suites), *.test.jsx colocated with components
-pnpm exec vitest run src/components/header/header.test.jsx
+pnpm test                # vitest run (jsdom unit suites), *.test.tsx colocated with components
+pnpm exec vitest run src/components/header/header.test.tsx
 pnpm test:storybook      # stories as tests in chromium (Playwright), needs a browser
 pnpm cy:open / cy:run    # Cypress e2e against http://localhost:3000 (app must be running)
 pnpm storybook           # :6006
@@ -147,7 +147,7 @@ So request paths in tests have no `/api` prefix, and `req.app.get('socketio')` i
 
 ### Real-time notifications
 
-`socket.server.ts` puts each client into a room named `user:<userId>` when it emits `register`. The `io` instance is stashed with `app.set('socketio', io)` and controllers retrieve it via `req.app.get('socketio')`, then call `sendNotificationToUser(io, userId, type, message, data)` from `services/notifications.ts`, which emits a `notification` event to that room. Frontend side is `components/notifications/notifications.jsx` — a render-null component that opens the socket and pipes events into react-toastify.
+`socket.server.ts` puts each client into a room named `user:<userId>` when it emits `register`. The `io` instance is stashed with `app.set('socketio', io)` and controllers retrieve it via `req.app.get('socketio')`, then call `sendNotificationToUser(io, userId, type, message, data)` from `services/notifications.ts`, which emits a `notification` event to that room. Frontend side is `components/notifications/notifications.tsx` — a render-null component that opens the socket and pipes events into react-toastify.
 
 Notifications only go to members with a linked `user` — `linkedUserIds()` in `utils/members.ts` filters them — since emitting to a member without an account means emitting into an empty room.
 
@@ -157,43 +157,43 @@ Notifications only go to members with a linked `user` — `linkedUserIds()` in `
 
 **`password` is declared `select: false`**, and login is the only place that asks for the hash, with `.select('+password')`. That is the field being protected rather than each call being protected: `updateUser` returns the whole document from `findByIdAndUpdate` and used to hand the caller's own bcrypt hash to the browser and to the logs, and the projection alone closed it without touching that controller.
 
-Registration validates in `registrationErrors()` before touching the DB, so a 400 leaves from where the request is read and `catch` still means a real failure. **Do not move the strength rule onto Mongoose `minlength`:** its default message quotes the value it rejected, which puts the plaintext password in the response body and the logs. Tests pin that no error response ever contains it. The regex is currently spelled in both `auth.routes.ts` and `registerForm.jsx` — point 11 of the TODO is what removes the duplication.
+Registration validates in `registrationErrors()` before touching the DB, so a 400 leaves from where the request is read and `catch` still means a real failure. **Do not move the strength rule onto Mongoose `minlength`:** its default message quotes the value it rejected, which puts the plaintext password in the response body and the logs. Tests pin that no error response ever contains it. The regex is currently spelled in both `auth.routes.ts` and `registerForm.tsx` — point 11 of the TODO is what removes the duplication.
 
 `security/jwt.ts` exports `jwtMiddleware`, which verifies the `Authorization: Bearer` header and sets `req.jwtPayload`. Nearly every route is wrapped in it; `auth.routes.ts` (register/login) is not.
 
-Frontend stores `{token, user}` as JSON in `localStorage` under the key `user-session`. `utils/localStorage.js` is the only place that key appears; `context/userContextAuth.jsx` (`useAuth()`) exposes `token`/`login`/`logout`; routes in `App.jsx` gate on `token` with `<Navigate to="/login" />`.
+Frontend stores `{token, user}` as JSON in `localStorage` under the key `user-session`. `utils/localStorage.ts` is the only place that key appears; `context/userContextAuth.tsx` (`useAuth()`) exposes `token`/`login`/`logout`; routes in `App.tsx` gate on `token` with `<Navigate to="/login" />`.
 
 ### Frontend data layer
 
-`utils/axios.js` creates a single axios instance from `VITE_API_URL`. There is **no auth interceptor** — every call passes `authHeaders(token)` explicitly. Endpoints are grouped per resource in `utils/{group,expense,payment,auth,user}Api.js`, and those modules are the only ones that import the axios instance.
+`utils/axios.ts` creates a single axios instance from `VITE_API_URL`. There is **no auth interceptor** — every call passes `authHeaders(token)` explicitly. Endpoints are grouped per resource in `utils/{group,expense,payment,auth,user}Api.ts`, and those modules are the only ones that import the axios instance.
 
-**Every request in the app goes through `@tanstack/react-query` v5, and always through a hook in `src/hooks/`.** No component imports `utils/*Api.js` or axios directly, and no `useQuery`/`useMutation` is written inline in a component. Object syntax only (`useQuery({ queryKey, queryFn })`, `useMutation({ mutationFn })`, `invalidateQueries({ queryKey })`); the old `react-query` package and its positional API are gone. The `QueryClientProvider` is in `App.jsx`.
+**Every request in the app goes through `@tanstack/react-query` v5, and always through a hook in `src/hooks/`.** No component imports `utils/*Api.ts` or axios directly, and no `useQuery`/`useMutation` is written inline in a component. Object syntax only (`useQuery({ queryKey, queryFn })`, `useMutation({ mutationFn })`, `invalidateQueries({ queryKey })`); the old `react-query` package and its positional API are gone. The `QueryClientProvider` is in `App.tsx`.
 
 The layout, one file per resource: `useGroups`, `useGroupDetails`, `useExpenses`, `usePayments`, `useInvite`, `useSession` (login/register) and `useProfile`. Rules that came out of building it:
 
 - **The hook takes the token from `useAuth()` itself.** Components never pass it. Queries that need it are `enabled: Boolean(token)` so they do not fire a 401 before the session is read.
-- **Every cache key lives in `hooks/queryKeys.js`.** A query and the mutations that invalidate it have to spell the same array, and that only holds if there is one place to read it from.
+- **Every cache key lives in `hooks/queryKeys.ts`.** A query and the mutations that invalidate it have to spell the same array, and that only holds if there is one place to read it from.
 - **The mutation hook owns the invalidation, the component owns the UI.** Toasts, `navigate` and closing modals go in the per-call `mutate(vars, { onSuccess, onError })`, which runs after the hook's own `onSuccess`. Do not pass UI into the hook.
 - Cache invalidation *is* the refresh mechanism: an expense mutation drops `groupDetails(groupId)` and `myExpenses`, joining a group drops `groups`. That is why no component takes a `refreshGroupDetails` or `setGroups` prop any more — the server state has one owner.
 - `useSettleDebt` invalidates on `onSettled`, not `onSuccess`: settling a debt somebody else already settled is a 409, and that is exactly the case where the screen is stale and has to refetch.
 - Login and register `queryClient.clear()` before storing the session, so the next screen never mounts against the previous user's cache.
 
-Every avatar in the app goes through `components/avatar/memberAvatar.jsx`: outlined, monochrome, initials from `initialsOf()` when there is no picture. It is one component on purpose. The four copies it replaced had drifted into two different colour schemes, and one of them rendered white on a white header.
+Every avatar in the app goes through `components/avatar/memberAvatar.tsx`: outlined, monochrome, initials from `initialsOf()` when there is no picture. It is one component on purpose. The four copies it replaced had drifted into two different colour schemes, and one of them rendered white on a white header.
 
-All four dropdowns go through `components/menu/appMenu.jsx` — the header's, `UserMenu`'s, `groupActions`' and `expenseActions`'. It carries no `sx`: with `background.paper` and `action.hover` correct in the palette, MUI's `Paper` and `MenuItem` defaults already paint the surface. It stays a component so that reaching for the bare `Menu` is a visible choice, and so menu styling has one place to land.
+All four dropdowns go through `components/menu/appMenu.tsx` — the header's, `UserMenu`'s, `groupActions`' and `expenseActions`'. It carries no `sx`: with `background.paper` and `action.hover` correct in the palette, MUI's `Paper` and `MenuItem` defaults already paint the surface. It stays a component so that reaching for the bare `Menu` is a visible choice, and so menu styling has one place to land.
 
 Menu entries are `MenuItem` with the content directly inside. Do not wrap it in a `Button`: a `<button>` inside `role="menuitem"` is invalid ARIA, and MUI's `Button` defaults to `color="primary"`, whose hover tints the row blue on top of the item's own hover.
 
-The header is **one file per variant** — `guestHeader`, `desktopHeader`, `mobileHeader`, with `header.jsx` doing nothing but picking one and exporting `MOBILE_QUERY` (768px, read with `useMediaQuery`; the CSS module deliberately has no media query, so the breakpoint is written once). The split is what keeps the collapsed menu's `anchorEl` inside `mobileHeader`: crossing the breakpoint unmounts the component, so no effect has to reset that state. Every clickable icon in the header is an `IconButton` with an `aria-label` — `Icon` on its own renders an `<svg>` with an `onClick`, which is neither focusable nor named.
+The header is **one file per variant** — `guestHeader`, `desktopHeader`, `mobileHeader`, with `header.tsx` doing nothing but picking one and exporting `MOBILE_QUERY` (768px, read with `useMediaQuery`; the CSS module deliberately has no media query, so the breakpoint is written once). The split is what keeps the collapsed menu's `anchorEl` inside `mobileHeader`: crossing the breakpoint unmounts the component, so no effect has to reset that state. Every clickable icon in the header is an `IconButton` with an `aria-label` — `Icon` on its own renders an `<svg>` with an `onClick`, which is neither focusable nor named.
 
-Two rules about the collapsed menu, both of them decisions rather than details, and `header.test.jsx` asserts the whole list in order rather than that the items exist:
+Two rules about the collapsed menu, both of them decisions rather than details, and `header.test.tsx` asserts the whole list in order rather than that the items exist:
 
 - **The order is `Groups`, `Expenses` | `Profile`, `Dark mode` | `Logout`, and `Logout` goes last behind its own divider.** It is the only destructive action in the menu and it reloads the page, so on a 390px touch target the one thing next to it is a divider.
 - **The theme toggle is the only entry that does not close the menu.** The other four navigate or end the session; this one is a switch, and its label flipping between `Dark mode` and `Light mode` is the confirmation that it worked. Closing threw that away and made undoing it cost two taps. It is also text-only in the menu — an icon there pushed its label out of line with the other five.
 
-Styling is CSS Modules (`foo.module.css` beside `foo.jsx`) plus MUI. `context/darkModeContext.jsx` still exists, but recent commits deliberately removed per-component `useDarkMode` usage in favor of the MUI theme (`useTheme`) — follow that direction in new components. The exception is `header/themeToggle.jsx`, which needs `toggleDarkMode` itself: it is the switch.
+Styling is CSS Modules (`foo.module.css` beside `foo.tsx`) plus MUI. `context/darkModeContext.tsx` still exists, but recent commits deliberately removed per-component `useDarkMode` usage in favor of the MUI theme (`useTheme`) — follow that direction in new components. The exception is `header/themeToggle.tsx`, which needs `toggleDarkMode` itself: it is the switch.
 
-**Every colour is declared in `App.css`, and nowhere else.** `theme/appTheme.js` holds no colour value: `createAppTheme(darkMode)` reads them out of the stylesheet and hands them to `createTheme`. MUI consumes the palette, it does not own it.
+**Every colour is declared in `App.css`, and nowhere else.** `theme/appTheme.ts` holds no colour value: `createAppTheme(darkMode)` reads them out of the stylesheet and hands them to `createTheme`. MUI consumes the palette, it does not own it.
 
 `:root` carries the light values and `body.dark` restates only the five that differ; the two primaries are shared. The names are the ones the CSS Modules already consume: `--color`, `--bg-color`, `--secondary-bg-color`, `--border-color`, `--placeholder-color`, `--primary-color`, `--primary-color-dark`. A new colour goes in `:root`, plus `body.dark` if dark needs a different one.
 
@@ -213,7 +213,7 @@ Transitions come off one knob, `--transition-base`. Set it only on the element t
 
 `vitest.config.js` aliases stylesheet imports to `identity-obj-proxy`, so `vitest.setup.js` injects the real `App.css` into jsdom; without it there is no palette to read and no theme can be built.
 - **`getComputedStyle` is the wrong way to read them.** The theme is built during render and the `dark` class is added in an effect, so in dark mode the computed value of `--color` is still the light one at the moment MUI needs the dark one. `declarationsFor()` walks `document.styleSheets` for the `:root` and `body.dark` rules instead, and resolves a colour the way the cascade does — `body.dark` first, `:root` behind it. The rules are there regardless of which class is applied, so the ordering problem disappears rather than being worked around. Verified against the minified build: esbuild keeps both selectors intact.
-- **A missing declaration must be loud.** `createAppTheme` throws naming the variable rather than falling back to a default, because a default would quietly put a colour back into JS. `darkModeContext.test.jsx` pins that, and asserts each MUI variable against the CSS one it came from without restating a single hex.
+- **A missing declaration must be loud.** `createAppTheme` throws naming the variable rather than falling back to a default, because a default would quietly put a colour back into JS. `darkModeContext.test.tsx` pins that, and asserts each MUI variable against the CSS one it came from without restating a single hex.
 
 `vitest.config.js` aliases stylesheet imports to `identity-obj-proxy`, so `App.css` is absent from jsdom and the theme could not be built at all. `vitest.setup.js` injects the real file into `document.head` — the real one, not a copy of its values, or the tests would become the third place the palette lives.
 
@@ -235,7 +235,7 @@ A comment earns its place only when the code cannot say the thing itself: the *w
 - **`.github/workflows/typecheck.yaml` runs `tsc --noEmit` on every PR** that touches `backend/**` or the root/base manifests — the repo's first PR gate (before this, nothing ran in PR CI; the deploy workflow only fires on push to `main`). It exists because vitest and `tsx` strip types without checking them, so green tests are not a type check.
 - Any backend test hitting a route needs an `Authorization: Bearer` header — almost every route carries `jwtMiddleware`. The signing secret is set once in `backend/vitest.setup.js` (`setupFiles`), not per test file: `jwt.ts` and `user.schema.ts` read `process.env.jwt_secret` at **call time**, not at import, so the value only has to exist before the first request — no import-order dance. (Under ESM the old before-the-requires trick would not have worked anyway: `import`s are hoisted above any top-level statement.)
 - `pnpm test` in `frontend/` is **green**: 3 suites, 36 tests — `components/icon`, `components/header` and `context/darkModeContext`, run by **vitest** (`vitest run`) in jsdom, configured in `frontend/vitest.config.js`. `--passWithNoTests` is deliberately absent: with it, a suite that stops being discovered by accident looks the same as a suite that passes (vitest, like jest before it, otherwise fails on no tests). Nothing runs these in CI — the deploy workflow is path-filtered to `backend/**` and Cloudflare Pages only runs `vite build` — so a frontend test guards intent, not the pipeline.
-- `icon.test.jsx` asserts that each variant renders an SVG **different from `add`'s**, not that it renders something. `Icon` resolves `iconsByVariant[variant] || MdAddCircleOutline`, so a variant that does not exist — or whose import broke — silently becomes the add icon everywhere it is used, with no error. Checking for "an SVG" would not catch that.
+- `icon.test.tsx` asserts that each variant renders an SVG **different from `add`'s**, not that it renders something. `Icon` resolves `iconsByVariant[variant] || MdAddCircleOutline`, so a variant that does not exist — or whose import broke — silently becomes the add icon everywhere it is used, with no error. Checking for "an SVG" would not catch that.
 - jsdom needs two shims for the frontend suites. `vitest.setup.js` defines `TextEncoder`/`TextDecoder` from `node:util`: `react-router` 7 reads them at import time, so **any** test that renders a router fails to even load the suite without them. And a test that renders `Header` has to stub `window.matchMedia` itself — MUI's `useMediaQuery` is what decides whether the header is collapsed, and jsdom ships no `matchMedia` at all.
 - The Storybook stories run as tests in chromium (Playwright) via `vitest.storybook.config.js` (`pnpm test:storybook`), separate from the jsdom unit config (`vitest.config.js`). Two independent frontend test configs coexist, and `pnpm test` loads only the unit one, so it needs no browser and never pulls in the Storybook addon.
 - **Cypress is the only real net the frontend has** — 7 specs, 13 tests, all green, and nothing else runs against the built app. Between them they cover login and a failed login, the profile form, creating/editing/deleting a group, the 409 when dropping a member who is in an expense, resetting and sharing the invite link, the whole life of an expense with its balance and debts, `/my-expenses`, and both halves of the join flow. Run it against a running app; it writes to whatever `MONGO_URL` points at, so check that it says `/test`.
