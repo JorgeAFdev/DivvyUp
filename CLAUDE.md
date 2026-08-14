@@ -222,7 +222,7 @@ Transitions come off one knob, `--transition-base`. Set it only on the element t
 
 ### Backend request flow
 
-`routers/router.ts` mounts `/group` twice (expense routes and group routes both live under it), plus `/user`, `/auth`, `/payment`. All validation is inline in the controllers — there is no `middlewares/` directory any more (its three helpers were only ever wired to routes that got deleted); `notes.txt` still tracks moving validation out.
+`routers/router.ts` mounts `/group` three times (expense, invite and group routes all live under it), plus `/user`, `/auth`, `/payment`. The invite/join flow is its own `invite.controller.ts` / `invite.routes.ts` (`getInviteName`, `getGroupByInviteCode`, `joinGroup`, `regenerateInviteCode`), split out from group management; `invite.routes` is mounted **before** `group.routes` so `/invite/:code` and `/join/:code` resolve as literals rather than as a `/:groupId` match. Validation is still inline in the controllers except the shared name helpers (`cleanName`, `hasDuplicateNames`, now in `utils/validation.ts` and used by both the group and invite controllers) — there is no `middlewares/` directory any more; `notes.txt` still tracks moving the rest out (TODO #11, shared Zod).
 
 Profile images: multer with `memoryStorage()` → `config/cloudinary.config.ts` → `uploadToCloudinary(buffer)` returns the secure URL stored on `user.profilePicture`. It is optional everywhere — registration works without one and `updateUser` only touches the field when a file arrives. With no picture the UI falls back to the name's initials (`initialsOf()`), which is also what a member without an account gets.
 
