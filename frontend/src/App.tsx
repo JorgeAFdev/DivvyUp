@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import "./App.css";
 import Layout from "./components/layout/layout";
@@ -16,15 +15,13 @@ import { DarkModeContextProvider } from "./context/darkModeContext";
 const queryClient = new QueryClient();
 
 function App() {
-  const [forceUpdate, setForceUpdate] = useState(false);
-
   return (
     <QueryClientProvider client={queryClient}>
       <DarkModeContextProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Layout />}>
-              <Route path="/login" element={<Login forceUpdate={() => setForceUpdate(!forceUpdate)} />} />
+              <Route path="/login" element={<Login />} />
               <Route path="/register" element={<RegisterForm />} />
               <Route path="/profile" element={<RequireAuth><User /></RequireAuth>} />
               <Route path="/groups" element={<RequireAuth><Groups /></RequireAuth>} />

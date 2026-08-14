@@ -6,7 +6,7 @@ import { getUserSession } from '../../utils/localStorage';
 import MemberAvatar from '../avatar/memberAvatar';
 import AppMenu from '../menu/appMenu';
 
-const UserMenu = ({ forceUpdate }: { forceUpdate: () => void }) => {
+const UserMenu = () => {
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const isMenuOpen = Boolean(anchorEl);
 
@@ -40,7 +40,7 @@ const UserMenu = ({ forceUpdate }: { forceUpdate: () => void }) => {
                     Profile
                 </MenuItem>
                 <MenuItem onClick={handleMenuClose} >
-                    <Logout forceUpdate={forceUpdate} />
+                    <Logout />
                 </MenuItem>
             </AppMenu>
         </div>

@@ -375,7 +375,7 @@ describe("GET /group/user", () => {
 describe("GET /group/:groupId/groupDetails", () => {
     it("returns members, balance, expenses and debts", async () => {
         await Expense.create(dinnerFor(group));
-        const [jorgeId, mamaId] = idsOf(group);
+        const [, mamaId] = idsOf(group);
 
         const response = await get(`/group/${group._id}/groupDetails`, jorgeToken);
 
