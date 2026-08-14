@@ -44,6 +44,8 @@ export type ExpenseParticipant = Types.Subdocument<Types.ObjectId> & ExpenseDoc[
 
 export type ExpenseHydrated = Omit<HydratedDocument<ExpenseDoc>, 'participants'> & {
     participants: Types.DocumentArray<ExpenseParticipant>;
+    createdAt: Date;
+    updatedAt: Date;
 };
 
 type ExpenseModel = Model<ExpenseDoc, {}, {}, {}, ExpenseHydrated>;

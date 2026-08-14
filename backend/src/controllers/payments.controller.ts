@@ -5,6 +5,7 @@ import Payment from "../schemas/payment.schema.js";
 import { MEMBER_FIELDS, memberOf, hydrateMembers, linkedUserIds } from "../utils/members.js";
 import { sendNotificationToUser, notificationTypes } from "../services/notifications.js";
 import { updateBalance, generateDebts } from "../services/ledger.js";
+import { serializeHydratedPayment } from "../serializers/contract.js";
 
 const pay = async (req: Request, res: Response) => {
   try {
@@ -63,7 +64,7 @@ const pay = async (req: Request, res: Response) => {
     await updateBalance(group);
     await generateDebts(group);
 
-    res.status(200).json(hydrateMembers(group, payment, ["from", "to"]));
+    res.status(200).json(serializeHydratedPayment(hydrateMembers(group, payment, ["from", "to"] as const)));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error updating payment." });
