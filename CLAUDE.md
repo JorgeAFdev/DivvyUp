@@ -138,7 +138,7 @@ Why the model looks like this, what was discarded (shadow users, a `GuestMember`
 **Every monetary calculation goes through `decimal.js`** (a real `dependency` of the backend). No `+`/`-`/`/` on amounts, no `Math.round(x * 100) / 100`, no `toFixed(2)` to "round" — those are what let a group's balance stop netting to zero.
 
 - Accumulate as `Decimal`, convert once at the boundary: MongoDB stores `Number`, so the last step is `.toDecimalPlaces(2).toNumber()`. `updateBalance()` and `generateDebts()` do exactly that.
-- Splitting an expense floors each share (`ROUND_DOWN`) and hands the leftover cents out one each from the top of the participant list (`splitEvenly` in `expense.controller.ts`). Dividing evenly and rounding each share independently loses or invents cents: 10 € between 3 gave three shares of 3.33 against a 10 € credit, leaving the group permanently 1 cent out.
+- Splitting an expense floors each share (`ROUND_DOWN`) and hands the leftover cents out one each from the top of the participant list (`splitEvenly` in `services/split.ts`). Dividing evenly and rounding each share independently loses or invents cents: 10 € between 3 gave three shares of 3.33 against a 10 € credit, leaving the group permanently 1 cent out.
 - Watch the predicates: `isPositive()` is **true for zero** and `isNegative()` is true for `-0`, so comparisons that must exclude zero use `.greaterThan(0)` / `.lessThan(0)`.
 
 ### Two Express app factories — pick the right one
