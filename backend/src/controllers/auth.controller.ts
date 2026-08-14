@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import User from '../schemas/user.schema.js';
 import uploadToCloudinary from '../config/cloudinary.config.js';
+import { serializeAuthResponse } from '../serializers/contract.js';
 
 const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 const EMAIL_PATTERN = /.+@.+\..+/;
@@ -54,15 +55,7 @@ const register = async (req: Request, res: Response) => {
         // Enviar correo de bienvenida
         // sendEmail(email, 'Welcome to DivvyUp', `Thank you ${name} for registering with DivvyUp!`);
 
-        return res.status(200).json({
-            token: await createdUser.generateJWT(),
-            user: {
-                email: createdUser.email,
-                name: createdUser.name,
-                id: createdUser._id,
-                profilePicture: createdUser.profilePicture,
-            },
-        });
+        return res.status(200).json(serializeAuthResponse(createdUser.generateJWT(), createdUser));
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: 'Error creating new user' });
@@ -87,15 +80,7 @@ const login = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Invalid credentials' });
         }
 
-        return res.status(200).json({
-            token: foundUser.generateJWT(),
-            user: {
-                email: foundUser.email,
-                name: foundUser.name,
-                id: foundUser._id,
-                profilePicture: foundUser.profilePicture,
-            },
-        });
+        return res.status(200).json(serializeAuthResponse(foundUser.generateJWT(), foundUser));
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: 'Error Logging in' });

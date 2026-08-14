@@ -6,19 +6,18 @@ import type { ExpenseHydrated } from "../schemas/expense.schema.js";
 import Group from "../schemas/group.schema.js";
 import type { GroupHydrated } from "../schemas/group.schema.js";
 import { MEMBER_FIELDS, MEMBER_PATHS, memberOf, hydrateMembers, linkedUserIds } from "../utils/members.js";
-import type { Hydrated } from "../utils/members.js";
 import { sendNotificationToUser, notificationTypes } from "../services/notifications.js";
+import { serializeHydratedExpense, serializeUserExpensesGroup } from "../serializers/contract.js";
+import type { HydratedExpense } from "@monorepo/shared";
 
 const CENT = new Decimal("0.01");
-
-type HydratedExpense = Hydrated<ExpenseHydrated, (typeof MEMBER_PATHS)[number]>;
 
 function expenseResponse(group: GroupHydrated, expenses: ExpenseHydrated): HydratedExpense;
 function expenseResponse(group: GroupHydrated, expenses: ExpenseHydrated[]): HydratedExpense[];
 function expenseResponse(group: GroupHydrated, expenses: ExpenseHydrated | ExpenseHydrated[]) {
     return Array.isArray(expenses)
-        ? hydrateMembers(group, expenses, MEMBER_PATHS)
-        : hydrateMembers(group, expenses, MEMBER_PATHS);
+        ? hydrateMembers(group, expenses, MEMBER_PATHS).map(serializeHydratedExpense)
+        : serializeHydratedExpense(hydrateMembers(group, expenses, MEMBER_PATHS));
 }
 
 const validateExpense = ({ group, paidBy, participants, totalAmount }: { group: GroupHydrated; paidBy: unknown; participants: unknown; totalAmount: number }) => {
@@ -238,16 +237,17 @@ const getExpensesByUserId = async (req: Request, res: Response) => {
 
         const groupedExpenses = groups
             .map((group) => ({
-                groupId: group._id.toString(),
-                groupName: group.name,
-                groupDescription: group.description,
-                members: group.members,
-                expenses: expenseResponse(
-                    group,
-                    expenses.filter((expense) => expense.group.equals(group._id)),
-                ),
+                group,
+                expenses: expenses.filter((expense) => expense.group.equals(group._id)),
             }))
-            .filter((entry) => entry.expenses.length > 0);
+            .filter((entry) => entry.expenses.length > 0)
+            .map((entry) => serializeUserExpensesGroup({
+                groupId: entry.group._id,
+                groupName: entry.group.name,
+                groupDescription: entry.group.description,
+                members: entry.group.members,
+                expenses: hydrateMembers(entry.group, entry.expenses, MEMBER_PATHS),
+            }));
 
         res.status(200).json(groupedExpenses);
     } catch (error) {

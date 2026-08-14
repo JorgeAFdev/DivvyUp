@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import User from '../schemas/user.schema.js';
 import uploadToCloudinary from '../config/cloudinary.config.js';
+import { serializeSessionUser } from '../serializers/contract.js';
 
 const updateUser = async (req: Request, res: Response) => {
     try {
@@ -20,7 +21,7 @@ const updateUser = async (req: Request, res: Response) => {
         if (!updatedUser) {
             return res.status(404).json({ message: "Usuario no encontrado" });
         }
-        res.status(200).json({ message: "Usuario actualizado exitosamente", user: updatedUser });
+        res.status(200).json({ message: "Usuario actualizado exitosamente", user: serializeSessionUser(updatedUser) });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Error al actualizar el usuario", error });

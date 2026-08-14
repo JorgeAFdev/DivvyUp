@@ -7,6 +7,11 @@ import User from "../schemas/user.schema.js";
 import mongoose from "mongoose";
 import { MEMBER_FIELDS, MEMBER_PATHS, memberOf, hydrateMembers } from "../utils/members.js";
 import { updateBalance, generateDebts } from "../services/ledger.js";
+import {
+  serializeGroup,
+  serializeGroupDetails,
+  serializeInviteInfo,
+} from "../serializers/contract.js";
 
 
 const cleanName = (name: unknown) => (typeof name === "string" ? name.trim() : "");
@@ -59,7 +64,7 @@ const createGroup = async (req: Request, res: Response) => {
     await updateBalance(group);
     await group.populate("members.user", MEMBER_FIELDS);
 
-    res.status(201).json(group);
+    res.status(201).json(serializeGroup(group));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error creating group" });
@@ -169,7 +174,7 @@ const updateGroup = async (req: Request, res: Response) => {
     }
     await group.populate("members.user", MEMBER_FIELDS);
 
-    res.status(200).json(group);
+    res.status(200).json(serializeGroup(group));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error updating group" });
@@ -186,7 +191,7 @@ const getUserGroups = async (req: Request, res: Response) => {
 
     const groups = await Group.find({ "members.user": userId }).populate("members.user", MEMBER_FIELDS);
 
-    res.status(200).json(groups);
+    res.status(200).json(groups.map(serializeGroup));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error getting groups" })
@@ -210,7 +215,7 @@ const getGroupById = async (req: Request, res: Response) => {
       return res.status(403).json({ error: "You don't have permission to view this group" });
     }
 
-    res.status(200).json(group);
+    res.status(200).json(serializeGroup(group));
   } catch (error) {
     res.status(500).json({ error: "Error getting group" });
   }
@@ -268,13 +273,13 @@ const getGroupDetails = async (req: Request, res: Response) => {
       status: 'pending'
     });
 
-    res.status(200).json({
+    res.status(200).json(serializeGroupDetails({
       inviteCode: group.inviteCode,
       members: group.members,
       expenses: hydrateMembers(group, expenses, MEMBER_PATHS),
-      balance: hydrateMembers(group, group.balance, ["member"]),
-      debts: hydrateMembers(group, debts, ["from", "to"]),
-    });
+      balance: hydrateMembers(group, [...group.balance], ["member"] as const),
+      debts: hydrateMembers(group, debts, ["from", "to"] as const),
+    }));
   } catch (error) {
     console.log(error)
     res.status(500).json({ error: "Error getting group details" });
@@ -310,7 +315,7 @@ const getGroupByInviteCode = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "This invite link is no longer valid" });
     }
 
-    res.status(200).json({
+    res.status(200).json(serializeInviteInfo({
       _id: group._id,
       name: group.name,
       description: group.description,
@@ -318,7 +323,7 @@ const getGroupByInviteCode = async (req: Request, res: Response) => {
       members: group.members
         .filter((member) => !member.user)
         .map((member) => ({ _id: member._id, name: member.name })),
-    });
+    }));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error getting group" });
@@ -369,7 +374,7 @@ const joinGroup = async (req: Request, res: Response) => {
     }
 
     await group.populate("members.user", MEMBER_FIELDS);
-    res.status(200).json(group);
+    res.status(200).json(serializeGroup(group));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error joining group" });
