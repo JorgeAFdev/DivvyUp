@@ -17,7 +17,7 @@ const User = () => {
                 src={user.profilePicture}
                 size={150}
                 className={styles.profileImage}
-                sx={{ margin: '0 auto' }}
+                sx={{ marginInline: 'auto' }}
             />
             <h1 className={styles.text}>{user.name}</h1>
             <p className={styles.text}><strong>Email:</strong> {user.email}</p>
