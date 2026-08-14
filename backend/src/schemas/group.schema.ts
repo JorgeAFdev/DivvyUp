@@ -61,6 +61,8 @@ export type BalanceEntry = Types.Subdocument<Types.ObjectId> & GroupDoc['balance
 export type GroupHydrated = Omit<HydratedDocument<GroupDoc>, 'members' | 'balance'> & {
   members: Types.DocumentArray<GroupMember>;
   balance: Types.DocumentArray<BalanceEntry>;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 interface GroupModel extends Model<GroupDoc, {}, {}, {}, GroupHydrated> {
