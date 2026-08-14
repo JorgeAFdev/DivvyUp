@@ -3,16 +3,19 @@ import { Menu, MenuItem } from '@mui/material';
 import { DarkModeContextProvider } from './darkModeContext';
 import { createAppTheme } from '../theme/appTheme';
 
-const rootVar = (name) =>
+const styleRules = () =>
     [...document.styleSheets]
         .flatMap((sheet) => [...(sheet.cssRules || [])])
+        .filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+
+const rootVar = (name: string) =>
+    styleRules()
         .filter((rule) => rule.selectorText === ':root')
         .map((rule) => rule.style.getPropertyValue(name))
         .filter(Boolean);
 
-const declaredInCss = (name, darkMode) => {
-    const rules = [...document.styleSheets].flatMap((sheet) => [...(sheet.cssRules || [])]);
-    const from = (selector) => rules
+const declaredInCss = (name: string, darkMode: boolean) => {
+    const from = (selector: string) => styleRules()
         .filter((rule) => rule.selectorText === selector)
         .map((rule) => rule.style.getPropertyValue(name).trim())
         .find(Boolean);
@@ -35,7 +38,7 @@ const WIRED = [
 describe('the palette comes from App.css', () => {
     afterEach(() => localStorage.clear());
 
-    describe.each([['light', false], ['dark', true]])('in %s mode', (theme, darkMode) => {
+    describe.each([['light', false], ['dark', true]] as const)('in %s mode', (_theme, darkMode) => {
         it.each(WIRED)('publishes %s from %s', (muiVar, cssVar) => {
             localStorage.setItem('darkMode', String(darkMode));
 
@@ -67,8 +70,8 @@ describe('theme transitions', () => {
             </DarkModeContextProvider>,
         );
 
-        const paper = document.querySelector('.MuiMenu-paper');
+        const paper = document.querySelector<HTMLElement>('.MuiMenu-paper');
 
-        await waitFor(() => expect(paper.style.transition).toBe(''));
+        await waitFor(() => expect(paper!.style.transition).toBe(''));
     });
 });
