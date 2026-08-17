@@ -1,11 +1,19 @@
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { registerSchema } from '@monorepo/validation';
 import styles from './registerForm.module.css';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useRegister } from '../../hooks/useSession';
 import { toast } from 'react-toastify';
 import { nextDestination } from '../../utils/nextDestination';
 import { apiErrorMessage } from '../../utils/apiError';
-import { PASSWORD_HINT, PASSWORD_MESSAGE, PASSWORD_PATTERN } from '../../utils/validation';
+import { PASSWORD_HINT } from '../../utils/validation';
+
+// The file field is not part of the shared body contract, so it is added here
+// as a passthrough: without it the resolver would strip profilePicture from the
+// submitted values and the upload would be lost.
+const registerFormSchema = registerSchema.extend({ profilePicture: z.any() });
 
 interface RegisterFormValues {
     name: string;
@@ -15,7 +23,9 @@ interface RegisterFormValues {
 }
 
 const RegisterForm = () => {
-    const { register, handleSubmit, watch, formState: { errors } } = useForm<RegisterFormValues>();
+    const { register, handleSubmit, watch, formState: { errors } } = useForm<RegisterFormValues>({
+        resolver: zodResolver(registerFormSchema),
+    });
 
     const navigate = useNavigate();
     const { search } = useLocation();
@@ -52,10 +62,7 @@ const RegisterForm = () => {
                 placeholder="Enter your name.."
                 aria-invalid={errors.name ? 'true' : 'false'}
                 aria-describedby={errors.name ? 'register-name-error' : undefined}
-                {...register('name', {
-                    required: 'Name is required',
-                    maxLength: { value: 20, message: 'Name is too long' },
-                })}
+                {...register('name')}
             />
             {errors.name && <p id="register-name-error" className={styles.registerErrorMessage}>{errors.name.message}</p>}
 
@@ -71,10 +78,7 @@ const RegisterForm = () => {
                 placeholder="example@example.com"
                 aria-invalid={errors.email ? 'true' : 'false'}
                 aria-describedby={errors.email ? 'register-email-error' : undefined}
-                {...register('email', {
-                    required: 'Email is required',
-                    pattern: { value: /^\S+@\S+$/i, message: 'Invalid email format' },
-                })}
+                {...register('email')}
             />
             {errors.email && <p id="register-email-error" className={styles.registerErrorMessage}>{errors.email.message}</p>}
 
@@ -92,10 +96,7 @@ const RegisterForm = () => {
                 aria-describedby={
                     errors.password ? 'register-password-hint register-password-error' : 'register-password-hint'
                 }
-                {...register('password', {
-                    required: 'Password is required',
-                    pattern: { value: PASSWORD_PATTERN, message: PASSWORD_MESSAGE },
-                })}
+                {...register('password')}
             />
             <p id="register-password-hint" className={styles.registerHint}>
                 {PASSWORD_HINT}
