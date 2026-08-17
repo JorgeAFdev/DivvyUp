@@ -552,4 +552,18 @@ describe("PATCH /payment/:paymentId", () => {
         expect(response.status).toBe(409);
         expect(emitted).toHaveLength(0);
     });
+
+    it("400s an unparseable paymentId", async () => {
+        const response = await patch(`/payment/not-a-valid-object-id`, jorgeToken);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Invalid payment ID");
+    });
+
+    it("lets a well-formed but unknown paymentId through to the not-found check", async () => {
+        const response = await patch(`/payment/0123456789abcdef01234567`, jorgeToken);
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe("Payment not found");
+    });
 });
