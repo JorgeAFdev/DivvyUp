@@ -1,5 +1,8 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { userUpdateSchema } from "@monorepo/validation";
 import { toast } from "react-toastify";
 import type { AuthResponse, SessionUser } from "@monorepo/shared";
 import { useUpdateProfile } from "../../hooks/useProfile";
@@ -8,6 +11,10 @@ import { apiErrorMessage } from "../../utils/apiError";
 import styles from "./userEditForm.module.css";
 import { IoCloseOutline } from "react-icons/io5";
 
+// The file field is not in the shared body schema, so it is added here as a
+// passthrough — like registerForm — or the resolver would strip the upload.
+const userFormSchema = userUpdateSchema.extend({ profilePicture: z.any() });
+
 interface UserEditFormValues {
     name: string;
     email: string;
@@ -15,7 +22,9 @@ interface UserEditFormValues {
 }
 
 const UserEditForm = ({ user, onClose }: { user: SessionUser; onClose: () => void }) => {
-    const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<UserEditFormValues>();
+    const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<UserEditFormValues>({
+        resolver: zodResolver(userFormSchema),
+    });
 
     const mutation = useUpdateProfile();
 
@@ -63,10 +72,7 @@ const UserEditForm = ({ user, onClose }: { user: SessionUser; onClose: () => voi
             <input
                 type="text"
                 className={styles.formInput}
-                {...register("name", {
-                    required: "El nombre es obligatorio",
-                    maxLength: { value: 50, message: "El nombre es demasiado largo" }
-                })}
+                {...register("name")}
             />
             {errors.name && <p className={styles.errorMessage}>{errors.name.message}</p>}
 
@@ -76,10 +82,7 @@ const UserEditForm = ({ user, onClose }: { user: SessionUser; onClose: () => voi
             <input
                 type="email"
                 className={styles.formInput}
-                {...register("email", {
-                    required: "El email es obligatorio",
-                    pattern: { value: /^\S+@\S+$/i, message: "Formato de email inválido" }
-                })}
+                {...register("email")}
             />
             {errors.email && <p className={styles.errorMessage}>{errors.email.message}</p>}
 
