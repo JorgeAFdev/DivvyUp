@@ -67,7 +67,7 @@ const UserEditForm = ({ user, onClose }: { user: SessionUser; onClose: () => voi
             </div>
 
             <label className={styles.formLabel}>
-                Nombre
+                Name
             </label>
             <input
                 type="text"
@@ -102,22 +102,22 @@ const UserEditForm = ({ user, onClose }: { user: SessionUser; onClose: () => voi
                 {profilePicture?.[0] ? (
                     <img
                         src={URL.createObjectURL(profilePicture[0])}
-                        alt="Vista previa"
+                        alt="Preview"
                         className={styles.previewImage}
                     />
                 ) : user.profilePicture ? (
                     <img
                         src={user.profilePicture}
-                        alt="Foto actual"
+                        alt="Current photo"
                         className={styles.previewImage}
                     />
                 ) : (
-                    <p>Doesn't upload image</p>
+                    <p>No image uploaded</p>
                 )}
             </div>
 
             <button type="submit" className={styles.button} disabled={mutation.isPending}>
-                {mutation.isPending ? "Guardando..." : "Guardar cambios"}
+                {mutation.isPending ? "Saving..." : "Save changes"}
             </button>
         </form>
     );
