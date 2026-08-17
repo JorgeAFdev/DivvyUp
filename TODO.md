@@ -146,19 +146,15 @@ gobierna todas las rutas necesita su rama, su PR y una pasada completa de Cypres
 
 ## 11. Las validaciones, a Zod y en un paquete compartido — HECHO el 17-08-2026
 
-Las cuatro fases (auth, group, expense, payment) están en `main` y desplegadas: cada endpoint
-declara la forma de su entrada en un esquema Zod de `@monorepo/validation` en vez de una escalera de
-`if`. La arquitectura (forma→esquema / BD→controlador, `objectId` y `decimal.js` compartidos, el
-`validate` de cuerpo y de params, el contrato de error `{ error: "..." }` sin tocar) vive en
-`CLAUDE.md` → *packages/validation*, *Auth* y *Backend request flow*.
+Las cinco áreas de entrada (auth, group, expense, payment e invite/join) están en `main` y
+desplegadas: cada endpoint declara la forma de su entrada en un esquema Zod de `@monorepo/validation`
+en vez de una escalera de `if`. La arquitectura (forma→esquema / BD→controlador, `objectId` y
+`decimal.js` compartidos, el `validate` de cuerpo y de params, el contrato de error `{ error: "..." }`
+sin tocar) vive en `CLAUDE.md` → *packages/validation*, *Auth* y *Backend request flow*.
 
-**Pendiente al hacer el Zod de invite:** revisar `backend/src/utils/validation.ts`. El criterio: lo
-que sea validación o formateo de un dato **del cuerpo** de ese endpoint (el `.trim()` de `cleanName`
-sobre el `name` del join, `invite.controller.ts:84/85/90`) se muda al esquema Zod; lo que sea lógica
-del endpoint se queda fuera — `hasDuplicateNames` (compara contra los miembros ya guardados, que
-vienen de la BD) y `cleanName(creator.name)` de `createGroup` (formatea un valor de la BD, no del
-cuerpo). Con invite en el esquema, ver qué queda vivo en `utils/validation.ts` y si merece seguir
-siendo un módulo aparte.
+Con invite hecho, la revisión de `utils/validation.ts` quedó resuelta: el `cleanName` del `name` del
+join se fue al `.trim()` del esquema; `hasDuplicateNames` (group + invite) y `cleanName(creator.name)`
+de `createGroup` se quedan porque son BD, no forma. El módulo sobrevive, aún usado por ambos.
 
 ## 13. El backend a ESM — HECHO el 08-08-2026
 
