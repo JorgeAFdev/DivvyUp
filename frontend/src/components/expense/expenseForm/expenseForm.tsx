@@ -1,15 +1,13 @@
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { z } from "zod";
+import { expenseSchema } from "@monorepo/validation";
 import type { HydratedExpense, Member } from "@monorepo/shared";
 import type { ExpenseInput } from "../../../utils/expenseApi";
 import styles from "./expenseform.module.css";
 import { IoCloseOutline } from "react-icons/io5";
 
-interface ExpenseFormValues {
-    description: string;
-    totalAmount: string;
-    paidBy: string;
-    participants: string[];
-}
+type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
 interface ExpenseFormProps {
     onClose: () => void;
@@ -25,9 +23,10 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
         handleSubmit,
         formState: { errors },
     } = useForm<ExpenseFormValues>({
+        resolver: zodResolver(expenseSchema),
         defaultValues: {
             description: defaultValues.description,
-            totalAmount: defaultValues.totalAmount != null ? String(defaultValues.totalAmount) : undefined,
+            totalAmount: defaultValues.totalAmount,
             paidBy: defaultValues.paidBy?._id,
             participants: defaultValues.participants
                 ?.map((p) => p.member?._id)
@@ -35,15 +34,8 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
         }
     });
 
-    // The text input holds a string; the contract wants a number. decimal.js on
-    // the backend parses either, so the single conversion happens here.
     const handleFormSubmit = (data: ExpenseFormValues) => {
-        onSubmit({
-            description: data.description,
-            totalAmount: Number(data.totalAmount),
-            paidBy: data.paidBy,
-            participants: data.participants,
-        });
+        onSubmit(data satisfies ExpenseInput);
     };
 
     return (
@@ -61,10 +53,7 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
                         type="text"
                         placeholder="Flights to madrid"
                         autoFocus
-                        {...register("description", {
-                            required: "Description is required",
-                            maxLength: { value: 30, message: 'description is to large' },
-                        })}
+                        {...register("description")}
                         className={`${styles.input} ${errors.description ? styles.errorInput : ""}`}
                     />
                     {errors.description && (
@@ -78,15 +67,7 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
                         id="totalAmount"
                         type="text"
                         placeholder="20.50"
-                        {...register("totalAmount", {
-                            required: "Total amount is required",
-                            min: { value: 0.01, message: "Amount must be greater than 0" },
-                            max: { value: 999999, message: "Amount must be less than 1000000" },
-                            pattern: {
-                                value: /^(?:\d+|\d*\.\d{1,2})$/,
-                                message: "Enter a valid amount (e.g., 20 or 75.40)",
-                            },
-                        })}
+                        {...register("totalAmount", { valueAsNumber: true })}
                         className={`${styles.input} ${errors.totalAmount ? styles.errorInput : ""}`}
                     />
                     {errors.totalAmount && (
@@ -97,7 +78,7 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
                 <div className={styles.payer}>
                     <label htmlFor="select-payer" className={styles.label}>Paid By</label>
                     <select
-                        {...register("paidBy", { required: "Please select a payer" })}
+                        {...register("paidBy")}
                         id="select-payer"
                         defaultValue=""
                         className={styles.select}
@@ -123,7 +104,7 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
                                 defaultChecked={defaultValues.participants ? defaultValues.participants.some((p) => p.member?._id === member._id) : true}
                                 value={member._id}
                                 id={`participant-${member._id}`}
-                                {...register('participants', { required: 'At least one participant must be selected' })} />
+                                {...register('participants')} />
                             <label htmlFor={`participant-${member._id}`}>
                                 {member.name}
                             </label>
