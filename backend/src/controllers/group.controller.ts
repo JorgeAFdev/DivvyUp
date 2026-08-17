@@ -19,9 +19,11 @@ const createGroup = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Member names are trimmed by groupSchema; the creator's name comes from
+    // the User doc, which no schema touches, so it is normalized here.
     const formattedMembers = [
       { name: cleanName(creator.name), user: creator._id },
-      ...members.map((member: any) => ({ name: cleanName(member.name) })),
+      ...members.map((member: any) => ({ name: member.name })),
     ];
 
     if (hasDuplicateNames(formattedMembers.map((member) => member.name))) {
@@ -55,7 +57,7 @@ const updateGroup = async (req: Request, res: Response) => {
       return res.status(403).json({ error: "You don't have permission to edit this group" });
     }
 
-    if (hasDuplicateNames(members.map((member: any) => cleanName(member.name)))) {
+    if (hasDuplicateNames(members.map((member: any) => member.name))) {
       return res.status(400).json({ error: "Duplicate members are not allowed" });
     }
 
@@ -119,8 +121,8 @@ const updateGroup = async (req: Request, res: Response) => {
       members: members.map((entry: any) => {
         const current = entry._id && currentById.get(entry._id.toString());
         return current
-          ? { _id: current._id, name: cleanName(entry.name), user: current.user }
-          : { name: cleanName(entry.name) };
+          ? { _id: current._id, name: entry.name, user: current.user }
+          : { name: entry.name };
       }),
     });
 
