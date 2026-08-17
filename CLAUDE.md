@@ -38,7 +38,7 @@ TypeScript layout: root `tsconfig.base.json` holds the shared options (`strict`,
 extends it (NodeNext, `noEmit`, used by `typecheck` and the editor, includes tests); `backend/tsconfig.build.json`
 emits `dist/` and excludes `src/tests`. Relative imports keep the `.js` extension (NodeNext resolves it to the `.ts`
 source). Mongoose types come from `InferSchemaType<typeof Schema>`; the balance/debt engine lives in `services/ledger.ts`,
-not on the document (see [docs/ts-migration.md](docs/ts-migration.md)).
+not on the document (see [docs/archive/ts-migration.md](docs/archive/ts-migration.md)).
 
 Frontend (`cd frontend`):
 ```bash

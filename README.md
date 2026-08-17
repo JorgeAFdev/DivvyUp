@@ -12,10 +12,10 @@ With DivvyUp, you can create groups, add expenses with multiple participants, an
 
 ## 🛠️ Tech Stack
 
-The project is a **pnpm-workspaces monorepo** driven by **Turborepo**. Both workspaces are ESM.
+The project is a **pnpm-workspaces monorepo** driven by **Turborepo**. All workspaces are ESM and **TypeScript** (`strict`); the serialized API contract lives in `packages/shared` (`@monorepo/shared`), typed on both ends.
 
 ### Frontend
-- **React 18** + **Vite**
+- **React 18** + **Vite** + **TypeScript** (`strict`)
 - **React Router DOM 7**
 - **TanStack Query (React Query) v5**
 - **React Hook Form**
@@ -40,7 +40,7 @@ The project is a **pnpm-workspaces monorepo** driven by **Turborepo**. Both work
 - **pnpm** (package manager, pinned via `packageManager`)
 - **Turborepo** (task pipeline)
 - **tsx** (dev) / **tsc** (build to `dist/`)
-- **Vitest** + **Supertest** (backend), **Jest** + **Cypress** + **Storybook** (frontend)
+- **Vitest** + **Supertest** (backend), **Vitest** + **Cypress** + **Storybook** (frontend)
 - **Docker** (backend image) + **MongoDB Atlas**
 
 ### Deployment
@@ -121,16 +121,18 @@ DivvyUp/
 │   │   ├── routers/        # Express route definitions
 │   │   ├── schemas/        # Mongoose models
 │   │   ├── security/       # JWT middleware
-│   │   ├── services/       # Core domain logic (ledger, email, notifications)
+│   │   ├── serializers/    # Mongoose docs -> @monorepo/shared response contract
+│   │   ├── services/       # Core domain logic (ledger, split, email, notifications)
 │   │   ├── socket/         # WebSocket server and event handlers
 │   │   ├── types/          # Ambient type declarations
+│   │   ├── utils/          # Member hydration and shared validation helpers
 │   │   ├── tests/          # Vitest suites
 │   │   └── index.ts
 │   ├── Dockerfile          # Multi-stage: tsc -> dist/, runtime ships dist only
 │   ├── tsconfig*.json
 │   └── package.json
 │
-├── frontend/               # Frontend built with React + Vite
+├── frontend/               # Frontend built with React, Vite and TypeScript
 │   ├── public/             # Static assets (e.g., favicon, logo)
 │   ├── src/
 │   │   ├── assets/         # Images and icons
@@ -140,11 +142,14 @@ DivvyUp/
 │   │   ├── pages/          # Application pages (routes)
 │   │   ├── stories/        # Storybook stories
 │   │   ├── utils/          # Utility functions
-│   │   ├── App.jsx         # Root component
-│   │   └── main.jsx        # ReactDOM entry point
+│   │   ├── App.tsx         # Root component
+│   │   └── main.tsx        # ReactDOM entry point
 │   ├── .env                # Environment variables (frontend)
 │   └── index.html
 │   └── package.json   
+│
+├── packages/
+│   └── shared/             # @monorepo/shared — serialized API contract (compiled to dist/)
 │
 ├── package.json            # Root package file (monorepo manager)
 ├── turbo.json              # Turborepo config

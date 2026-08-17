@@ -246,27 +246,21 @@ que la pasada mecánica se verificara en verde sin ruido de tipos.
 - El `require` lazy de `mongodb-memory-server` dentro de `connectDB()` pasó a `await import(...)`,
   dentro de la rama `NODE_ENV === 'test'`. `connectDB()` ya era async.
 
-## 14. TypeScript
+## 14. TypeScript — HECHO el 14-08-2026
 
-**Decidido el 04-08-2026: sí.** El proyecto es lo bastante pequeño como para que la migración no sea
-tediosa, y es lo que hace que Zod (punto 11) aporte tipos y no sólo validación en runtime.
+**Backend y frontend a TypeScript estricto, completo.** El plan por fases y las decisiones (qué se
+descartó y por qué) están archivados en [docs/archive/ts-migration.md](docs/archive/ts-migration.md);
+las reglas vigentes viven en `CLAUDE.md`.
 
-**Backend HECHO el 11-08-2026 (PR #103 + #104), desplegado y verificado en producción. Queda el
-frontend.** El plan completo y las decisiones están en [docs/ts-migration.md](docs/ts-migration.md);
-las reglas del backend TS viven en `CLAUDE.md`.
-
-- **Backend (hecho):** los 25 ficheros de `src` + 5 tests a `.ts`, `strict: true`, sin `allowJs`.
-  Mongoose vía `InferSchemaType<typeof Schema>` (+ un tipo hidratado por el 5º genérico del modelo
-  para que `findById`/`create`/`find` devuelvan subdocumentos tipados). El motor de balances salió a
-  `services/ledger.ts` en el PR previo (#103). Dev con `tsx watch`, producción con `tsc` → `dist/` en
-  Dockerfile multi-stage (la imagen no lleva toolchain TS), y `tsconfig.base.json` en la raíz. La
-  puerta `tsc --noEmit` corre en cada PR (`.github/workflows/typecheck.yaml`) — el primer check de PR
-  del repo. `clean-e2e` también pasó a TS y lo cubre el typecheck.
-- **Frontend (pendiente, su propia sesión):** extiende el mismo `tsconfig.base.json`
-  (`moduleResolution: Bundler`, `lib: DOM`, `jsx: react-jsx`, `noEmit`). Decisiones abiertas:
-  jest → vitest o `@babel/preset-typescript`, retirar `prop-types`, rigor de `.jsx` → `.tsx` con MUI y
-  react-hook-form tipados, y si se engancha al mismo Action de `typecheck` (Vite nunca comprueba
-  tipos).
+- **Backend (PR #103 + #104):** `src` + tests a `.ts`, `strict`, sin `allowJs`. Mongoose vía
+  `InferSchemaType` + tipos hidratados; motor de balances en `services/ledger.ts` y reparto en
+  `services/split.ts`. Dev con `tsx watch`, producción `tsc` → `dist/` en Dockerfile multi-stage.
+  Puerta `tsc --noEmit` en cada PR.
+- **`packages/shared` (#106) + serializadores (#113):** contrato serializado; cada controller tipa su
+  respuesta contra el contrato vía `serializers/contract.ts`.
+- **Frontend (#105, #107–#111):** `frontend/src` 100% `.ts`/`.tsx` estricto; jest → vitest,
+  `prop-types` fuera, react-query/MUI/react-hook-form tipados. `noUnusedLocals`/`noUnusedParameters`
+  activos en el gate.
 
 ## 15. Contrato de errores por código, como en Cartobol
 
