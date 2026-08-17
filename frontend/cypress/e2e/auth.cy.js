@@ -44,7 +44,7 @@ describe('session', () => {
 
         cy.contains('Edit profile').click();
         cy.get('input[type="text"]').clear().type('Jorge Alvarez');
-        cy.contains('button', 'Guardar cambios').click();
+        cy.contains('button', 'Save changes').click();
 
         // The profile reads the user from the session, not from a query, so the
         // form writes localStorage and reloads. This is what checks it wrote.
