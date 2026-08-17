@@ -144,151 +144,21 @@ gobierna todas las rutas necesita su rama, su PR y una pasada completa de Cypres
 - Cambia el estado del riesgo si algún día se plantea SSR o RSC en el front: en cuanto se escriba la
   primera server action, esto pasa de aplazable a bloqueante y hay que subir antes.
 
-## 11. Las validaciones, a Zod y en un paquete compartido
+## 11. Las validaciones, a Zod y en un paquete compartido — HECHO el 17-08-2026
 
-Que cada endpoint declare la forma de su entrada en un esquema y no en una escalera de `if`. Hoy la
-validación existe, pero está escrita a mano y repetida.
+Las cuatro fases (auth, group, expense, payment) están en `main` y desplegadas: cada endpoint
+declara la forma de su entrada en un esquema Zod de `@monorepo/validation` en vez de una escalera de
+`if`. La arquitectura (forma→esquema / BD→controlador, `objectId` y `decimal.js` compartidos, el
+`validate` de cuerpo y de params, el contrato de error `{ error: "..." }` sin tocar) vive en
+`CLAUDE.md` → *packages/validation*, *Auth* y *Backend request flow*.
 
-**Fase 1 (auth) — HECHO el 17-08-2026.** Existe `packages/validation` (`@monorepo/validation`, ESM +
-TS compilado a `dist/`, Zod v4). Exporta `registerSchema` y `loginSchema` (mismas reglas: login
-reutiliza las de register, no hay cuentas pre-fuerza que dejar fuera), con el texto del error dentro
-del esquema. El backend valida con `middlewares/validate.ts` (`validate(schema)` delante de la ruta,
-detrás de multer en register; aplana los issues a `{ error: "motivo. motivo" }`, así que el contrato
-no cambia; reemplaza `req.body` por el parseado). El front consume el mismo esquema con
-`@hookform/resolvers` (`zodResolver`); `PASSWORD_HINT` se queda en el front como copy. `registrationErrors()`
-y el regex duplicado murieron; `name` pasó a min 3 / max 40 (Mongoose `maxlength` bajado a 40). Toda
-la fontanería nueva hecha: `zod` runtime dep en los tres `package.json`, dos `COPY` por stage del
-Dockerfile, filtros de `typecheck.yaml` y `prod-deploy.yaml`. **Falta a mano en el panel de Cloudflare
-Pages:** cambiar el build command a `--filter @monorepo/frontend...` (con los tres puntos), o el build
-del front no resuelve `@monorepo/validation`. Detalle en `CLAUDE.md` → *packages/validation*.
-
-**Fase 2 (group) — HECHO el 17-08-2026.** `packages/validation/src/group.ts` exporta `groupSchema`
-(cuerpo de create/update: `name` ≤30, `description` ≤50, `members` no vacío con `name` limpiado
-1-30) y `groupParamsSchema` (el `:groupId`, un ObjectId por **regex** de 24-hex, no por `mongoose`,
-para no meter mongoose en el bundle del front). El `validate` se ensanchó a `validate(schema,
-'params')`: la ruta que necesita las dos cosas encadena params-primero. Se borraron `validateGroupBody`
-y los `ObjectId.isValid(groupId)` inline de los controladores; quedan las de BD/negocio (duplicados,
-pertenencia, el 409 de miembro con gastos). El form del front consume `groupSchema` por `zodResolver`
-(extendido con el flag UI `hasAccount` como passthrough), matando las reglas inline duplicadas (con su
-typo `name is to large`). Mensajes pineados por tests preservados (`Every member needs a name`,
-`member name is too large`).
-
-**Fase 3 (expense) — HECHO el 17-08-2026.** `packages/validation/src/expense.ts` exporta
-`expenseSchema` (cuerpo: `description` 1-30, `totalAmount` número >0 <1M y ≤2 decimales, `paidBy`
-24-hex, `participants` lista no vacía de strings sin duplicados) y dos esquemas de params
-(`expenseGroupParamsSchema` para `:groupId`, `expenseParamsSchema` para `:groupId`+`:expenseId`). El
-`validateExpense` viejo mezclaba forma y pertenencia: la forma se fue al esquema, y la pertenencia
-(`paidBy`/participants son miembros del grupo) quedó en el controlador como `checkMembership`. **La
-comprobación de ≤2 decimales usa `decimal.js` dentro de un `superRefine`**, así que `decimal.js` pasó
-a ser `dependency` del paquete (antes solo del backend) y el front lo bundlea transitivamente — se
-acabó la regla duplicada (regex de string en el front vs `Decimal` en el back). El id 24-hex se
-comparte desde `src/common.ts` (`objectId`), y `group.ts` se refactorizó para usarlo. El form del
-front consume `expenseSchema` por `zodResolver` sin extender (sus campos son el esquema), con
-`valueAsNumber: true` en el importe porque el input es texto y el esquema quiere `number`. Ninguna
-fontanería nueva (Docker/Pages ya instalan las deps del paquete). Mensajes pineados intactos y +9
-tests exigentes (params, rango del importe, forma≠existencia).
-
-**Lo que queda:** el esquema de entrada de payment. `pay` (`payments.controller.ts`) no tiene cuerpo:
-solo valida el `:paymentId` (un ObjectId) — es solo un `validate(paymentParamsSchema, 'params')` con
-el `objectId` de `common.ts`; el resto de `pay` (que el pago exista, que esté `pending`, permisos) es
-lógica de BD que se queda. Cuando entre multiidioma revive el punto 15 (códigos + i18next), y el enum
-de códigos saldría de este mismo paquete.
-
-**Al hacer el Zod de invite, revisar `backend/src/utils/validation.ts`.** El criterio: todo lo que
-sea validación o formateo de un dato **del cuerpo** de ese endpoint (el `.trim()` de `cleanName` sobre
-el `name` que llega en el join, `invite.controller.ts:84/85/90`) se muda al esquema Zod. Lo que sea
-lógica del endpoint se queda fuera de Zod: `hasDuplicateNames` (compara contra los miembros ya
-guardados del grupo, que vienen de la BD) y el `cleanName(creator.name)` de `createGroup` (formatea un
-valor de la BD, no del cuerpo). Con la parte de invite en el esquema, ver qué queda vivo en
-`utils/validation.ts` y si merece seguir siendo un módulo aparte.
-
-**Decidido el 04-08-2026:**
-
-- **Una sola fuente de verdad, compartida entre backend y frontend.** No es Zod suelto en cada lado
-  repitiendo los regex: es un tercer paquete del workspace que los dos importan. Si no se comparte,
-  la tarea no vale la pena, porque lo que duele es la duplicación, no la escalera de `if`.
-- **Sólo forma de entrada.** Lo que necesita la BD (que el grupo exista, que el miembro pertenezca,
-  que los `amountOwed` sumen el total) se queda en el controlador del backend y no entra al paquete.
-- **El backend pasa a ESM** (punto 13) y **el proyecto a TypeScript** (punto 14). Las dos deshacen
-  las restricciones que hacían fea esta tarea, así que van antes.
-- ~~**Los mensajes no se comparten: viaja un código de error** y la copy es del front (punto 15).~~
-  **Revocado el 17-08-2026 (ver abajo):** sin multiidioma, el código no compra nada; la API sigue
-  devolviendo el mensaje literal y el mensaje vive en el propio esquema de Zod, dentro del paquete.
-
-Con eso, el orden era **13 → 14 → 15 → 11**. Con el 15 absorbido (mensaje literal, sin códigos), lo
-que queda es sólo el **11**. Ninguna de las cuatro depende de este punto, así que se pueden hacer y
-desplegar sueltas.
-
-**Decidido el 17-08-2026 (cierra la parte útil del 15 dentro del 11):**
-
-- **El paquete se llama `packages/validation`.**
-- **La API devuelve el mensaje literal, no un código.** Montar códigos + diccionario en el front es
-  aparato para un problema que hoy no existe: la app es de un solo idioma y no hay i18n. El contrato
-  de error sigue siendo `{ error: "..." }`, que es lo que `frontend/src/utils/apiError.ts` ya lee y
-  los 14 consumidores ya pintan. Si algún día entra multiidioma, **ahí** sí se pasa a códigos (era el
-  punto 15). Hasta entonces, no.
-- **El texto del error vive en el esquema de Zod**, dentro de `packages/validation` (p. ej.
-  `.min(8, 'Password must be at least 8 characters long ...')`). O sea el paquete es *reglas + su
-  copy*, no sólo reglas: es la única forma de que backend y frontend no vuelvan a duplicar el texto,
-  que es justo lo que duele hoy (el regex de contraseña en dos sitios). El backend aplana los issues
-  de Zod a la forma `{ error: "motivo. otro motivo" }` que ya existe, así que **el contrato de la API
-  no cambia** y no se toca ningún consumidor del front.
-
-**Estado actual (verificado):**
-
-- **33 `res.status(400)`** repartidos por los controladores: 16 en `group.controller.js`, 12 en
-  `expense.controller.js`, 4 en `auth.routes.js` y 1 en `payments.controller.js`. Cada uno con su
-  propio `if` y su propio texto.
-- No hay `middlewares/`: sus tres helpers murieron con las rutas que los usaban (`796040b`), así que
-  no queda ni un punto común donde enganchar nada.
-- La regla de contraseña del punto 1 vive **en dos sitios a la vez**: `registrationErrors()` en
-  `auth.routes.js` y el `pattern` de `registerForm.jsx`. Son el mismo regex copiado, y nada obliga a
-  que sigan iguales.
-- `zod` **no está instalado** en ninguno de los dos workspaces.
-- Formato de error actual: `{ error: "motivo. otro motivo" }`, motivos unidos con `. `. Zod devuelve
-  un array de issues con `path`, que es más útil para pintar el error junto a su campo pero **cambia
-  el contrato** de la API.
-
-**Las dos cosas que rompen esto, las dos comprobadas.** (La tercera, que jest no podía consumir un
-paquete ESM, ya la resolvió el punto 13: el backend corre en vitest y es ESM.)
-
-- **El Dockerfile no lo copiaría.** `backend/Dockerfile` copia explícitamente los manifiestos raíz,
-  `backend/package.json`, `frontend/package.json` y `backend/src`. Un `packages/contracts/` nuevo no
-  entra: el `pnpm install --frozen-lockfile` falla porque el lockfile referencia un miembro del
-  workspace que no está en la imagen, y aunque pasara, el código no estaría para requerirlo en
-  runtime. Hacen falta dos `COPY` más.
-- **El build de Cloudflare Pages tampoco.** El comando es
-  `pnpm install --frozen-lockfile --filter @monorepo/frontend`, **sin los tres puntos finales**, así
-  que selecciona sólo ese paquete y no sus dependencias del workspace. Tiene que pasar a
-  `--filter @monorepo/frontend...`, como ya hace el Dockerfile con el backend. Y vive en el panel de
-  Pages, no en el repo, así que no se ve en ningún diff.
-
-Además, `pnpm-workspace.yaml` declara `backend` y `frontend` uno a uno, no con un glob, así que el
-paquete nuevo hay que añadirlo ahí a mano.
-
-**A decidir, lo que queda:**
-
-- ~~**Cómo se llama y dónde vive.**~~ **Decidido: `packages/validation`** (17-08-2026). ESM + TS
-  compilado, como los otros dos.
-- **¿Sólo esquemas, o también los tipos de las respuestas?** Las respuestas ya tienen su contrato en
-  `@monorepo/shared` (punto 14), así que este paquete es **sólo entrada**: esquemas de Zod + la copy
-  de sus errores, nada de tipos de respuesta.
-- **`login` no puede usar el mismo esquema que `register`.** El registro exige la regla de fuerza;
-  el login tiene que aceptar cualquier cosa que un usuario antiguo tenga guardada, o dejas fuera a
-  las cuentas creadas antes de la regla. Son dos esquemas, no uno reutilizado.
-- Zod tiene que ir en `dependencies` del backend, no en dev, o el contenedor (`--prod`) se cae al
-  arrancar. Y ojo con `minimumReleaseAge: 4320`.
-- En el front, `react-hook-form` ya está y tiene `@hookform/resolvers/zod`, así que el formulario
-  validaría con el mismo esquema en vez de con `pattern` a mano.
-- ¿Middleware genérico (`validate(schema)` delante de cada ruta) o `schema.safeParse(req.body)` al
-  principio de cada controlador? Lo primero saca la validación del controlador del todo, pero
-  reintroduce el `middlewares/` que se borró.
-- En el front, `react-hook-form` ya está y tiene `@hookform/resolvers/zod`, así que el formulario
-  pasaría a validar con el mismo esquema en vez de con `pattern` a mano.
-- Cambiar el formato del error toca el front: hoy los componentes pintan `error` como un string.
-  O se mantiene la forma actual aplanando los issues de Zod, o se migran los consumidores.
-- Hay red de seguridad razonable: los 103 tests del backend cubren buena parte de esos 400, así que
-  el refactor se puede hacer sin adivinar. `auth.test.js` fija los del registro con el texto exacto.
+**Pendiente al hacer el Zod de invite:** revisar `backend/src/utils/validation.ts`. El criterio: lo
+que sea validación o formateo de un dato **del cuerpo** de ese endpoint (el `.trim()` de `cleanName`
+sobre el `name` del join, `invite.controller.ts:84/85/90`) se muda al esquema Zod; lo que sea lógica
+del endpoint se queda fuera — `hasDuplicateNames` (compara contra los miembros ya guardados, que
+vienen de la BD) y `cleanName(creator.name)` de `createGroup` (formatea un valor de la BD, no del
+cuerpo). Con invite en el esquema, ver qué queda vivo en `utils/validation.ts` y si merece seguir
+siendo un módulo aparte.
 
 ## 13. El backend a ESM — HECHO el 08-08-2026
 
