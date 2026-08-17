@@ -130,11 +130,15 @@ TODO 11.
 - **Login validates the same shape as register** (email format + password strength), so a malformed
   login body 400s before the credential check; a *well-formed unknown* email still returns "Invalid
   credentials", so account enumeration stays shut.
-- **Plumbing that has to move with a new workspace package** (the same two that `shared` needed, now
-  a runtime dep): two `COPY`s in each Dockerfile stage plus `--filter=@monorepo/validation` and a
-  build step; the Cloudflare Pages build command's `--filter @monorepo/frontend...` (the `...` pulls
-  workspace deps — it lives in the Pages dashboard, not the repo); and the `typecheck.yaml` /
-  `prod-deploy.yaml` path filters. `pnpm-workspace.yaml` needs nothing (it globs `packages/*`).
+- **Plumbing that has to move with a new workspace package**, and more than `shared` needed because
+  this one is imported at *runtime*: two `COPY`s in each Dockerfile stage plus
+  `--filter=@monorepo/validation` and an explicit `pnpm --filter=@monorepo/validation build` before
+  the backend build; the Cloudflare Pages build command (in the dashboard, not the repo) has to
+  **build `validation` before `vite build`** — the frontend resolves it at bundle time, and running
+  Vite directly skips Turborepo's `^build`, so its `dist/` won't exist otherwise (see the exact
+  command under *Deployment*); and the `typecheck.yaml` / `prod-deploy.yaml` path filters.
+  `pnpm-workspace.yaml` needs nothing (it globs `packages/*`). `shared` never hit this because the
+  frontend imports it type-only, so Vite never resolves its `dist/`.
 
 ### A group member is a name, not an account
 
@@ -294,7 +298,7 @@ The backend runs at `https://divvyup-api.jorgeaf.dev` on a self-hosted **Coolify
 Frontend deploys on **Cloudflare Pages** (project `divvyup`, live at `https://divvyup.jorgeaf.dev`), connected to the GitHub repo — no workflow file, the config lives in the Pages dashboard:
 
 - Root directory is the **repo root**, not `frontend/`: Pages picks the package manager from the lockfile it finds there, and `pnpm-lock.yaml` + `pnpm-workspace.yaml` are at the root (same reason as the Docker build context).
-- Build command `pnpm install --frozen-lockfile --filter @monorepo/frontend && pnpm --filter @monorepo/frontend build`, output `frontend/dist`.
+- Build command `pnpm install --frozen-lockfile --filter @monorepo/frontend... && pnpm --filter @monorepo/validation build && pnpm --filter @monorepo/frontend build`, output `frontend/dist`. Each part is load-bearing: `--filter @monorepo/frontend...` (the `...`) installs the frontend plus its workspace deps, so `@monorepo/validation` and its `zod` are linked and the frontend's own `typescript` devDep is present (that is the `tsc` the next step runs with). Then `pnpm --filter @monorepo/validation build` compiles `validation` to `dist/` **before** `vite build`, because the frontend imports it at runtime (`import { registerSchema }`) and Vite resolves `@monorepo/validation/dist` at bundle time; running `pnpm --filter frontend build` invokes Vite directly, so Turborepo's `^build` never fires to build it first — the frontend build fails with *Failed to resolve entry for package "@monorepo/validation"* if this step is missing. `@monorepo/shared` needs no build here: the frontend imports it type-only, so it erases and Vite never resolves it.
 - Build env vars: `VITE_API_URL`, `VITE_SOCKET_URL` (Vite inlines them at build time, so they must be build vars), `NODE_VERSION` (mandatory — `packageManager: pnpm@11.0.0` needs Node >= 22.13, newer than the default image), `SKIP_DEPENDENCY_INSTALL=1` (the filtered install is done by the build command; without this Pages also runs an unfiltered `pnpm install` that pulls the backend's 122 MB `mongodb-memory-server` binary) and `CYPRESS_INSTALL_BINARY=0`.
 - Pages serves `index.html` for unmatched routes on its own, so the SPA needs no `_redirects` file.
 - The custom domain is `divvyup.jorgeaf.dev`. Pages can't disable the generated `divvyup-8wi.pages.dev`, so it is 301'd to the custom domain by an **account-level Bulk Redirect** (not a zone Redirect Rule — the `pages.dev` source isn't in the `jorgeaf.dev` zone), with preserve-query/subpath/path-suffix/include-subdomains on. `include subdomains` also catches preview deployments (`<hash>.divvyup-8wi.pages.dev`).
