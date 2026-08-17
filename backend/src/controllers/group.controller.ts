@@ -9,30 +9,10 @@ import { updateBalance, generateDebts } from "../services/ledger.js";
 import { cleanName, hasDuplicateNames } from "../utils/validation.js";
 import { serializeGroup, serializeGroupDetails } from "../serializers/contract.js";
 
-const validateGroupBody = ({ name, description, members }: { name?: string; description?: string; members?: any[] }) => {
-  if (!name || !description || !members || members.length === 0) {
-    return "incomplete data";
-  }
-  if (name.length > 30) { return "name is too large"; }
-  if (description.length > 50) { return "description is too large"; }
-  if (members.some((member) => !cleanName(member.name))) {
-    return "Every member needs a name";
-  }
-  if (members.some((member) => cleanName(member.name).length > 30)) {
-    return "member name is too large";
-  }
-  return null;
-};
-
 const createGroup = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { name, description, members } = req.body;
-
-    const invalid = validateGroupBody({ name, description, members });
-    if (invalid) {
-      return res.status(400).json({ error: invalid });
-    }
 
     const creator = await User.findById(userId);
     if (!creator) {
@@ -64,15 +44,6 @@ const updateGroup = async (req: Request, res: Response) => {
     const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
     const { name, description, members } = req.body;
-
-    if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
-      return res.status(400).json({ error: "Invalid group ID" });
-    }
-
-    const invalid = validateGroupBody({ name, description, members });
-    if (invalid) {
-      return res.status(400).json({ error: invalid });
-    }
 
     const group = await Group.findById(groupId);
     if (!group) {
@@ -191,9 +162,6 @@ const getGroupById = async (req: Request, res: Response) => {
     const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
 
-    if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
-      return res.status(400).json({ error: "Invalid group ID" });
-    }
     const group = await Group.findById(groupId).populate("members.user", MEMBER_FIELDS);
     if (!group) {
       return res.status(400).json({ error: "Group does not exist" })
@@ -213,10 +181,6 @@ const deleteGroup = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
-
-    if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
-      return res.status(400).json({ error: "Invalid group ID" });
-    }
 
     const group = await Group.findById(groupId)
     if (!group) { return res.status(404).json({ error: 'group not found' }) }
@@ -239,10 +203,6 @@ const getGroupDetails = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
-
-    if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
-      return res.status(400).json({ error: "Invalid group ID" });
-    }
 
     const group = await Group.findById(groupId).populate('members.user', MEMBER_FIELDS);
 
