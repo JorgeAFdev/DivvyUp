@@ -609,6 +609,28 @@ describe("POST /group/join/:inviteCode", () => {
         const response = await post(`/group/join/${group.inviteCode}`, anaToken, {});
 
         expect(response.status).toBe(400);
+        expect(response.body.error).toBe("A memberId or a name is required");
+    });
+
+    it("refuses a whitespace-only name as if it were absent", async () => {
+        const response = await post(`/group/join/${group.inviteCode}`, anaToken, { name: "   " });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("A memberId or a name is required");
+    });
+
+    it("400s an unparseable memberId", async () => {
+        const response = await post(`/group/join/${group.inviteCode}`, anaToken, { memberId: "not-an-id" });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Invalid member ID");
+    });
+
+    it("trims the new member's name", async () => {
+        const response = await post(`/group/join/${group.inviteCode}`, anaToken, { name: "  Bea  " });
+
+        expect(response.status).toBe(200);
+        expect(response.body.members[3].name).toBe("Bea");
     });
 });
 
@@ -630,5 +652,12 @@ describe("POST /group/:groupId/invite-code/regenerate", () => {
         const response = await post(`/group/${group._id}/invite-code/regenerate`, anaToken);
 
         expect(response.status).toBe(403);
+    });
+
+    it("400s an unparseable groupId", async () => {
+        const response = await post(`/group/not-a-valid-object-id/invite-code/regenerate`, jorgeToken);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Invalid group ID");
     });
 });

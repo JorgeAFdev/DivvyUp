@@ -1,7 +1,8 @@
-// Name normalization and the group-uniqueness check, shared by the group and
-// invite controllers. Member names are unique within a group, compared
-// lowercased. Body-shape validation lives in @monorepo/validation now; these
-// stay because they are DB/business rules (uniqueness, storage form), not shape.
+// DB/business helpers left after body-shape validation moved to
+// @monorepo/validation. hasDuplicateNames (group + invite controllers) enforces
+// the case-insensitive uniqueness of member names within a group. cleanName
+// only normalizes the creator's stored User name in createGroup — the one name
+// no request schema trims; body names are trimmed by their Zod schema.
 const cleanName = (name: unknown) => (typeof name === "string" ? name.trim() : "");
 
 const hasDuplicateNames = (names: string[]) => {

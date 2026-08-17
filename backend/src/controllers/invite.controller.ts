@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import Group from "../schemas/group.schema.js";
 import { MEMBER_FIELDS, memberOf } from "../utils/members.js";
 import { updateBalance } from "../services/ledger.js";
-import { cleanName, hasDuplicateNames } from "../utils/validation.js";
+import { hasDuplicateNames } from "../utils/validation.js";
 import { serializeGroup, serializeInviteInfo } from "../serializers/contract.js";
 
 // Public on purpose, and deliberately not the same handler as the one below:
@@ -67,10 +67,6 @@ const joinGroup = async (req: Request, res: Response) => {
     }
 
     if (memberId) {
-      if (!mongoose.Types.ObjectId.isValid(memberId)) {
-        return res.status(400).json({ error: "Invalid member ID" });
-      }
-
       const member = group.members.id(memberId);
       if (!member) {
         return res.status(404).json({ error: "That member is not in this group" });
@@ -81,17 +77,15 @@ const joinGroup = async (req: Request, res: Response) => {
 
       member.user = new mongoose.Types.ObjectId(userId);
       await group.save();
-    } else if (cleanName(name)) {
-      const names = group.members.map((member) => member.name).concat(cleanName(name));
+    } else if (name) {
+      const names = group.members.map((member) => member.name).concat(name);
       if (hasDuplicateNames(names)) {
         return res.status(400).json({ error: "Duplicate members are not allowed" });
       }
 
-      group.members.push({ name: cleanName(name), user: new mongoose.Types.ObjectId(userId) });
+      group.members.push({ name, user: new mongoose.Types.ObjectId(userId) });
       await group.save();
       await updateBalance(group);
-    } else {
-      return res.status(400).json({ error: "A memberId or a name is required" });
     }
 
     await group.populate("members.user", MEMBER_FIELDS);
@@ -106,10 +100,6 @@ const regenerateInviteCode = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { groupId } = req.params;
-
-    if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
-      return res.status(400).json({ error: "Invalid group ID" });
-    }
 
     const group = await Group.findById(groupId);
     if (!group) {
