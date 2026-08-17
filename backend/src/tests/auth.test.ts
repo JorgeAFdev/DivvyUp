@@ -64,6 +64,25 @@ describe("POST /auth/login", () => {
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("Invalid credentials");
     });
+
+    // Login validates the same body shape as register: it gates on a malformed
+    // input before the credential check. A well-formed unknown email still
+    // returns "Invalid credentials" (above), so account enumeration stays shut.
+    it("rejects a malformed email before checking credentials", async () => {
+        const response = await fakeRequest
+            .post("/auth/login")
+            .send({ ...credentials, email: "nope" });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Please enter a valid email address");
+    });
+
+    it("rejects a body missing the password", async () => {
+        const response = await fakeRequest.post("/auth/login").send({ email: credentials.email });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Password not received");
+    });
 });
 
 describe("POST /auth/register", () => {
@@ -137,6 +156,15 @@ describe("POST /auth/register field validation", () => {
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("Name must be at least 3 characters long");
+    });
+
+    it("answers 400 and the reason for an over-long name", async () => {
+        const response = await fakeRequest
+            .post("/auth/register")
+            .send({ name: "a".repeat(41), email: "ana@user.com", password: "Password1" });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Name must be at most 40 characters long");
     });
 
     it("answers 400 and the reason for a malformed email", async () => {
