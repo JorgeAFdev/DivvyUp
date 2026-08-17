@@ -37,12 +37,12 @@ const UserEditForm = ({ user, onClose }: { user: SessionUser; onClose: () => voi
                     const session = getStorageObject<AuthResponse>('user-session') || {};
                     setStorageObject(JSON.stringify({ ...session, user: updatedUser.user }));
 
-                    toast.success("¡Usuario actualizado con éxito! 🎉");
+                    toast.success("User updated successfully 🎉");
                     onClose();
                     window.location.reload();
                 },
                 onError: (error) => {
-                    toast.error(apiErrorMessage(error, "Hubo un error al actualizar el usuario."));
+                    toast.error(apiErrorMessage(error, "there was an error updating the user"));
                 },
             },
         );
