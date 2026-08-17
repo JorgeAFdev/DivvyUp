@@ -1,10 +1,5 @@
 import { z } from 'zod';
-
-// A member id is a 24-hex string. This validates it without pulling mongoose
-// into the package, which the frontend bundles: a regex keeps the input
-// contract shared, an ObjectId cast would not. Missing/garbage ids still hit
-// the controller's membership check, so this only covers the shape.
-const objectId = (message: string) => z.string().regex(/^[0-9a-fA-F]{24}$/, message);
+import { objectId } from './common.js';
 
 // name is not trimmed here: the group name is stored raw, so its length check
 // must see the raw value. Member names are trimmed because the controller
