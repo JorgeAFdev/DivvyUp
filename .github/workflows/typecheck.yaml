@@ -9,6 +9,7 @@ on:
       - 'backend/**'
       - 'frontend/**'
       - 'packages/shared/**'
+      - 'packages/validation/**'
       - 'tsconfig.base.json'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -26,14 +27,21 @@ jobs:
         include:
           - workspace: shared
             install: '--filter=@monorepo/shared...'
+            build: '--filter=@monorepo/shared'
+          - workspace: validation
+            install: '--filter=@monorepo/validation...'
+            build: '--filter=@monorepo/validation'
           - workspace: backend
-            # shared is selected too so its build toolchain (tsc) installs; the
-            # backend imports its types, so shared must be buildable here.
-            install: '--filter=@monorepo/backend... --filter=@monorepo/shared'
+            # shared and validation are selected too so their build toolchain
+            # (tsc) installs; the backend imports both, so both must be buildable
+            # here (validation ships runtime code, shared is type-only).
+            install: '--filter=@monorepo/backend... --filter=@monorepo/shared --filter=@monorepo/validation'
+            build: '--filter=@monorepo/shared --filter=@monorepo/validation'
           - workspace: frontend
-            # Same reason as backend: the frontend imports the contract's types,
-            # so shared has to be buildable in this job.
-            install: '--filter=@monorepo/frontend... --filter=@monorepo/shared'
+            # Same reason as backend: the frontend imports the contract's types
+            # and the validation schemas, so both have to be buildable here.
+            install: '--filter=@monorepo/frontend... --filter=@monorepo/shared --filter=@monorepo/validation'
+            build: '--filter=@monorepo/shared --filter=@monorepo/validation'
 
     steps:
       - name: 'Checkout'
@@ -55,9 +63,10 @@ jobs:
         env:
           MONGOMS_DISABLE_POSTINSTALL: '1'
 
-      # The backend resolves @monorepo/shared from its dist/, so build it first.
-      - name: 'Build shared'
-        run: pnpm --filter=@monorepo/shared build
+      # Consumers resolve @monorepo/shared and @monorepo/validation from their
+      # dist/, so build the ones this job needs first.
+      - name: 'Build workspace deps'
+        run: pnpm ${{ matrix.build }} build
 
       - name: 'Typecheck ${{ matrix.workspace }}'
         run: pnpm --filter=@monorepo/${{ matrix.workspace }} typecheck

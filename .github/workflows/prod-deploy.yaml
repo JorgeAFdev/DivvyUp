@@ -10,6 +10,7 @@ on:
     paths:
       - 'backend/**'
       - 'packages/shared/**'
+      - 'packages/validation/**'
       - 'tsconfig.base.json'
       - 'package.json'
       - 'pnpm-lock.yaml'
