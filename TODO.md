@@ -149,6 +149,26 @@ gobierna todas las rutas necesita su rama, su PR y una pasada completa de Cypres
 Que cada endpoint declare la forma de su entrada en un esquema y no en una escalera de `if`. Hoy la
 validación existe, pero está escrita a mano y repetida.
 
+**Fase 1 (auth) — HECHO el 17-08-2026.** Existe `packages/validation` (`@monorepo/validation`, ESM +
+TS compilado a `dist/`, Zod v4). Exporta `registerSchema` y `loginSchema` (mismas reglas: login
+reutiliza las de register, no hay cuentas pre-fuerza que dejar fuera), con el texto del error dentro
+del esquema. El backend valida con `middlewares/validate.ts` (`validate(schema)` delante de la ruta,
+detrás de multer en register; aplana los issues a `{ error: "motivo. motivo" }`, así que el contrato
+no cambia; reemplaza `req.body` por el parseado). El front consume el mismo esquema con
+`@hookform/resolvers` (`zodResolver`); `PASSWORD_HINT` se queda en el front como copy. `registrationErrors()`
+y el regex duplicado murieron; `name` pasó a min 3 / max 40 (Mongoose `maxlength` bajado a 40). Toda
+la fontanería nueva hecha: `zod` runtime dep en los tres `package.json`, dos `COPY` por stage del
+Dockerfile, filtros de `typecheck.yaml` y `prod-deploy.yaml`. **Falta a mano en el panel de Cloudflare
+Pages:** cambiar el build command a `--filter @monorepo/frontend...` (con los tres puntos), o el build
+del front no resuelve `@monorepo/validation`. Detalle en `CLAUDE.md` → *packages/validation*.
+
+**Lo que queda:** los esquemas de entrada de group, expense y payment. Cada uno reemplaza sus `if` de
+forma (no las comprobaciones de BD: que el grupo exista, que el miembro pertenezca, que los
+`amountOwed` sumen — esas se quedan en el controlador). El patrón ya está montado; es aplicar
+`validate(schema)` ruta a ruta y, donde el middleware body-only no llegue (params `:groupId`),
+ensanchar su firma. Cuando entre multiidioma revive el punto 15 (códigos + i18next), y el enum de
+códigos saldría de este mismo paquete.
+
 **Decidido el 04-08-2026:**
 
 - **Una sola fuente de verdad, compartida entre backend y frontend.** No es Zod suelto en cada lado
@@ -158,10 +178,28 @@ validación existe, pero está escrita a mano y repetida.
   que los `amountOwed` sumen el total) se queda en el controlador del backend y no entra al paquete.
 - **El backend pasa a ESM** (punto 13) y **el proyecto a TypeScript** (punto 14). Las dos deshacen
   las restricciones que hacían fea esta tarea, así que van antes.
-- **Los mensajes no se comparten: viaja un código de error** y la copy es del front (punto 15).
+- ~~**Los mensajes no se comparten: viaja un código de error** y la copy es del front (punto 15).~~
+  **Revocado el 17-08-2026 (ver abajo):** sin multiidioma, el código no compra nada; la API sigue
+  devolviendo el mensaje literal y el mensaje vive en el propio esquema de Zod, dentro del paquete.
 
-Con eso, el orden es **13 → 14 → 15 → 11**, y el 12 cae solo por el camino. Ninguna de las cuatro
-depende de este punto, así que se pueden hacer y desplegar sueltas.
+Con eso, el orden era **13 → 14 → 15 → 11**. Con el 15 absorbido (mensaje literal, sin códigos), lo
+que queda es sólo el **11**. Ninguna de las cuatro depende de este punto, así que se pueden hacer y
+desplegar sueltas.
+
+**Decidido el 17-08-2026 (cierra la parte útil del 15 dentro del 11):**
+
+- **El paquete se llama `packages/validation`.**
+- **La API devuelve el mensaje literal, no un código.** Montar códigos + diccionario en el front es
+  aparato para un problema que hoy no existe: la app es de un solo idioma y no hay i18n. El contrato
+  de error sigue siendo `{ error: "..." }`, que es lo que `frontend/src/utils/apiError.ts` ya lee y
+  los 14 consumidores ya pintan. Si algún día entra multiidioma, **ahí** sí se pasa a códigos (era el
+  punto 15). Hasta entonces, no.
+- **El texto del error vive en el esquema de Zod**, dentro de `packages/validation` (p. ej.
+  `.min(8, 'Password must be at least 8 characters long ...')`). O sea el paquete es *reglas + su
+  copy*, no sólo reglas: es la única forma de que backend y frontend no vuelvan a duplicar el texto,
+  que es justo lo que duele hoy (el regex de contraseña en dos sitios). El backend aplana los issues
+  de Zod a la forma `{ error: "motivo. otro motivo" }` que ya existe, así que **el contrato de la API
+  no cambia** y no se toca ningún consumidor del front.
 
 **Estado actual (verificado):**
 
@@ -197,11 +235,11 @@ paquete nuevo hay que añadirlo ahí a mano.
 
 **A decidir, lo que queda:**
 
-- **Cómo se llama y dónde vive.** `packages/contracts`, `packages/validation`, `shared/`. Con TS
-  hecho (punto 14) el formato ya no es una decisión: ESM + TS compilado, como los otros dos.
-- **¿Sólo esquemas, o también los tipos de las respuestas?** Un paquete de contratos que declare
-  también la forma de lo que devuelve la API es más útil que uno de sólo validación, pero es más
-  superficie que mantener y no hace falta para cerrar la duplicación de hoy.
+- ~~**Cómo se llama y dónde vive.**~~ **Decidido: `packages/validation`** (17-08-2026). ESM + TS
+  compilado, como los otros dos.
+- **¿Sólo esquemas, o también los tipos de las respuestas?** Las respuestas ya tienen su contrato en
+  `@monorepo/shared` (punto 14), así que este paquete es **sólo entrada**: esquemas de Zod + la copy
+  de sus errores, nada de tipos de respuesta.
 - **`login` no puede usar el mismo esquema que `register`.** El registro exige la regla de fuerza;
   el login tiene que aceptar cualquier cosa que un usuario antiguo tenga guardada, o dejas fuera a
   las cuentas creadas antes de la regla. Son dos esquemas, no uno reutilizado.
@@ -262,7 +300,18 @@ las reglas vigentes viven en `CLAUDE.md`.
   `prop-types` fuera, react-query/MUI/react-hook-form tipados. `noUnusedLocals`/`noUnusedParameters`
   activos en el gate.
 
-## 15. Contrato de errores por código, como en Cartobol
+## 15. Contrato de errores por código, como en Cartobol — APLAZADO el 17-08-2026
+
+**Absorbido en el punto 11, aplazado el resto.** Sin multiidioma, devolver un código estable en vez
+del mensaje sólo tiene sentido para traducirlo, y no hay i18n ni lo va a haber por ahora. Montar el
+error handler global + el diccionario `code → texto` en el front es aparato para un problema que hoy
+no existe. Lo único que se rescata —desacoplar la copy del controlador— se resuelve en el 11 metiendo
+el texto del error en el esquema de Zod del paquete `packages/validation`, sin cambiar el contrato
+`{ error: "..." }` que el front ya consume. **Este punto revive el día que entre multiidioma:** ahí
+el mensaje literal deja de valer y hay que pasar a códigos + i18next, y el enum de códigos saldría
+del propio `packages/validation` (así front y back no se desincronizan). Hasta entonces, no se hace.
+
+Lo de abajo se conserva como referencia del patrón de Cartobol para cuando se retome.
 
 Que la API deje de devolver una frase en inglés y devuelva un código estable, y que el front lo
 traduzca. Es el patrón que ya existe en Cartobol y funciona.

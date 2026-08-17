@@ -98,6 +98,48 @@ the contract deliberately describes what ships, so it is the one definition both
 - The typecheck gate (`typecheck.yaml`) runs `shared` and `backend` as a matrix; `shared` builds
   first in each job because the backend resolves it from `dist/`.
 
+### `packages/validation` is the shared input contract
+
+A second compiled TS package (`@monorepo/validation`) holding the **Zod schemas for request
+bodies** — `registerSchema`, `loginSchema` in `src/auth.ts` — imported by **both** the backend
+(the `validate` middleware) and the frontend (the forms). It is the mirror of `shared` for the
+*input* boundary: `shared` types what the endpoints send, `validation` validates what they receive.
+So far it covers only `/auth`; group/expense/payment input schemas are the follow-up phases of
+TODO 11.
+
+- **Rules *and* their copy live in the schema.** A field carries its own message
+  (`.min(3, 'Name must be at least 3 characters long')`), because the point of the package is that
+  backend and frontend stop duplicating the rule *and its text* — the password regex used to be
+  copied in the auth controller and `registerForm.tsx`. The API error contract is unchanged: the
+  `validate` middleware flattens Zod's issues to `{ error: "reason. reason" }` (join with `. `, in
+  schema field order), which is what `frontend/src/utils/apiError.ts` and every consumer already
+  read. No error message is a stable code — that was TODO 15, deferred until there is i18n.
+- **Consumed at runtime, not type-only.** Unlike `shared` (erased `import type`), Zod executes, so
+  the backend imports it with a normal `import`, `zod` is a real `dependency` in all three
+  package.jsons (the package, backend, frontend), and the runtime Docker stage copies its `dist/`.
+  Zod is **v4**.
+- **The backend gate is `middlewares/validate.ts`.** `validate(schema)` runs in front of the route
+  (after `multer` on register, so the multipart body is populated), 400s with the flattened message
+  on failure, and on success **replaces `req.body` with the parsed value** — so the controller sees
+  the trimmed/stripped shape. The DB-existence checks stay in the controller below it.
+- **The frontend consumes the same schema through `@hookform/resolvers`** (`zodResolver`). The file
+  field is not in the shared body schema, so `registerForm` extends it locally with
+  `profilePicture: z.any()` — without that the resolver would strip the upload from the submitted
+  values. `PASSWORD_HINT` (the helper text under the field) stays in `frontend/utils/validation.ts`:
+  it is presentational copy, not a rule.
+- **Login validates the same shape as register** (email format + password strength), so a malformed
+  login body 400s before the credential check; a *well-formed unknown* email still returns "Invalid
+  credentials", so account enumeration stays shut.
+- **Plumbing that has to move with a new workspace package**, and more than `shared` needed because
+  this one is imported at *runtime*: two `COPY`s in each Dockerfile stage plus
+  `--filter=@monorepo/validation` and an explicit `pnpm --filter=@monorepo/validation build` before
+  the backend build; the Cloudflare Pages build command (in the dashboard, not the repo) has to
+  **build `validation` before `vite build`** — the frontend resolves it at bundle time, and running
+  Vite directly skips Turborepo's `^build`, so its `dist/` won't exist otherwise (see the exact
+  command under *Deployment*); and the `typecheck.yaml` / `prod-deploy.yaml` path filters.
+  `pnpm-workspace.yaml` needs nothing (it globs `packages/*`). `shared` never hit this because the
+  frontend imports it type-only, so Vite never resolves its `dist/`.
+
 ### A group member is a name, not an account
 
 `members: [{ name, user: ObjectId|null }]`, and **`members[]._id` is the identity** that `Expense.paidBy`, `Expense.participants[].member` and `Payment.from`/`to` point at. `user` is optional: a member who will never register still owns expenses, holds a balance and can be a creditor.
@@ -160,7 +202,7 @@ Notifications only go to members with a linked `user` — `linkedUserIds()` in `
 
 **`password` is declared `select: false`**, and login is the only place that asks for the hash, with `.select('+password')`. That is the field being protected rather than each call being protected: `updateUser` returns the whole document from `findByIdAndUpdate` and used to hand the caller's own bcrypt hash to the browser and to the logs, and the projection alone closed it without touching that controller.
 
-Registration validates in `registrationErrors()` before touching the DB, so a 400 leaves from where the request is read and `catch` still means a real failure. **Do not move the strength rule onto Mongoose `minlength`:** its default message quotes the value it rejected, which puts the plaintext password in the response body and the logs. Tests pin that no error response ever contains it. The regex is currently spelled in both `auth.routes.ts` and `registerForm.tsx` — point 11 of the TODO is what removes the duplication.
+Register and login validate their body shape with Zod schemas from `@monorepo/validation` (`registerSchema`, `loginSchema`), applied by the `validate(schema)` middleware in front of the route, not by hand in the controller. **Do not move the strength rule onto Mongoose `minlength`:** its default message quotes the value it rejected, which puts the plaintext password in the response body and the logs. Tests pin that no error response ever contains it. **Login reuses the same rules as register** (email format + password strength): there are no pre-strength accounts to lock out, so a single shared schema covers both. The password regex now lives once, in the package — see *packages/validation* below. The controller keeps only the checks the schema cannot do: the `Email already registered` and `Invalid credentials` DB lookups sit below the gate.
 
 `security/jwt.ts` exports `jwtMiddleware`, which verifies the `Authorization: Bearer` header and sets `req.jwtPayload`. Nearly every route is wrapped in it; `auth.routes.ts` (register/login) is not.
 
@@ -222,7 +264,7 @@ Transitions come off one knob, `--transition-base`. Set it only on the element t
 
 ### Backend request flow
 
-`routers/router.ts` mounts `/group` three times (expense, invite and group routes all live under it), plus `/user`, `/auth`, `/payment`. The invite/join flow is its own `invite.controller.ts` / `invite.routes.ts` (`getInviteName`, `getGroupByInviteCode`, `joinGroup`, `regenerateInviteCode`), split out from group management; `invite.routes` is mounted **before** `group.routes` so `/invite/:code` and `/join/:code` resolve as literals rather than as a `/:groupId` match. Validation is still inline in the controllers except the shared name helpers (`cleanName`, `hasDuplicateNames`, now in `utils/validation.ts` and used by both the group and invite controllers) — there is no `middlewares/` directory any more; `notes.txt` still tracks moving the rest out (TODO #11, shared Zod).
+`routers/router.ts` mounts `/group` three times (expense, invite and group routes all live under it), plus `/user`, `/auth`, `/payment`. The invite/join flow is its own `invite.controller.ts` / `invite.routes.ts` (`getInviteName`, `getGroupByInviteCode`, `joinGroup`, `regenerateInviteCode`), split out from group management; `invite.routes` is mounted **before** `group.routes` so `/invite/:code` and `/join/:code` resolve as literals rather than as a `/:groupId` match. Body-shape validation is moving to Zod schemas in `@monorepo/validation` applied by `middlewares/validate.ts` — **so far only `/auth` (register + login)**; group, expense and payment still validate inline in their controllers, alongside the DB-existence checks (group exists, member belongs, amounts sum) that stay in the controller by design. The shared name helpers (`cleanName`, `hasDuplicateNames`) live in `utils/validation.ts`, used by the group and invite controllers.
 
 Profile images: multer with `memoryStorage()` → `config/cloudinary.config.ts` → `uploadToCloudinary(buffer)` returns the secure URL stored on `user.profilePicture`. It is optional everywhere — registration works without one and `updateUser` only touches the field when a file arrives. With no picture the UI falls back to the name's initials (`initialsOf()`), which is also what a member without an account gets.
 
@@ -256,7 +298,7 @@ The backend runs at `https://divvyup-api.jorgeaf.dev` on a self-hosted **Coolify
 Frontend deploys on **Cloudflare Pages** (project `divvyup`, live at `https://divvyup.jorgeaf.dev`), connected to the GitHub repo — no workflow file, the config lives in the Pages dashboard:
 
 - Root directory is the **repo root**, not `frontend/`: Pages picks the package manager from the lockfile it finds there, and `pnpm-lock.yaml` + `pnpm-workspace.yaml` are at the root (same reason as the Docker build context).
-- Build command `pnpm install --frozen-lockfile --filter @monorepo/frontend && pnpm --filter @monorepo/frontend build`, output `frontend/dist`.
+- Build command `pnpm install --frozen-lockfile --filter @monorepo/frontend... && pnpm --filter @monorepo/validation build && pnpm --filter @monorepo/frontend build`, output `frontend/dist`. Each part is load-bearing: `--filter @monorepo/frontend...` (the `...`) installs the frontend plus its workspace deps, so `@monorepo/validation` and its `zod` are linked and the frontend's own `typescript` devDep is present (that is the `tsc` the next step runs with). Then `pnpm --filter @monorepo/validation build` compiles `validation` to `dist/` **before** `vite build`, because the frontend imports it at runtime (`import { registerSchema }`) and Vite resolves `@monorepo/validation/dist` at bundle time; running `pnpm --filter frontend build` invokes Vite directly, so Turborepo's `^build` never fires to build it first — the frontend build fails with *Failed to resolve entry for package "@monorepo/validation"* if this step is missing. `@monorepo/shared` needs no build here: the frontend imports it type-only, so it erases and Vite never resolves it.
 - Build env vars: `VITE_API_URL`, `VITE_SOCKET_URL` (Vite inlines them at build time, so they must be build vars), `NODE_VERSION` (mandatory — `packageManager: pnpm@11.0.0` needs Node >= 22.13, newer than the default image), `SKIP_DEPENDENCY_INSTALL=1` (the filtered install is done by the build command; without this Pages also runs an unfiltered `pnpm install` that pulls the backend's 122 MB `mongodb-memory-server` binary) and `CYPRESS_INSTALL_BINARY=0`.
 - Pages serves `index.html` for unmatched routes on its own, so the SPA needs no `_redirects` file.
 - The custom domain is `divvyup.jorgeaf.dev`. Pages can't disable the generated `divvyup-8wi.pages.dev`, so it is 301'd to the custom domain by an **account-level Bulk Redirect** (not a zone Redirect Rule — the `pages.dev` source isn't in the `jorgeaf.dev` zone), with preserve-query/subpath/path-suffix/include-subdomains on. `include subdomains` also catches preview deployments (`<hash>.divvyup-8wi.pages.dev`).

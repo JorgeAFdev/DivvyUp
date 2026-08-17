@@ -3,40 +3,10 @@ import User from '../schemas/user.schema.js';
 import uploadToCloudinary from '../config/cloudinary.config.js';
 import { serializeAuthResponse } from '../serializers/contract.js';
 
-const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-const EMAIL_PATTERN = /.+@.+\..+/;
-
-// Checked here rather than on the schema so a bad request answers 400 where it
-// is read, instead of reaching save() and coming back as a ValidationError the
-// catch would have to tell apart from a real failure.
-const registrationErrors = ({ name, email, password }: { name?: string; email?: string; password?: string }) => {
-    const errors = [];
-
-    if (!name || name.length < 3) errors.push('Name must be at least 3 characters long');
-    else if (name.length > 100) errors.push('Name must be at most 100 characters long');
-
-    if (!email) errors.push('Email not received');
-    else if (!EMAIL_PATTERN.test(email)) errors.push('Please enter a valid email address');
-
-    if (!password) errors.push('Password not received');
-    else if (!PASSWORD_PATTERN.test(password)) {
-        errors.push(
-            'Password must be at least 8 characters long and contain a lowercase letter, an uppercase letter and a number'
-        );
-    }
-
-    return errors;
-};
-
 const register = async (req: Request, res: Response) => {
     try {
         const { email, name, password } = req.body;
         let profilePicture = '';
-
-        const errors = registrationErrors(req.body);
-        if (errors.length) {
-            return res.status(400).json({ error: errors.join('. ') });
-        }
 
         const existingUser = await User.findOne({ email });
         if (existingUser) {
@@ -65,10 +35,6 @@ const register = async (req: Request, res: Response) => {
 const login = async (req: Request, res: Response) => {
     try {
         const { email, password } = req.body;
-
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Missing email or password' });
-        }
 
         const foundUser = await User.findOne({ email }).select('+password');
 

@@ -17,22 +17,28 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json .
 COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/validation/package.json ./packages/validation/
 
 # No --prod here: the build needs typescript, which is a devDependency. But the
 # devDeps include mongodb-memory-server, whose postinstall would download a
 # ~120 MB mongod binary into this throwaway layer just to let tsc run.
-# @monorepo/shared is selected explicitly so its own devDeps (tsc) install too;
-# --filter=backend... alone would link it as a dep without its build toolchain.
+# @monorepo/shared and @monorepo/validation are selected explicitly so their own
+# devDeps (tsc) install too; --filter=backend... alone would link them as deps
+# without their build toolchain.
 ENV MONGOMS_DISABLE_POSTINSTALL=1
-RUN pnpm install --frozen-lockfile --filter=@monorepo/backend... --filter=@monorepo/shared
+RUN pnpm install --frozen-lockfile --filter=@monorepo/backend... --filter=@monorepo/shared --filter=@monorepo/validation
 
 COPY packages/shared/tsconfig.json packages/shared/tsconfig.build.json ./packages/shared/
 COPY packages/shared/src ./packages/shared/src
+COPY packages/validation/tsconfig.json packages/validation/tsconfig.build.json ./packages/validation/
+COPY packages/validation/src ./packages/validation/src
 COPY backend/tsconfig.json backend/tsconfig.build.json ./backend/
 COPY backend/src ./backend/src
 
-# shared before backend: the backend imports its types, so its dist must exist first.
+# shared and validation before backend: the backend imports them, so their dist
+# must exist first. validation ships runtime code, not just types.
 RUN pnpm --filter=@monorepo/shared build
+RUN pnpm --filter=@monorepo/validation build
 RUN pnpm --filter=@monorepo/backend build
 
 # --- runtime stage: prod deps + compiled dist only, no TypeScript toolchain ---
@@ -47,10 +53,12 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/validation/package.json ./packages/validation/
 
 RUN pnpm install --frozen-lockfile --prod --filter=@monorepo/backend...
 
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
+COPY --from=build /app/packages/validation/dist ./packages/validation/dist
 COPY --from=build /app/backend/dist ./backend/dist
 
 ENV NODE_ENV=production

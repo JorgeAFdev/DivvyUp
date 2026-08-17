@@ -1,4 +1,6 @@
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { loginSchema } from '@monorepo/validation';
 import styles from './loginForm.module.css';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLogin } from '../../hooks/useSession';
@@ -6,11 +8,12 @@ import { toast } from 'react-toastify';
 import { nextDestination } from '../../utils/nextDestination';
 import type { LoginCredentials } from '../../utils/authApi';
 import { apiErrorMessage } from '../../utils/apiError';
-import { PASSWORD_MESSAGE, PASSWORD_PATTERN } from '../../utils/validation';
 
 
 const Login = () => {
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginCredentials>({});
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginCredentials>({
+    resolver: zodResolver(loginSchema),
+  });
   const navigate = useNavigate();
   const { search } = useLocation();
 
@@ -36,10 +39,7 @@ const Login = () => {
         id="email"
         aria-invalid={errors.email ? 'true' : 'false'}
         aria-describedby={errors.email ? 'login-email-error' : undefined}
-        {...register('email', {
-          required: 'Email is required',
-          pattern: { value: /^\S+@\S+$/i, message: 'Invalid email format' }
-        })}
+        {...register('email')}
         placeholder="Email"
         className={styles.loginInput}
       />
@@ -50,10 +50,7 @@ const Login = () => {
         id="password"
         aria-invalid={errors.password ? 'true' : 'false'}
         aria-describedby={errors.password ? 'login-password-error' : undefined}
-        {...register('password', {
-          required: 'Password is required',
-          pattern: { value: PASSWORD_PATTERN, message: PASSWORD_MESSAGE }
-        })}
+        {...register('password')}
         placeholder="Password"
         type="password"
         className={styles.loginInput}
