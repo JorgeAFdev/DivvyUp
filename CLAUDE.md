@@ -104,9 +104,10 @@ A second compiled TS package (`@monorepo/validation`) holding the **Zod schemas 
 bodies** — `registerSchema`, `loginSchema` in `src/auth.ts` — imported by **both** the backend
 (the `validate` middleware) and the frontend (the forms). It is the mirror of `shared` for the
 *input* boundary: `shared` types what the endpoints send, `validation` validates what they receive.
-It covers `/auth` (`src/auth.ts`) and group (`src/group.ts` — `groupSchema` for the create/update
-body, `groupParamsSchema` for the `:groupId` param); expense and payment input schemas are the
-remaining phases of TODO 11.
+It covers `/auth` (`src/auth.ts`), group (`src/group.ts` — `groupSchema` for the create/update
+body, `groupParamsSchema` for the `:groupId` param) and expense (`src/expense.ts` — `expenseSchema`
+for the body, plus `expenseGroupParamsSchema` and `expenseParamsSchema` for the id params); payment
+is the remaining phase of TODO 11. The 24-hex id validator (`objectId`) is shared from `src/common.ts`.
 
 - **Rules *and* their copy live in the schema.** A field carries its own message
   (`.min(3, 'Name must be at least 3 characters long')`), because the point of the package is that
@@ -118,7 +119,11 @@ remaining phases of TODO 11.
 - **Consumed at runtime, not type-only.** Unlike `shared` (erased `import type`), Zod executes, so
   the backend imports it with a normal `import`, `zod` is a real `dependency` in all three
   package.jsons (the package, backend, frontend), and the runtime Docker stage copies its `dist/`.
-  Zod is **v4**.
+  Zod is **v4**. `decimal.js` is a `dependency` of the package too: `expenseSchema` validates the
+  amount's ≤2-decimal shape through it (the app's money engine), so that rule and its text are
+  shared instead of duplicated as a string regex in the form and a `Decimal` check in the
+  controller. The frontend bundles it transitively (no manifest entry of its own); nothing in Docker
+  or the Pages command changed, since both already install the package's deps.
 - **The backend gate is `middlewares/validate.ts`.** `validate(schema)` runs in front of the route
   (after `multer` on register, so the multipart body is populated), 400s with the flattened message
   on failure, and on success **replaces `req.body` with the parsed value** — so the controller sees
@@ -130,10 +135,13 @@ remaining phases of TODO 11.
   controller below it. The member-id **regex** lives in the schema, not `mongoose.Types.ObjectId`:
   the package is bundled by the frontend, so a regex keeps the shape shared without pulling mongoose
   into the browser bundle.
-- **The frontend consumes the same schema through `@hookform/resolvers`** (`zodResolver`). The file
-  field is not in the shared body schema, so `registerForm` extends it locally with
-  `profilePicture: z.any()` — without that the resolver would strip the upload from the submitted
-  values. `PASSWORD_HINT` (the helper text under the field) stays in `frontend/utils/validation.ts`:
+- **The frontend consumes the same schema through `@hookform/resolvers`** (`zodResolver`). A form
+  with a field the shared body does not describe extends the schema locally so the resolver keeps it
+  (`registerForm` adds `profilePicture: z.any()`, `groupForm` adds `hasAccount` on each member) —
+  without that the resolver strips the extra value. `expenseForm` needs no extension (its fields are
+  the schema), but its amount input is `type="text"` while `expenseSchema` wants a `number`, so it
+  registers `totalAmount` with `valueAsNumber: true` and the form value is the number the API takes.
+  `PASSWORD_HINT` (the helper text under the field) stays in `frontend/utils/validation.ts`:
   it is presentational copy, not a rule.
 - **Login validates the same shape as register** (email format + password strength), so a malformed
   login body 400s before the credential check; a *well-formed unknown* email still returns "Invalid
@@ -272,7 +280,7 @@ Transitions come off one knob, `--transition-base`. Set it only on the element t
 
 ### Backend request flow
 
-`routers/router.ts` mounts `/group` three times (expense, invite and group routes all live under it), plus `/user`, `/auth`, `/payment`. The invite/join flow is its own `invite.controller.ts` / `invite.routes.ts` (`getInviteName`, `getGroupByInviteCode`, `joinGroup`, `regenerateInviteCode`), split out from group management; `invite.routes` is mounted **before** `group.routes` so `/invite/:code` and `/join/:code` resolve as literals rather than as a `/:groupId` match. Body-shape validation is moving to Zod schemas in `@monorepo/validation` applied by `middlewares/validate.ts` — **so far `/auth` (register + login) and `/group` (body + `:groupId` param)**; expense and payment still validate inline in their controllers. The DB-existence and business checks (group exists, member belongs, duplicate names, the 409 on removing a member who is in an expense) stay in the controller by design. The shared name helpers (`cleanName`, `hasDuplicateNames`) live in `utils/validation.ts`, used by the group and invite controllers.
+`routers/router.ts` mounts `/group` three times (expense, invite and group routes all live under it), plus `/user`, `/auth`, `/payment`. The invite/join flow is its own `invite.controller.ts` / `invite.routes.ts` (`getInviteName`, `getGroupByInviteCode`, `joinGroup`, `regenerateInviteCode`), split out from group management; `invite.routes` is mounted **before** `group.routes` so `/invite/:code` and `/join/:code` resolve as literals rather than as a `/:groupId` match. Body-shape validation is moving to Zod schemas in `@monorepo/validation` applied by `middlewares/validate.ts` — **so far `/auth` (register + login), `/group` (body + `:groupId` param) and `/expense` (body + id params)**; payment still validates inline in its controller. The DB-existence and business checks stay in the controller by design: group exists, member belongs, duplicate names, the 409 on removing a member who is in an expense, and — the expense-specific ones — that `paidBy` and every participant name a member of the group (`checkMembership`), which the body-only schema cannot see. The shared name helpers (`cleanName`, `hasDuplicateNames`) live in `utils/validation.ts`, used by the group and invite controllers.
 
 Profile images: multer with `memoryStorage()` → `config/cloudinary.config.ts` → `uploadToCloudinary(buffer)` returns the secure URL stored on `user.profilePicture`. It is optional everywhere — registration works without one and `updateUser` only touches the field when a file arrives. With no picture the UI falls back to the name's initials (`initialsOf()`), which is also what a member without an account gets.
 

@@ -173,14 +173,26 @@ pertenencia, el 409 de miembro con gastos). El form del front consume `groupSche
 typo `name is to large`). Mensajes pineados por tests preservados (`Every member needs a name`,
 `member name is too large`).
 
-**Lo que queda:** los esquemas de entrada de expense y payment. Reemplazan sus `if` de forma (no las
-de BD: que el grupo exista, que el miembro pertenezca, que los `amountOwed` sumen — esas se quedan en
-el controlador). El patrón ya está montado (`validate(schema)` de cuerpo, `validate(schema, 'params')`
-de params). Ojo con expense: `validateExpense` mezcla forma pura (participants es lista, sin
-duplicados, totalAmount número >0 <1M ≤2 decimales) con pertenencia al grupo (paidBy/participants son
-miembros) — solo la forma va al esquema, la pertenencia se queda. Payment (`pay`) no tiene cuerpo:
-solo el `:paymentId`. Cuando entre multiidioma revive el punto 15 (códigos + i18next), y el enum de
-códigos saldría de este mismo paquete.
+**Fase 3 (expense) — HECHO el 17-08-2026.** `packages/validation/src/expense.ts` exporta
+`expenseSchema` (cuerpo: `description` 1-30, `totalAmount` número >0 <1M y ≤2 decimales, `paidBy`
+24-hex, `participants` lista no vacía de strings sin duplicados) y dos esquemas de params
+(`expenseGroupParamsSchema` para `:groupId`, `expenseParamsSchema` para `:groupId`+`:expenseId`). El
+`validateExpense` viejo mezclaba forma y pertenencia: la forma se fue al esquema, y la pertenencia
+(`paidBy`/participants son miembros del grupo) quedó en el controlador como `checkMembership`. **La
+comprobación de ≤2 decimales usa `decimal.js` dentro de un `superRefine`**, así que `decimal.js` pasó
+a ser `dependency` del paquete (antes solo del backend) y el front lo bundlea transitivamente — se
+acabó la regla duplicada (regex de string en el front vs `Decimal` en el back). El id 24-hex se
+comparte desde `src/common.ts` (`objectId`), y `group.ts` se refactorizó para usarlo. El form del
+front consume `expenseSchema` por `zodResolver` sin extender (sus campos son el esquema), con
+`valueAsNumber: true` en el importe porque el input es texto y el esquema quiere `number`. Ninguna
+fontanería nueva (Docker/Pages ya instalan las deps del paquete). Mensajes pineados intactos y +9
+tests exigentes (params, rango del importe, forma≠existencia).
+
+**Lo que queda:** el esquema de entrada de payment. `pay` (`payments.controller.ts`) no tiene cuerpo:
+solo valida el `:paymentId` (un ObjectId) — es solo un `validate(paymentParamsSchema, 'params')` con
+el `objectId` de `common.ts`; el resto de `pay` (que el pago exista, que esté `pending`, permisos) es
+lógica de BD que se queda. Cuando entre multiidioma revive el punto 15 (códigos + i18next), y el enum
+de códigos saldría de este mismo paquete.
 
 **Al hacer el Zod de invite, revisar `backend/src/utils/validation.ts`.** El criterio: todo lo que
 sea validación o formateo de un dato **del cuerpo** de ese endpoint (el `.trim()` de `cleanName` sobre

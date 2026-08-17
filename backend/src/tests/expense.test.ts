@@ -143,6 +143,7 @@ describe("POST /group/:groupId/expenses", () => {
         });
 
         expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Total amount must be a number");
     });
 
     it("rejects participants that are not a list", async () => {
@@ -199,7 +200,7 @@ describe("POST /group/:groupId/expenses", () => {
         expect(response.body.error).toBe("One or more participants are not part of the group");
     });
 
-    it("rejects an amount of 0", async () => {
+    it("rejects a negative amount", async () => {
         const response = await post(`/group/${group._id}/expenses`, jorgeToken, {
             description: "Cena",
             totalAmount: -5,
@@ -208,6 +209,42 @@ describe("POST /group/:groupId/expenses", () => {
         });
 
         expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Total amount must be greater than 0");
+    });
+
+    it("rejects an amount of a million or more", async () => {
+        const response = await post(`/group/${group._id}/expenses`, jorgeToken, {
+            description: "Cena",
+            totalAmount: 1000000,
+            paidBy: jorgeId,
+            participants: [jorgeId],
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Total amount must be less than 1,000,000");
+    });
+
+    it("rejects an empty participant list", async () => {
+        const response = await post(`/group/${group._id}/expenses`, jorgeToken, {
+            description: "Cena",
+            totalAmount: 30,
+            paidBy: jorgeId,
+            participants: [],
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("At least one participant must be selected");
+    });
+
+    it("rejects a missing description", async () => {
+        const response = await post(`/group/${group._id}/expenses`, jorgeToken, {
+            totalAmount: 30,
+            paidBy: jorgeId,
+            participants: [jorgeId],
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Description is required");
     });
 
     it("rejects someone who is not a member", async () => {
@@ -296,6 +333,54 @@ describe("DELETE /group/:groupId/expenses/:expenseId", () => {
         await reload();
         expect(group.balance.every((b) => b.amount === 0)).toBe(true);
         expect(await Payment.find({ group: group._id, status: "pending" })).toHaveLength(0);
+    });
+});
+
+describe(":groupId / :expenseId ObjectId validation", () => {
+    const badId = "not-a-valid-object-id";
+    const missingId = "0123456789abcdef01234567";
+    const body = () => ({ description: "Cena", totalAmount: 30, paidBy: jorgeId, participants: [jorgeId] });
+
+    it("400s an unparseable groupId on POST", async () => {
+        const response = await post(`/group/${badId}/expenses`, jorgeToken, body());
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Invalid group or expense ID");
+    });
+
+    it("400s an unparseable groupId on GET", async () => {
+        const response = await get(`/group/${badId}/expenses`, jorgeToken);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Invalid group or expense ID");
+    });
+
+    it("400s an unparseable expenseId on PATCH", async () => {
+        const response = await patch(`/group/${group._id}/expenses/${badId}`, jorgeToken, body());
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Invalid group or expense ID");
+    });
+
+    it("400s an unparseable expenseId on DELETE", async () => {
+        const response = await fakeRequest.delete(`/group/${group._id}/expenses/${badId}`).set(auth(jorgeToken));
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Invalid group or expense ID");
+    });
+
+    it("checks the id before the body on POST", async () => {
+        const response = await post(`/group/${badId}/expenses`, jorgeToken, { totalAmount: "free" });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Invalid group or expense ID");
+    });
+
+    it("lets a well-formed but unknown groupId through to the not-found check", async () => {
+        const response = await post(`/group/${missingId}/expenses`, jorgeToken, body());
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Group does not exist");
     });
 });
 

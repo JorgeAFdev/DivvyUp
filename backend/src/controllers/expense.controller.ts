@@ -1,4 +1,3 @@
-import { Decimal } from "decimal.js";
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import Expense from "../schemas/expense.schema.js";
@@ -19,36 +18,18 @@ function expenseResponse(group: GroupHydrated, expenses: ExpenseHydrated | Expen
         : serializeHydratedExpense(hydrateMembers(group, expenses, MEMBER_PATHS));
 }
 
-const validateExpense = ({ group, paidBy, participants, totalAmount }: { group: GroupHydrated; paidBy: unknown; participants: unknown; totalAmount: number }) => {
+// Shape (participants is a unique non-empty list, the amount is a valid money
+// number, the ids are 24-hex) is guaranteed by expenseSchema before this runs.
+// What is left is the DB check the schema cannot make: that those ids name
+// members of this group.
+const checkMembership = (group: GroupHydrated, paidBy: string, participants: string[]) => {
     const memberIds = new Set(group.members.map((member) => member._id.toString()));
 
-    // A single checkbox makes react-hook-form send a boolean instead of a list,
-    // and .some() on a boolean is a 500.
-    if (!Array.isArray(participants)) {
-        return "Participants must be a list of members";
-    }
-    if (new Set(participants.map(String)).size !== participants.length) {
-        return "Duplicate participants are not allowed";
-    }
-    if (!memberIds.has(String(paidBy))) {
+    if (!memberIds.has(paidBy)) {
         return "Payer is not part of the group";
     }
-    if (participants.some((participant: unknown) => !memberIds.has(String(participant)))) {
+    if (participants.some((participant) => !memberIds.has(participant))) {
         return "One or more participants are not part of the group";
-    }
-    if (!Number.isFinite(Number(totalAmount))) {
-        return "Total amount must be a number";
-    }
-    if (totalAmount <= 0) {
-        return "Total amount must be greater than 0";
-    }
-    if (totalAmount >= 1000000) {
-        return "Total amount must be less than 1,000,000";
-    }
-    // Money has no thousandths, and a third decimal breaks the even split: the
-    // leftover stops being a whole number of cents and gets handed out twice.
-    if (new Decimal(totalAmount).decimalPlaces() > 2) {
-        return "Total amount cannot have more than 2 decimals";
     }
     return null;
 };
@@ -59,14 +40,6 @@ const createExpense = async (req: Request, res: Response) => {
         const { groupId } = req.params;
         const { description, totalAmount, paidBy, participants } = req.body;
 
-        if (!mongoose.Types.ObjectId.isValid(groupId)) {
-            return res.status(400).json({ error: "Invalid group or expense ID" });
-        }
-
-        if (!description || !totalAmount || !paidBy || !participants || participants.length === 0) {
-            return res.status(400).json({ error: "Incomplete data" });
-        }
-
         const group = await Group.findById(groupId).populate("members.user", MEMBER_FIELDS);
         if (!group) {
             return res.status(400).json({ error: "Group does not exist" });
@@ -76,7 +49,7 @@ const createExpense = async (req: Request, res: Response) => {
             return res.status(403).json({ error: 'You must be a member of this group to create an expense' });
         }
 
-        const invalid = validateExpense({ group, paidBy, participants, totalAmount });
+        const invalid = checkMembership(group, paidBy, participants);
         if (invalid) {
             return res.status(400).json({ error: invalid });
         }
@@ -113,14 +86,6 @@ const updateExpense = async (req: Request, res: Response) => {
         const { expenseId, groupId } = req.params;
         const { description, totalAmount, paidBy, participants } = req.body;
 
-        if (!mongoose.Types.ObjectId.isValid(groupId) || !mongoose.Types.ObjectId.isValid(expenseId)) {
-            return res.status(400).json({ error: "Invalid group or expense ID" });
-        }
-
-        if (!description || !totalAmount || !paidBy || !participants || participants.length === 0) {
-            return res.status(400).json({ error: "Some required fields are missing" });
-        }
-
         const expense = await Expense.findOne({ _id: expenseId, group: groupId });
         if (!expense) {
             return res.status(404).json({ error: "Expense not found in this group" });
@@ -135,7 +100,7 @@ const updateExpense = async (req: Request, res: Response) => {
             return res.status(403).json({ error: 'You must be a member of this group to update this expense' });
         }
 
-        const invalid = validateExpense({ group, paidBy, participants, totalAmount });
+        const invalid = checkMembership(group, paidBy, participants);
         if (invalid) {
             return res.status(400).json({ error: invalid });
         }
@@ -168,10 +133,6 @@ const getExpensesByGroupId = async (req: Request, res: Response) => {
     try {
         const { id: userId } = req.jwtPayload;
         const { groupId } = req.params;
-
-        if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
-            return res.status(400).json({ error: "Invalid group ID" });
-        }
 
         const group = await Group.findById(groupId).populate("members.user", MEMBER_FIELDS);
         if (!group) {
@@ -245,10 +206,6 @@ const deleteExpense = async (req: Request, res: Response) => {
     try {
         const { id: userId } = req.jwtPayload;
         const { groupId, expenseId } = req.params;
-
-        if (!mongoose.Types.ObjectId.isValid(groupId) || !mongoose.Types.ObjectId.isValid(expenseId)) {
-            return res.status(400).json({ error: "Invalid group or expense ID" });
-        }
 
         const expense = await Expense.findOne({ _id: expenseId, group: groupId });
         if (!expense) {
