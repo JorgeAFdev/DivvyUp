@@ -162,12 +162,33 @@ Dockerfile, filtros de `typecheck.yaml` y `prod-deploy.yaml`. **Falta a mano en 
 Pages:** cambiar el build command a `--filter @monorepo/frontend...` (con los tres puntos), o el build
 del front no resuelve `@monorepo/validation`. Detalle en `CLAUDE.md` → *packages/validation*.
 
-**Lo que queda:** los esquemas de entrada de group, expense y payment. Cada uno reemplaza sus `if` de
-forma (no las comprobaciones de BD: que el grupo exista, que el miembro pertenezca, que los
-`amountOwed` sumen — esas se quedan en el controlador). El patrón ya está montado; es aplicar
-`validate(schema)` ruta a ruta y, donde el middleware body-only no llegue (params `:groupId`),
-ensanchar su firma. Cuando entre multiidioma revive el punto 15 (códigos + i18next), y el enum de
+**Fase 2 (group) — HECHO el 17-08-2026.** `packages/validation/src/group.ts` exporta `groupSchema`
+(cuerpo de create/update: `name` ≤30, `description` ≤50, `members` no vacío con `name` limpiado
+1-30) y `groupParamsSchema` (el `:groupId`, un ObjectId por **regex** de 24-hex, no por `mongoose`,
+para no meter mongoose en el bundle del front). El `validate` se ensanchó a `validate(schema,
+'params')`: la ruta que necesita las dos cosas encadena params-primero. Se borraron `validateGroupBody`
+y los `ObjectId.isValid(groupId)` inline de los controladores; quedan las de BD/negocio (duplicados,
+pertenencia, el 409 de miembro con gastos). El form del front consume `groupSchema` por `zodResolver`
+(extendido con el flag UI `hasAccount` como passthrough), matando las reglas inline duplicadas (con su
+typo `name is to large`). Mensajes pineados por tests preservados (`Every member needs a name`,
+`member name is too large`).
+
+**Lo que queda:** los esquemas de entrada de expense y payment. Reemplazan sus `if` de forma (no las
+de BD: que el grupo exista, que el miembro pertenezca, que los `amountOwed` sumen — esas se quedan en
+el controlador). El patrón ya está montado (`validate(schema)` de cuerpo, `validate(schema, 'params')`
+de params). Ojo con expense: `validateExpense` mezcla forma pura (participants es lista, sin
+duplicados, totalAmount número >0 <1M ≤2 decimales) con pertenencia al grupo (paidBy/participants son
+miembros) — solo la forma va al esquema, la pertenencia se queda. Payment (`pay`) no tiene cuerpo:
+solo el `:paymentId`. Cuando entre multiidioma revive el punto 15 (códigos + i18next), y el enum de
 códigos saldría de este mismo paquete.
+
+**Al hacer el Zod de invite, revisar `backend/src/utils/validation.ts`.** El criterio: todo lo que
+sea validación o formateo de un dato **del cuerpo** de ese endpoint (el `.trim()` de `cleanName` sobre
+el `name` que llega en el join, `invite.controller.ts:84/85/90`) se muda al esquema Zod. Lo que sea
+lógica del endpoint se queda fuera de Zod: `hasDuplicateNames` (compara contra los miembros ya
+guardados del grupo, que vienen de la BD) y el `cleanName(creator.name)` de `createGroup` (formatea un
+valor de la BD, no del cuerpo). Con la parte de invite en el esquema, ver qué queda vivo en
+`utils/validation.ts` y si merece seguir siendo un módulo aparte.
 
 **Decidido el 04-08-2026:**
 

@@ -1,20 +1,20 @@
 import { useFieldArray, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { groupMemberSchema, groupSchema } from "@monorepo/validation";
 import type { Member } from "@monorepo/shared";
 import type { GroupInput } from "../../../utils/groupApi";
 import styles from "./groupform.module.css";
 import { IoCloseOutline } from "react-icons/io5";
 
-interface GroupFormMember {
-    _id?: string;
-    name: string;
-    hasAccount?: boolean;
-}
+// hasAccount is a UI-only flag (it tags a member as claimed), not part of the
+// shared input contract, so it is added here as a passthrough — like the file
+// field in registerForm — or the resolver would strip it from the form values.
+const groupFormSchema = groupSchema.extend({
+    members: z.array(groupMemberSchema.extend({ hasAccount: z.boolean().optional() })).min(1),
+});
 
-interface GroupFormValues {
-    name: string;
-    description: string;
-    members: GroupFormMember[];
-}
+type GroupFormValues = z.infer<typeof groupFormSchema>;
 
 interface GroupFormProps {
     onClose: () => void;
@@ -35,6 +35,7 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
         control,
         formState: { errors },
     } = useForm<GroupFormValues>({
+        resolver: zodResolver(groupFormSchema),
         defaultValues: {
             name: defaultValues.name,
             description: defaultValues.description,
@@ -71,10 +72,7 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
                         type="text"
                         placeholder="Trip to Madrid"
                         autoFocus
-                        {...register("name", {
-                            required: "Name is required",
-                            maxLength: { value: 30, message: 'name is to large' },
-                        })}
+                        {...register("name")}
                         className={`${styles.input} ${errors.name ? styles.errorInput : ""}`}
                     />
                     {errors.name && (
@@ -88,10 +86,7 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
                         id="description"
                         type="text"
                         placeholder="Trip to madrid in february"
-                        {...register("description", {
-                            required: "Description is required",
-                            maxLength: { value: 50, message: 'description is to large' },
-                        })}
+                        {...register("description")}
                         className={`${styles.input} ${errors.description ? styles.errorInput : ""}`}
                     />
                     {errors.description && (
@@ -111,10 +106,7 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
                                     id={`member-${index}`}
                                     type="text"
                                     placeholder="Name"
-                                    {...register(`members.${index}.name`, {
-                                        required: "Name is required",
-                                        maxLength: { value: 30, message: 'name is to large' },
-                                    })}
+                                    {...register(`members.${index}.name`)}
                                     className={`${styles.input} ${errors.members?.[index]?.name ? styles.errorInput : ""}`}
                                 />
                                 {field._id && !field.hasAccount && (

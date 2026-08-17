@@ -129,6 +129,50 @@ describe("POST /group", () => {
         expect(response.body.error).toBe("Every member needs a name");
     });
 
+    it("rejects a missing name", async () => {
+        const { name, ...noName } = groupBody;
+        const response = await post("/group", jorgeToken, noName);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Name is required");
+    });
+
+    it("rejects a name longer than 30", async () => {
+        const response = await post("/group", jorgeToken, { ...groupBody, name: "A".repeat(31) });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("name is too large");
+    });
+
+    it("rejects a missing description", async () => {
+        const { description, ...noDescription } = groupBody;
+        const response = await post("/group", jorgeToken, noDescription);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Description is required");
+    });
+
+    it("rejects a description longer than 50", async () => {
+        const response = await post("/group", jorgeToken, { ...groupBody, description: "A".repeat(51) });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("description is too large");
+    });
+
+    it("rejects an empty members list", async () => {
+        const response = await post("/group", jorgeToken, { ...groupBody, members: [] });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("A group needs at least one member");
+    });
+
+    it("flattens several field errors in schema order", async () => {
+        const response = await post("/group", jorgeToken, { members: groupBody.members });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Name is required. Description is required");
+    });
+
     it("rejects a request without a token", async () => {
         const response = await fakeRequest.post("/group").send(groupBody);
 
@@ -313,6 +357,13 @@ describe("PUT /group/:groupId", () => {
 
         expect(response.status).toBe(403);
     });
+
+    it("validates the body shape on update too", async () => {
+        const response = await put(`/group/${group._id}`, jorgeToken, { ...groupBody, name: "A".repeat(31) });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("name is too large");
+    });
 });
 
 describe("GET /group/:groupId", () => {
@@ -411,6 +462,48 @@ describe("DELETE /group/:groupId", () => {
         expect(await Group.findById(group._id)).toBeNull();
         expect(await Expense.find({ group: group._id })).toHaveLength(0);
         expect(await Payment.find({ group: group._id })).toHaveLength(0);
+    });
+});
+
+describe(":groupId ObjectId validation", () => {
+    const badId = "not-a-valid-object-id";
+    // Valid 24-hex shape, so it clears the schema and reaches the controller,
+    // which then answers "does not exist" — proving the param check is shape,
+    // not existence.
+    const missingId = "0123456789abcdef01234567";
+
+    it("400s an unparseable id on GET", async () => {
+        const response = await get(`/group/${badId}`, jorgeToken);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Invalid group ID");
+    });
+
+    it("400s an unparseable id on GET groupDetails", async () => {
+        const response = await get(`/group/${badId}/groupDetails`, jorgeToken);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Invalid group ID");
+    });
+
+    it("400s an unparseable id on DELETE", async () => {
+        const response = await fakeRequest.delete(`/group/${badId}`).set(auth(jorgeToken));
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Invalid group ID");
+    });
+
+    it("checks the id before the body on PUT", async () => {
+        const response = await put(`/group/${badId}`, jorgeToken, { name: "" });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Invalid group ID");
+    });
+
+    it("lets a well-formed but unknown id through to the not-found check", async () => {
+        const response = await fakeRequest.delete(`/group/${missingId}`).set(auth(jorgeToken));
+
+        expect(response.status).toBe(404);
     });
 });
 
