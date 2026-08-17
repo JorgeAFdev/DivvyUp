@@ -45,9 +45,11 @@ jobs:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: |
           set -euo pipefail
-          resp=$(curl --fail --silent --show-error \
-            "https://coolify.jorgeaf.dev/api/v1/deploy?uuid=uset5w5tsg77ctdfczsp0hse&force=false" \
-            -H "Authorization: Bearer $COOLIFY_TOKEN")
+          resp=$(curl --fail --silent --show-error -X POST \
+            "https://coolify.jorgeaf.dev/api/v1/deploy" \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"uuid":"uset5w5tsg77ctdfczsp0hse","force":false}')
           dep=$(echo "$resp" | jq -r '.deployments[0].deployment_uuid')
           [ -n "$dep" ] && [ "$dep" != "null" ] || { echo "no deployment_uuid: $resp"; exit 1; }
           echo "polling deployment $dep ..."
