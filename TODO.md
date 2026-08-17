@@ -146,9 +146,10 @@ gobierna todas las rutas necesita su rama, su PR y una pasada completa de Cypres
 
 ## 11. Las validaciones, a Zod y en un paquete compartido — HECHO el 17-08-2026
 
-Las cinco áreas de entrada (auth, group, expense, payment e invite/join) están en `main` y
-desplegadas: cada endpoint declara la forma de su entrada en un esquema Zod de `@monorepo/validation`
-en vez de una escalera de `if`. La arquitectura (forma→esquema / BD→controlador, `objectId` y
+Todas las áreas de entrada (auth, group, expense, payment, invite/join y el update de perfil) están
+en `main` y desplegadas: cada endpoint con cuerpo declara la forma de su entrada en un esquema Zod de
+`@monorepo/validation` en vez de una escalera de `if`. `userUpdateSchema` es `registerSchema.omit({
+password: true })` — mismas reglas de nombre/email que register, sin duplicar. La arquitectura (forma→esquema / BD→controlador, `objectId` y
 `decimal.js` compartidos, el `validate` de cuerpo y de params, el contrato de error `{ error: "..." }`
 sin tocar) vive en `CLAUDE.md` → *packages/validation*, *Auth* y *Backend request flow*.
 
