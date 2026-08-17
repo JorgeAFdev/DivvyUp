@@ -1,5 +1,4 @@
 import type { Request, Response } from "express";
-import mongoose from "mongoose";
 import Group from "../schemas/group.schema.js";
 import Payment from "../schemas/payment.schema.js";
 import { MEMBER_FIELDS, memberOf, hydrateMembers, linkedUserIds } from "../utils/members.js";
@@ -11,10 +10,6 @@ const pay = async (req: Request, res: Response) => {
   try {
     const { id: userId } = req.jwtPayload;
     const { paymentId } = req.params;
-
-    if (!paymentId || !mongoose.Types.ObjectId.isValid(paymentId)) {
-      return res.status(400).json({ error: "Invalid group ID" });
-    }
 
     const payment = await Payment.findById(paymentId);
     if (!payment) {
