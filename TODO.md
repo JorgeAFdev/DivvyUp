@@ -144,62 +144,6 @@ gobierna todas las rutas necesita su rama, su PR y una pasada completa de Cypres
 - Cambia el estado del riesgo si algún día se plantea SSR o RSC en el front: en cuanto se escriba la
   primera server action, esto pasa de aplazable a bloqueante y hay que subir antes.
 
-## 11. Las validaciones, a Zod y en un paquete compartido — HECHO el 17-08-2026
-
-Todas las áreas de entrada (auth, group, expense, payment, invite/join y el update de perfil) están
-en `main` y desplegadas: cada endpoint con cuerpo declara la forma de su entrada en un esquema Zod de
-`@monorepo/validation` en vez de una escalera de `if`. `userUpdateSchema` es `registerSchema.omit({
-password: true })` — mismas reglas de nombre/email que register, sin duplicar. La arquitectura (forma→esquema / BD→controlador, `objectId` y
-`decimal.js` compartidos, el `validate` de cuerpo y de params, el contrato de error `{ error: "..." }`
-sin tocar) vive en `CLAUDE.md` → *packages/validation*, *Auth* y *Backend request flow*.
-
-Con invite hecho, la revisión de `utils/validation.ts` quedó resuelta: el `cleanName` del `name` del
-join se fue al `.trim()` del esquema; `hasDuplicateNames` (group + invite) y `cleanName(creator.name)`
-de `createGroup` se quedan porque son BD, no forma. El módulo sobrevive, aún usado por ambos.
-
-## 13. El backend a ESM — HECHO el 08-08-2026
-
-Backend y frontend son ambos ESM ahora. Esto es lo que permite que un paquete compartido (punto 11)
-lo consuman los dos sin build dual. Se hizo como paso propio, antes de TypeScript (punto 14), para
-que la pasada mecánica se verificara en verde sin ruido de tipos.
-
-**Estado actual:**
-
-- `backend/package.json` lleva `"type": "module"` y se quedan las extensiones `.js`. Los 28 ficheros
-  de `src` más `scripts/clean-e2e.js` pasaron a `import`/`export`, con `.js` explícito en cada import
-  relativo (ESM no resuelve directorios: `./mongo/connection` pasó a `./mongo/connection/index.js`).
-  Los routers importan los controladores como namespace (`import * as groupController`), porque los
-  controladores exportan funciones con nombre, no un default.
-- **El runner es vitest** (`vitest run --coverage`), no jest. jest y `cross-env` se han quitado de las
-  devDependencies; `vitest` y `@vitest/coverage-v8` (`^3.0.8`, ya en el repo por el frontend) entran.
-  La config vive en `backend/vitest.config.js`: `globals: true` para que los tests sigan usando
-  `describe`/`it`/`expect` sin importarlos, `fileParallelism: false` como equivalente de `--runInBand`
-  (cada fichero levanta su propio memory server sobre la conexión global de mongoose, así que se
-  corren en serie), y coverage con proveedor `v8`. Los 103 tests siguen en verde.
-- **El `secret` ya no se captura en el import.** `jwt.js` y `user.schema.js` leen
-  `process.env.jwt_secret` en el momento de la llamada, no a nivel de módulo, así que el orden de
-  imports deja de importar (que con ESM es obligatorio: los `import` se izan por encima de cualquier
-  sentencia). El workaround por fichero de los tests desaparece: el secreto se pone una sola vez en
-  `backend/vitest.setup.js` (`setupFiles`).
-- El `require` lazy de `mongodb-memory-server` dentro de `connectDB()` pasó a `await import(...)`,
-  dentro de la rama `NODE_ENV === 'test'`. `connectDB()` ya era async.
-
-## 14. TypeScript — HECHO el 14-08-2026
-
-**Backend y frontend a TypeScript estricto, completo.** El plan por fases y las decisiones (qué se
-descartó y por qué) están archivados en [docs/archive/ts-migration.md](docs/archive/ts-migration.md);
-las reglas vigentes viven en `CLAUDE.md`.
-
-- **Backend (PR #103 + #104):** `src` + tests a `.ts`, `strict`, sin `allowJs`. Mongoose vía
-  `InferSchemaType` + tipos hidratados; motor de balances en `services/ledger.ts` y reparto en
-  `services/split.ts`. Dev con `tsx watch`, producción `tsc` → `dist/` en Dockerfile multi-stage.
-  Puerta `tsc --noEmit` en cada PR.
-- **`packages/shared` (#106) + serializadores (#113):** contrato serializado; cada controller tipa su
-  respuesta contra el contrato vía `serializers/contract.ts`.
-- **Frontend (#105, #107–#111):** `frontend/src` 100% `.ts`/`.tsx` estricto; jest → vitest,
-  `prop-types` fuera, react-query/MUI/react-hook-form tipados. `noUnusedLocals`/`noUnusedParameters`
-  activos en el gate.
-
 ## 15. Contrato de errores por código, como en Cartobol — APLAZADO el 17-08-2026
 
 **Absorbido en el punto 11, aplazado el resto.** Sin multiidioma, devolver un código estable en vez
@@ -350,43 +294,4 @@ que está por debajo de mínimos (44 de iOS, 48 de Android) y sale del `padding:
 `IconButton`. Ojo con el orden: el `minWidth` es trabajo que el `Drawer` tira a la basura, el de la
 hamburguesa no, porque el botón se queda igual. Y el mínimo de 48 para botones de sólo icono es la
 misma conversación que el punto 17.
-
-## 19. Cambiar SendGrid por Resend — HECHO el 09-08-2026
-
-El proveedor de email es Resend. El servicio vive en `backend/src/services/email.js`:
-`sendEmail(to, subject, text)`, ahora `async`, que instancia `new Resend(process.env.RESEND_API_KEY)`
-**en el momento de la llamada** —no a nivel de módulo, el mismo patrón que `jwt_secret` desde el
-punto 13, así que el orden frente a `dotenv` deja de importar— y hace `resend.emails.send({...})`. La
-firma no cambia respecto a SendGrid, así que el (futuro) llamante no se toca.
-
-**Estado:**
-
-- **El `from` sale de `RESEND_FROM`, con default en código `DivvyUp <onboarding@resend.dev>`** — el
-  remitente de pruebas de Resend, que **sólo entrega al email dueño de la cuenta de Resend**. Para
-  mandar a usuarios reales hace falta un `from` en un dominio verificado (SPF/DKIM); eso **ya existe**
-  (`send.jorgeaf.dev`, verificado al comprar `jorgeaf.dev` — ver punto 9), así que sólo queda rellenar
-  `RESEND_FROM` con una dirección de ese dominio, sin tocar código. El envío real depende además de
-  descablear el único llamante (punto 6).
-- **Resend no lanza en un fallo de envío: devuelve `{ data, error }`.** `sendEmail` mira `error` y
-  **lanza** si viene, para que ningún fallo se trague en silencio (el SendGrid anterior ni siquiera
-  hacía `await`, así que un fallo era un unhandled rejection). Qué hacer con ese throw es del
-  llamante, no del servicio: la bienvenida es best-effort, el reset es crítico.
-- **Sigue sin enviarse nada:** el único llamante es la línea comentada de `auth.controller.js:54`.
-  Descablearla es el punto 6.
-- Dependencia: `resend@^6.18.1` en `dependencies` (no dev, o el contenedor `--prod` se cae al
-  arrancar). `@sendgrid/mail` fuera. Variables: `RESEND_API_KEY` (obligatoria) y `RESEND_FROM`
-  (opcional). `SENDGRID_API_KEY` y `SENDGRID_EMAIL` retiradas de `.env`, README y `CLAUDE.md`.
-- Test: `backend/src/tests/email.test.js` mockea `resend` y fija el payload (from/to/subject/text) y
-  que un `{ error }` hace que `sendEmail` rechace.
-
-## 20. Dominio propio (`jorgeaf.dev`) — HECHO el 11-08-2026
-
-Front en `divvyup.jorgeaf.dev` (Cloudflare Pages) y back en `divvyup-api.jorgeaf.dev` (VPS OVH VPS-1
-2027 + Coolify). Koyeb dado de baja. El detalle operativo (deploy con polling, los dos tokens, TLS,
-el bloqueo del panel, el Bulk Redirect de `pages.dev`, el CORS atado a `CLIENT_URL`) vive en
-`CLAUDE.md` → *Deployment*.
-
-Con front y back bajo el mismo dominio registrable, **queda desbloqueado el camino-cookies del punto
-5**: la cookie de sesión de Better Auth puede ser same-site (`SameSite=Lax`) en vez de
-`SameSite=None; Secure` cross-site.
 
