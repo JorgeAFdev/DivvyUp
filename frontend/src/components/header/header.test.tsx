@@ -1,10 +1,18 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { AuthProvider } from '../../context/userContextAuth';
 import { DarkModeContextProvider } from '../../context/darkModeContext';
 import Header, { MOBILE_QUERY } from './header';
 
 vi.mock('../notifications/notifications', () => ({ default: () => null }));
+
+// Identity now comes from the Better Auth session via useAuth, not localStorage.
+const authState = vi.hoisted(() => ({
+    user: null as { id: string; name: string; image: string | null } | null,
+    isPending: false,
+}));
+vi.mock('../../context/userContextAuth', () => ({
+    useAuth: () => ({ ...authState, signOut: vi.fn() }),
+}));
 
 const matchMediaAs = (viewport: 'mobile' | 'desktop') => (query: string): MediaQueryList => ({
     matches: viewport === 'mobile' && query === MOBILE_QUERY,
@@ -20,25 +28,23 @@ const matchMediaAs = (viewport: 'mobile' | 'desktop') => (query: string): MediaQ
 const renderHeader = ({ viewport = 'desktop', logged = true }: { viewport?: 'mobile' | 'desktop'; logged?: boolean } = {}) => {
     window.matchMedia = vi.fn().mockImplementation(matchMediaAs(viewport));
 
-    if (logged) {
-        localStorage.setItem('user-session', JSON.stringify({
-            token: 'a-token',
-            user: { id: '1', name: 'Ana', profilePicture: '' },
-        }));
-    }
+    authState.isPending = false;
+    authState.user = logged ? { id: '1', name: 'Ana', image: '' } : null;
 
     return render(
         <MemoryRouter>
-            <AuthProvider>
-                <DarkModeContextProvider>
-                    <Header />
-                </DarkModeContextProvider>
-            </AuthProvider>
+            <DarkModeContextProvider>
+                <Header />
+            </DarkModeContextProvider>
         </MemoryRouter>,
     );
 };
 
 afterEach(() => {
+    authState.user = null;
+    authState.isPending = false;
+    // The dark-mode context persists its choice in localStorage; the toggle test
+    // would otherwise leak dark mode into the next test's default.
     localStorage.clear();
 });
 

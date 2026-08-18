@@ -2,7 +2,7 @@ import { useState, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { MenuItem, IconButton } from '@mui/material';
 import Logout from '../logout/logout';
-import { getUserSession } from '../../utils/localStorage';
+import { useAuth } from '../../context/userContextAuth';
 import MemberAvatar from '../avatar/memberAvatar';
 import AppMenu from '../menu/appMenu';
 
@@ -17,7 +17,7 @@ const UserMenu = () => {
     const handleMenuClose = () => {
         setAnchorEl(null);
     };
-    const user = getUserSession();
+    const { user } = useAuth();
     if (!user) return null;
 
     return (
@@ -29,7 +29,7 @@ const UserMenu = () => {
                 aria-haspopup="true"
                 aria-expanded={isMenuOpen}
             >
-                <MemberAvatar name={user.name} src={user.profilePicture} />
+                <MemberAvatar name={user.name} src={user.image ?? undefined} />
             </IconButton>
             <AppMenu
                 anchorEl={anchorEl}

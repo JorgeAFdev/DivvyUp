@@ -8,7 +8,7 @@ import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 import { useDeleteGroup, useUpdateGroup } from '../../../hooks/useGroups';
 import type { GroupInput } from '../../../utils/groupApi';
 import { Tooltip } from 'react-tooltip';
-import { getUserSession } from '../../../utils/localStorage';
+import { useAuth } from '../../../context/userContextAuth';
 import { apiErrorMessage } from '../../../utils/apiError';
 import MemberAvatar from '../../avatar/memberAvatar';
 
@@ -20,8 +20,9 @@ const Group = ({ group }: { group: GroupType }) => {
 
     const updateGroup = useUpdateGroup(group._id);
     const deleteGroup = useDeleteGroup(group._id);
+    const { user } = useAuth();
 
-    const myMemberId = group.members.find((m) => m.user?._id === getUserSession()?.id)?._id;
+    const myMemberId = group.members.find((m) => m.user?._id === user?.id)?._id;
 
     const handleActionsClick = (e: MouseEvent) => {
         e.stopPropagation();
