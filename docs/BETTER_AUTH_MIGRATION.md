@@ -73,8 +73,9 @@ contraseña, login, accounts y sesiones. La red de Cypress sigue verde.
   ser el único almacén de usuarios: `password` se va a la colección `account` de BA, y
   `profilePicture` se mapea al campo **`image`** de BA.
 - Para **leer** esa colección (pintar avatares) se registra un modelo Mongoose de sólo lectura
-  `Account` con `{ collection: 'user' }` y campos `name`/`image`, y `members.user` apunta a él con
-  `ref: 'Account'`. Así **los 13 `.populate('members.user', ...)` siguen funcionando sin tocarse**;
+  `UserView` con `{ collection: 'user' }` y campos `name`/`image`, y `members.user` apunta a él con
+  `ref: 'UserView'` (nombrado por la colección que lee, no `Account`: la colección `account` de BA es
+  el almacén de credenciales, otra cosa). Así **los 13 `.populate('members.user', ...)` siguen funcionando sin tocarse**;
   sólo cambia la proyección (`name image`, antes `name profilePicture`) y el serializer mapea el
   `image` de BA al `profilePicture` del contrato. BA sigue siendo el único que _escribe_ los campos
   auth-sensibles (`email`, `emailVerified`, `account`).
