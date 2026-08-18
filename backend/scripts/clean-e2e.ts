@@ -26,7 +26,9 @@ const commit = process.argv.includes('--yes');
         process.exit(1);
     }
 
-    const users = await db.collection('users').find({ email: SPEC_EMAIL }, { projection: { _id: 1 } }).toArray();
+    // Better Auth's user collection is 'user' (singular), not the Mongoose 'users'
+    // the old auth used. Its account (password) and session rows hang off userId.
+    const users = await db.collection('user').find({ email: SPEC_EMAIL }, { projection: { _id: 1 } }).toArray();
     const userIds = users.map((user) => user._id);
 
     // A spec group always has its creator as a member with an account, so this
@@ -38,9 +40,13 @@ const commit = process.argv.includes('--yes');
 
     const expenses = await db.collection('expenses').countDocuments({ group: { $in: groupIds } });
     const payments = await db.collection('payments').countDocuments({ group: { $in: groupIds } });
+    const accounts = await db.collection('account').countDocuments({ userId: { $in: userIds } });
+    const sessions = await db.collection('session').countDocuments({ userId: { $in: userIds } });
 
     console.log(`database: ${db.name}`);
-    console.log(`users:    ${userIds.length} / ${await db.collection('users').countDocuments()}`);
+    console.log(`users:    ${userIds.length} / ${await db.collection('user').countDocuments()}`);
+    console.log(`accounts: ${accounts} / ${await db.collection('account').countDocuments()}`);
+    console.log(`sessions: ${sessions} / ${await db.collection('session').countDocuments()}`);
     console.log(`groups:   ${groupIds.length} / ${await db.collection('groups').countDocuments()}`);
     console.log(`expenses: ${expenses} / ${await db.collection('expenses').countDocuments()}`);
     console.log(`payments: ${payments} / ${await db.collection('payments').countDocuments()}`);
@@ -56,12 +62,16 @@ const commit = process.argv.includes('--yes');
     const deletedPayments = await db.collection('payments').deleteMany({ group: { $in: groupIds } });
     const deletedExpenses = await db.collection('expenses').deleteMany({ group: { $in: groupIds } });
     const deletedGroups = await db.collection('groups').deleteMany({ _id: { $in: groupIds } });
-    const deletedUsers = await db.collection('users').deleteMany({ _id: { $in: userIds } });
+    const deletedSessions = await db.collection('session').deleteMany({ userId: { $in: userIds } });
+    const deletedAccounts = await db.collection('account').deleteMany({ userId: { $in: userIds } });
+    const deletedUsers = await db.collection('user').deleteMany({ _id: { $in: userIds } });
 
     console.log('\ndeleted:', {
         payments: deletedPayments.deletedCount,
         expenses: deletedExpenses.deletedCount,
         groups: deletedGroups.deletedCount,
+        sessions: deletedSessions.deletedCount,
+        accounts: deletedAccounts.deletedCount,
         users: deletedUsers.deletedCount,
     });
 
