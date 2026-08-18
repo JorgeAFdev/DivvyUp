@@ -109,11 +109,13 @@ contraseña, login, accounts y sesiones. La red de Cypress sigue verde.
   Better Auth valida el header `Origin` contra `trustedOrigins` en las peticiones que cambian estado
   (el `Missing or null Origin` que saltó en la siembra de Cypress) — segunda capa. `credentials: true`
   en CORS sólo habilita *leer* la respuesta cross-origin; no es protección CSRF por sí mismo.
-- **Verificación en prod pendiente.** El Cypress local corre `localhost:3000 → :3001`, que es el
-  **mismo host, distinto puerto** (las cookies ignoran el puerto), así que **no** ejercita el camino
-  cross-subdominio real. En el primer deploy confirmar en DevTools → Application → Cookies que
-  `divvyup_session` aparece bajo `divvyup-api.jorgeaf.dev` sin `Domain`, y que el `fetch` al API tras
-  el login lleva `Cookie: divvyup_session=…`.
+- **Verificado en prod (18-08-2026).** El Cypress local corre `localhost:3000 → :3001`, que es el
+  **mismo host, distinto puerto** (las cookies ignoran el puerto), así que no ejercitaba el camino
+  cross-subdominio real; se comprobó en el primer deploy. Un register real dejó la cookie
+  `__Secure-divvyup_session` **host-only** bajo `divvyup-api.jorgeaf.dev` (Domain sin punto delante =
+  no compartida, no raíz), y la sesión quedó activa desde el front, luego viaja cross-subdominio con
+  `SameSite=Lax`. El prefijo `__Secure-` lo añade Better Auth solo en prod (cookie `Secure` sobre
+  https) y lo gestiona en ambos lados; en local (http) es `divvyup_session` a secas.
 - Es el motivo de fondo de toda la migración: el token deja de estar en `localStorage`, donde
   cualquier JS de la página lo lee (exposición a XSS de hoy). Hacer esta migración manteniendo el
   token en `localStorage` (plugin `bearer`/`jwt` de BA) sería pagar el coste de BA sin cobrarse su
