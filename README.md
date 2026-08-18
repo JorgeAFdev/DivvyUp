@@ -84,7 +84,10 @@ VITE_SOCKET_URL=http://localhost:3001
 
 ```env
 MONGO_URL=<your_mongo_db_url>
-jwt_secret=<your_jwt_secret>
+# Better Auth: a random secret (e.g. `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
+# and the backend's own origin (no /api/auth suffix — Better Auth appends it).
+BETTER_AUTH_SECRET=<your_better_auth_secret>
+BETTER_AUTH_URL=http://localhost:3001
 RESEND_API_KEY=<your_resend_api_key>
 # Optional; defaults to "DivvyUp <onboarding@resend.dev>" (Resend's test sender)
 RESEND_FROM=<your_verified_sender>
