@@ -67,6 +67,13 @@ describe("sign-up validation (our Zod hook)", () => {
         expect(response.body.message).toBe("Name must be at least 3 characters long");
     });
 
+    it("rejects a name longer than 40 with the exact copy", async () => {
+        const response = await signUp({ ...valid, name: "A".repeat(41) });
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe("Name must be at most 40 characters long");
+    });
+
     it("rejects a malformed email", async () => {
         const response = await signUp({ ...valid, email: "nope" });
 
@@ -114,5 +121,19 @@ describe("sign-in validation (our Zod hook)", () => {
         const response = await signIn({ email: "nobody@user.com", password: "Password1" });
 
         expect(response.status).toBe(401);
+    });
+
+    // The one message that must never differ, or the response tells an attacker
+    // whether an email is registered. Better Auth owns the check now, so pin that
+    // its wrong-password and unknown-email answers stay identical.
+    it("answers a wrong password and an unknown email identically (no enumeration)", async () => {
+        await signUp(valid);
+
+        const wrongPassword = await signIn({ email: valid.email, password: "Wrongpass1" });
+        const unknownEmail = await signIn({ email: "nobody@user.com", password: "Password1" });
+
+        expect(wrongPassword.status).toBe(401);
+        expect(unknownEmail.status).toBe(401);
+        expect(unknownEmail.body).toEqual(wrongPassword.body);
     });
 });
