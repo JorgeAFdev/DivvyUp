@@ -1,18 +1,11 @@
 // Step 33: someone with no account follows the link and ends up inside the
 // group, without ever pasting the link twice.
-const api = 'http://localhost:3001/api';
+import { registerUser, createGroup } from '../support/api';
 
 const seedGroup = (stamp) =>
-    cy.request('POST', `${api}/auth/register`, {
-        name: 'Jorge', email: `jorge${stamp}@test.com`, password: 'Password1',
-    }).then(({ body }) =>
-        cy.request({
-            method: 'POST',
-            url: `${api}/group`,
-            headers: { Authorization: `Bearer ${body.token}` },
-            body: { name: 'Viaje', description: 'Fin de semana', members: [{ name: 'Ana' }] },
-        }),
-    ).then(({ body }) => body.inviteCode);
+    registerUser('Jorge', `jorge${stamp}@test.com`)
+        .then(() => createGroup({ name: 'Viaje', description: 'Fin de semana', members: [{ name: 'Ana' }] }))
+        .then((body) => body.inviteCode);
 
 describe('landing on an invite without a session', () => {
     it('explains the invite, registers from there and claims a member', () => {
@@ -21,7 +14,9 @@ describe('landing on an invite without a session', () => {
         // Everything hangs off this callback: interpolating the code outside it
         // would read the value at queue time, before the request answered.
         seedGroup(stamp).then((inviteCode) => {
-            cy.clearLocalStorage();
+            // seedGroup signed the owner in; clear the cookie to arrive as a
+            // logged-out visitor.
+            cy.clearCookies();
             cy.visit(`/join/${inviteCode}`);
 
             // the group is named before asking for anything
@@ -46,7 +41,7 @@ describe('landing on an invite without a session', () => {
     });
 
     it('says so when the link was already reset', () => {
-        cy.clearLocalStorage();
+        cy.clearCookies();
         cy.visit('/join/this-code-does-not-exist');
 
         cy.contains('This invite link is not valid').should('be.visible');

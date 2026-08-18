@@ -1,16 +1,16 @@
 import { useNavigate } from 'react-router-dom';
-import { removeSession, getUserToken } from '../../utils/localStorage';
+import { useAuth } from '../../context/userContextAuth';
 
 const Logout = () => {
     const navigate = useNavigate();
-    const isLogged = !!getUserToken();
+    const { user, signOut } = useAuth();
 
-    if (!isLogged) {
+    if (!user) {
         return null;
     }
 
-    const doLogout = () => {
-        removeSession();
+    const doLogout = async () => {
+        await signOut();
         navigate('/');
         window.location.reload();
     }

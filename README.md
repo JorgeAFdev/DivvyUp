@@ -22,6 +22,7 @@ The project is a **pnpm-workspaces monorepo** driven by **Turborepo**. All works
 - **MUI (Material UI)**
 - **CSS Modules**
 - **Axios**
+- **Better Auth** (React client — cookie session)
 - **React Toastify**
 - **React Tooltip**
 - **Socket.io Client**
@@ -31,7 +32,7 @@ The project is a **pnpm-workspaces monorepo** driven by **Turborepo**. All works
 - **TypeScript** (`strict`)
 - **MongoDB** with **Mongoose** (`InferSchemaType`)
 - **decimal.js** — all monetary math (never native floats)
-- **jsonwebtoken** — header-based `Bearer` auth
+- **Better Auth** — email/password auth with `httpOnly` cookie sessions
 - **Socket.io** — real-time notifications
 - **Cloudinary** (profile images) + **Multer**
 - **Resend** — transactional email
@@ -84,7 +85,10 @@ VITE_SOCKET_URL=http://localhost:3001
 
 ```env
 MONGO_URL=<your_mongo_db_url>
-jwt_secret=<your_jwt_secret>
+# Better Auth: a random secret (e.g. `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
+# and the backend's own origin (no /api/auth suffix — Better Auth appends it).
+BETTER_AUTH_SECRET=<your_better_auth_secret>
+BETTER_AUTH_URL=http://localhost:3001
 RESEND_API_KEY=<your_resend_api_key>
 # Optional; defaults to "DivvyUp <onboarding@resend.dev>" (Resend's test sender)
 RESEND_FROM=<your_verified_sender>

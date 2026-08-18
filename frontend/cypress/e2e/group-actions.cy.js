@@ -1,19 +1,15 @@
-import { api, createGroup, registerUser, useSession } from '../support/api';
+import { api, createGroup, registerUser } from '../support/api';
 
 // Everything behind the dots menu of a group card. Creating and deleting are in
 // create-group.cy.js; this is editing, the invite link and the 409.
 describe('group actions', () => {
     it('edits a group and the card shows the new data', () => {
-        let session;
-
-        registerUser('Jorge', `edit${Date.now()}@test.com`).then((body) => { session = body; });
-        cy.then(() => createGroup(session, {
+        registerUser('Jorge', `edit${Date.now()}@test.com`);
+        cy.then(() => createGroup({
             name: 'Cumple', description: 'Regalo', members: [{ name: 'Ana' }],
         }));
 
         cy.visit('/groups');
-        cy.then(() => useSession(session));
-        cy.then(() => cy.visit('/groups'));
 
         cy.get('#basic-button').first().click();
         cy.contains('Edit group').click();
@@ -35,16 +31,12 @@ describe('group actions', () => {
     });
 
     it('resets the invite link and shares the new code', () => {
-        let session;
-
-        registerUser('Jorge', `invite${Date.now()}@test.com`).then((body) => { session = body; });
-        cy.then(() => createGroup(session, {
+        registerUser('Jorge', `invite${Date.now()}@test.com`);
+        cy.then(() => createGroup({
             name: 'Concierto', description: 'Entradas', members: [{ name: 'Ana' }],
         }));
 
         cy.visit('/groups');
-        cy.then(() => useSession(session));
-        cy.then(() => cy.visit('/groups'));
 
         // navigator.share would open the OS sheet, so force the clipboard branch
         cy.window().then((win) => {
@@ -59,10 +51,7 @@ describe('group actions', () => {
 
         // The link is built from the group the card is rendering, so sharing the
         // old code here would mean the reset never reached the screen.
-        cy.then(() => cy.request({
-            url: `${api}/group/user`,
-            headers: { Authorization: `Bearer ${session.token}` },
-        })).then(({ body }) => {
+        cy.then(() => cy.request(`${api}/group/user`)).then(({ body }) => {
             const currentCode = body[0].inviteCode;
 
             cy.get('#basic-button').first().click();
@@ -72,17 +61,14 @@ describe('group actions', () => {
     });
 
     it('refuses to drop a member who is in an expense and keeps the form open', () => {
-        let session;
         let groupId;
 
-        registerUser('Jorge', `conflict${Date.now()}@test.com`).then((body) => { session = body; });
+        registerUser('Jorge', `conflict${Date.now()}@test.com`);
         // three members: the form only offers to remove one above the minimum
-        cy.then(() => createGroup(session, {
+        cy.then(() => createGroup({
             name: 'Cena', description: 'Con gastos', members: [{ name: 'Ana' }, { name: 'Luis' }],
         })).then((group) => { groupId = group._id; });
 
-        cy.visit('/groups');
-        cy.then(() => useSession(session));
         cy.then(() => cy.visit(`/groups/${groupId}/expenses`));
 
         cy.get('[data-type="add"]').last().click();

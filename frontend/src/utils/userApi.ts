@@ -1,5 +1,4 @@
 import type { SessionUser } from '@monorepo/shared';
-import { authHeaders } from './authHeaders';
 import api from './axios';
 
 export interface UpdateProfileInput {
@@ -15,7 +14,6 @@ export interface UpdateProfileResponse {
 
 export const updateUser = async (
     { name, email, profilePicture }: UpdateProfileInput,
-    token: string | null,
 ): Promise<UpdateProfileResponse> => {
     const formData = new FormData();
     formData.append('name', name);
@@ -25,10 +23,7 @@ export const updateUser = async (
     }
 
     const response = await api.patch<UpdateProfileResponse>('/user/update', formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-            ...authHeaders(token).headers,
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
 };

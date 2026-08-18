@@ -3,10 +3,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema } from '@monorepo/validation';
 import styles from './loginForm.module.css';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useLogin } from '../../hooks/useSession';
+import { useLogin, type LoginCredentials } from '../../hooks/useSession';
 import { toast } from 'react-toastify';
 import { nextDestination } from '../../utils/nextDestination';
-import type { LoginCredentials } from '../../utils/authApi';
 import { apiErrorMessage } from '../../utils/apiError';
 
 

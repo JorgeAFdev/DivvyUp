@@ -11,3 +11,9 @@ allowBuilds:
   unrs-resolver: true
 
 minimumReleaseAge: 4320
+
+# Better Auth's mongo-adapter has mongodb as an optional peer and would pull 7.x
+# (bson 7), but mongoose ships mongodb 6.x (bson 6). Two bson majors in one process
+# throws "Unsupported BSON version" on insert, so both are pinned to mongoose's.
+overrides:
+  mongodb: 6.20.0

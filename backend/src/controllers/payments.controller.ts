@@ -8,7 +8,7 @@ import { serializeHydratedPayment } from "../serializers/contract.js";
 
 const pay = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload;
+    const { id: userId } = req.user;
     const { paymentId } = req.params;
 
     const payment = await Payment.findById(paymentId);

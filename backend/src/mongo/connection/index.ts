@@ -20,7 +20,11 @@ export const connectDB = async () => {
     const mongo = mongoose.connection;
     mongo.on('error', (error) => console.error(error));
   } catch (e) {
-    console.log(e);
+    // Rethrow, don't swallow: createAuth() reads mongoose.connection.db right
+    // after this resolves. Swallowing let the server "start" with an undefined
+    // db, logging success while every request 401s and the deploy went green.
+    console.error(e);
+    throw e;
   }
 };
 

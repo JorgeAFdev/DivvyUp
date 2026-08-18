@@ -4,11 +4,11 @@ import { getGroupDetails } from '../utils/groupApi';
 import { queryKeys } from './queryKeys';
 
 export const useGroupDetails = (groupId: string) => {
-    const { token } = useAuth();
+    const { user } = useAuth();
 
     return useQuery({
         queryKey: queryKeys.groupDetails(groupId),
-        queryFn: () => getGroupDetails(groupId, token),
-        enabled: Boolean(token && groupId),
+        queryFn: () => getGroupDetails(groupId),
+        enabled: Boolean(user && groupId),
     });
 };

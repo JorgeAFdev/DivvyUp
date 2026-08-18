@@ -1,5 +1,8 @@
 import crypto from 'crypto';
 import mongoose, { HydratedDocument, InferSchemaType, Model, Types } from 'mongoose';
+// Side-effect import: registers the 'UserView' model so members.user's
+// ref: 'UserView' resolves when .populate('members.user') runs.
+import './userView.js';
 
 
 const GroupSchema = new mongoose.Schema(
@@ -29,7 +32,7 @@ const GroupSchema = new mongoose.Schema(
         },
         user: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: 'User',
+          ref: 'UserView',
           default: null,
         },
       }],

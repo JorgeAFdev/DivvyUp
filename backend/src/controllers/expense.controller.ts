@@ -36,7 +36,7 @@ const checkMembership = (group: GroupHydrated, paidBy: string, participants: str
 
 const createExpense = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload;
+        const { id: userId } = req.user;
         const { groupId } = req.params;
         const { description, totalAmount, paidBy, participants } = req.body;
 
@@ -82,7 +82,7 @@ const createExpense = async (req: Request, res: Response) => {
 
 const updateExpense = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload;
+        const { id: userId } = req.user;
         const { expenseId, groupId } = req.params;
         const { description, totalAmount, paidBy, participants } = req.body;
 
@@ -131,7 +131,7 @@ const updateExpense = async (req: Request, res: Response) => {
 
 const getExpensesByGroupId = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload;
+        const { id: userId } = req.user;
         const { groupId } = req.params;
 
         const group = await Group.findById(groupId).populate("members.user", MEMBER_FIELDS);
@@ -154,7 +154,7 @@ const getExpensesByGroupId = async (req: Request, res: Response) => {
 
 const getExpensesByUserId = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload;
+        const { id: userId } = req.user;
 
         if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ error: "Invalid user ID" });
@@ -204,7 +204,7 @@ const getExpensesByUserId = async (req: Request, res: Response) => {
 
 const deleteExpense = async (req: Request, res: Response) => {
     try {
-        const { id: userId } = req.jwtPayload;
+        const { id: userId } = req.user;
         const { groupId, expenseId } = req.params;
 
         const expense = await Expense.findOne({ _id: expenseId, group: groupId });

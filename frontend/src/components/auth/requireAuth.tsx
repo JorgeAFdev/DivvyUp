@@ -5,10 +5,13 @@ import { useAuth } from '../../context/userContextAuth';
 // Sends you to login remembering where you were headed, so an invite link
 // survives having to register first.
 const RequireAuth = ({ children }: { children: ReactNode }) => {
-    const { token } = useAuth();
+    const { user, isPending } = useAuth();
     const location = useLocation();
 
-    if (!token) {
+    // The session cookie is still being checked; don't bounce to /login yet.
+    if (isPending) return null;
+
+    if (!user) {
         const next = encodeURIComponent(`${location.pathname}${location.search}`);
         return <Navigate to={`/login?next=${next}`} replace />;
     }

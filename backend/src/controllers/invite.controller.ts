@@ -28,7 +28,7 @@ const getInviteName = async (req: Request, res: Response) => {
 
 const getGroupByInviteCode = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload;
+    const { id: userId } = req.user;
     const { inviteCode } = req.params;
 
     const group = await Group.findOne({ inviteCode });
@@ -53,7 +53,7 @@ const getGroupByInviteCode = async (req: Request, res: Response) => {
 
 const joinGroup = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload;
+    const { id: userId } = req.user;
     const { inviteCode } = req.params;
     const { memberId, name } = req.body;
 
@@ -98,7 +98,7 @@ const joinGroup = async (req: Request, res: Response) => {
 
 const regenerateInviteCode = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload;
+    const { id: userId } = req.user;
     const { groupId } = req.params;
 
     const group = await Group.findById(groupId);

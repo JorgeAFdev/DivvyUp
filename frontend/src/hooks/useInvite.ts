@@ -3,7 +3,7 @@ import { useAuth } from '../context/userContextAuth';
 import { getGroupByInviteCode, getInviteName, joinGroup, type JoinGroupInput } from '../utils/groupApi';
 import { queryKeys } from './queryKeys';
 
-// Public endpoint: it answers only the group name, so it takes no token.
+// Public endpoint: it answers only the group name, so it needs no session.
 export const useInviteName = (inviteCode: string) =>
     useQuery({
         queryKey: queryKeys.inviteName(inviteCode),
@@ -12,22 +12,21 @@ export const useInviteName = (inviteCode: string) =>
     });
 
 export const useInvite = (inviteCode: string) => {
-    const { token } = useAuth();
+    const { user } = useAuth();
 
     return useQuery({
         queryKey: queryKeys.invite(inviteCode),
-        queryFn: () => getGroupByInviteCode(inviteCode, token),
+        queryFn: () => getGroupByInviteCode(inviteCode),
         retry: 0,
-        enabled: Boolean(token),
+        enabled: Boolean(user),
     });
 };
 
 export const useJoinGroup = (inviteCode: string) => {
-    const { token } = useAuth();
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (body: JoinGroupInput) => joinGroup(inviteCode, body, token),
+        mutationFn: (body: JoinGroupInput) => joinGroup(inviteCode, body),
         onSuccess: (joined) => {
             queryClient.invalidateQueries({ queryKey: queryKeys.groups() });
             queryClient.invalidateQueries({ queryKey: queryKeys.groupDetails(joined._id) });

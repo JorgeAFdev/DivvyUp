@@ -1,17 +1,14 @@
-const api = 'http://localhost:3001/api';
+import { api, registerUser } from '../support/api';
 
 describe('create group', () => {
   beforeEach(() => {
     cy.intercept('POST', `${api}/group`).as('createGroup')
 
-    // The spec used to open /groups with no session and never got past the
-    // redirect to login.
-    cy.request('POST', `${api}/auth/register`, {
-      name: 'Jorge', email: `jorge${Date.now()}@test.com`, password: 'Password1',
-    }).then(({ body }) => {
-      cy.visit('/groups', {
-        onBeforeLoad: (win) => win.localStorage.setItem('user-session', JSON.stringify(body)),
-      })
+    // registerUser sets the session cookie in Cypress's jar (with the Origin
+    // header Better Auth's CSRF check needs), shared with the app, so visiting
+    // /groups afterwards lands logged in.
+    registerUser('Jorge', `jorge${Date.now()}@test.com`).then(() => {
+      cy.visit('/groups')
     })
   })
   it('create group flow', () => {

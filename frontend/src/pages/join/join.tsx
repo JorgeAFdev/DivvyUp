@@ -11,7 +11,7 @@ import styles from './join.module.css';
 
 const Join = () => {
     const { inviteCode = '' } = useParams();
-    const { token } = useAuth();
+    const { user, isPending } = useAuth();
     const navigate = useNavigate();
 
     const [newName, setNewName] = useState('');
@@ -33,7 +33,11 @@ const Join = () => {
         });
     };
 
-    if (!token) {
+    if (isPending) {
+        return null;
+    }
+
+    if (!user) {
         return <InviteLanding />;
     }
 

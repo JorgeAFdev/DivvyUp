@@ -11,31 +11,29 @@ import {
 import { queryKeys } from './queryKeys';
 
 export const useGroups = () => {
-    const { token } = useAuth();
+    const { user } = useAuth();
 
     return useQuery({
         queryKey: queryKeys.groups(),
-        queryFn: () => getGroupByUserId(token),
-        enabled: Boolean(token),
+        queryFn: () => getGroupByUserId(),
+        enabled: Boolean(user),
     });
 };
 
 export const useCreateGroup = () => {
-    const { token } = useAuth();
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: GroupInput) => createGroup(data, token),
+        mutationFn: (data: GroupInput) => createGroup(data),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.groups() }),
     });
 };
 
 export const useUpdateGroup = (groupId: string) => {
-    const { token } = useAuth();
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: GroupInput) => updateGroup(groupId, data, token),
+        mutationFn: (data: GroupInput) => updateGroup(groupId, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.groups() });
             queryClient.invalidateQueries({ queryKey: queryKeys.groupDetails(groupId) });
@@ -44,11 +42,10 @@ export const useUpdateGroup = (groupId: string) => {
 };
 
 export const useDeleteGroup = (groupId: string) => {
-    const { token } = useAuth();
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: () => deleteGroup(groupId, token),
+        mutationFn: () => deleteGroup(groupId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.groups() });
             queryClient.removeQueries({ queryKey: queryKeys.groupDetails(groupId) });
@@ -57,11 +54,10 @@ export const useDeleteGroup = (groupId: string) => {
 };
 
 export const useRegenerateInviteCode = (groupId: string) => {
-    const { token } = useAuth();
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: () => regenerateInviteCode(groupId, token),
+        mutationFn: () => regenerateInviteCode(groupId),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.groups() }),
     });
 };

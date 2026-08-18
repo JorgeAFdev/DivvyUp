@@ -21,42 +21,39 @@ const useInvalidateExpenses = (groupId: string) => {
 };
 
 export const useUserExpenses = () => {
-    const { token } = useAuth();
+    const { user } = useAuth();
 
     return useQuery({
         queryKey: queryKeys.userExpenses(),
-        queryFn: () => getAllUserExpenses(token),
+        queryFn: () => getAllUserExpenses(),
         retry: 0,
-        enabled: Boolean(token),
+        enabled: Boolean(user),
     });
 };
 
 export const useCreateExpense = (groupId: string) => {
-    const { token } = useAuth();
     const invalidate = useInvalidateExpenses(groupId);
 
     return useMutation({
-        mutationFn: (data: ExpenseInput) => createGroupExpense(groupId, data, token),
+        mutationFn: (data: ExpenseInput) => createGroupExpense(groupId, data),
         onSuccess: invalidate,
     });
 };
 
 export const useUpdateExpense = (groupId: string, expenseId: string) => {
-    const { token } = useAuth();
     const invalidate = useInvalidateExpenses(groupId);
 
     return useMutation({
-        mutationFn: (data: ExpenseInput) => updateGroupExpense(groupId, expenseId, data, token),
+        mutationFn: (data: ExpenseInput) => updateGroupExpense(groupId, expenseId, data),
         onSuccess: invalidate,
     });
 };
 
 export const useDeleteExpense = (groupId: string, expenseId: string) => {
-    const { token } = useAuth();
     const invalidate = useInvalidateExpenses(groupId);
 
     return useMutation({
-        mutationFn: () => deleteGroupExpense(groupId, expenseId, token),
+        mutationFn: () => deleteGroupExpense(groupId, expenseId),
         onSuccess: invalidate,
     });
 };

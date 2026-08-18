@@ -1,10 +1,9 @@
 import { useState } from "react";
-import type { SessionUser } from "@monorepo/shared";
 import Modal from "../modal/modal";
-import UserEditForm from "./userEditForm";
+import UserEditForm, { type EditableUser } from "./userEditForm";
 import styles from "./userEditForm.module.css";
 
-const UserEdit = ({ user }: { user: SessionUser }) => {
+const UserEdit = ({ user }: { user: EditableUser }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     return (

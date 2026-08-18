@@ -2,7 +2,6 @@ import type { Request, Response } from "express";
 import Expense from "../schemas/expense.schema.js";
 import Group from "../schemas/group.schema.js";
 import Payment from "../schemas/payment.schema.js";
-import User from "../schemas/user.schema.js";
 import mongoose from "mongoose";
 import { MEMBER_FIELDS, MEMBER_PATHS, memberOf, hydrateMembers } from "../utils/members.js";
 import { updateBalance, generateDebts } from "../services/ledger.js";
@@ -11,18 +10,14 @@ import { serializeGroup, serializeGroupDetails } from "../serializers/contract.j
 
 const createGroup = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload;
+    const { id: userId, name: creatorName } = req.user;
     const { name, description, members } = req.body;
 
-    const creator = await User.findById(userId);
-    if (!creator) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Member names are trimmed by groupSchema; the creator's name comes from
-    // the User doc, which no schema touches, so it is normalized here.
+    // Member names are trimmed by groupSchema; the creator's name comes from the
+    // Better Auth session, which no schema touches, so it is normalized here.
+    // members[].user stays an ObjectId — it is the Better Auth user's _id.
     const formattedMembers = [
-      { name: cleanName(creator.name), user: creator._id },
+      { name: cleanName(creatorName), user: new mongoose.Types.ObjectId(userId) },
       ...members.map((member: any) => ({ name: member.name })),
     ];
 
@@ -43,7 +38,7 @@ const createGroup = async (req: Request, res: Response) => {
 
 const updateGroup = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload;
+    const { id: userId } = req.user;
     const { groupId } = req.params;
     const { name, description, members } = req.body;
 
@@ -144,7 +139,7 @@ const updateGroup = async (req: Request, res: Response) => {
 
 const getUserGroups = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload;
+    const { id: userId } = req.user;
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ error: "Invalid user Id" });
@@ -161,7 +156,7 @@ const getUserGroups = async (req: Request, res: Response) => {
 
 const getGroupById = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload;
+    const { id: userId } = req.user;
     const { groupId } = req.params;
 
     const group = await Group.findById(groupId).populate("members.user", MEMBER_FIELDS);
@@ -181,7 +176,7 @@ const getGroupById = async (req: Request, res: Response) => {
 
 const deleteGroup = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload;
+    const { id: userId } = req.user;
     const { groupId } = req.params;
 
     const group = await Group.findById(groupId)
@@ -203,7 +198,7 @@ const deleteGroup = async (req: Request, res: Response) => {
 
 const getGroupDetails = async (req: Request, res: Response) => {
   try {
-    const { id: userId } = req.jwtPayload;
+    const { id: userId } = req.user;
     const { groupId } = req.params;
 
     const group = await Group.findById(groupId).populate('members.user', MEMBER_FIELDS);

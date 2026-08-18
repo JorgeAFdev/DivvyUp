@@ -1,10 +1,10 @@
-import { getUserSession } from '../../../utils/localStorage';
+import { useAuth } from '../../../context/userContextAuth';
 import styles from './user.module.css';
 import MemberAvatar from '../../../components/avatar/memberAvatar';
 import UserEdit from '../../../components/user/userEdit';
 
 const User = () => {
-    const user = getUserSession();
+    const { user } = useAuth();
 
     if (!user) {
         return <div className={styles.error}>User not found. Please log in.</div>;
@@ -14,7 +14,7 @@ const User = () => {
         <div className={styles.userContainer}>
             <MemberAvatar
                 name={user.name}
-                src={user.profilePicture}
+                src={user.image ?? undefined}
                 size={150}
                 className={styles.profileImage}
                 sx={{ marginInline: 'auto' }}
