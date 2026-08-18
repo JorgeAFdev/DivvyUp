@@ -156,9 +156,3 @@ export interface SessionUser {
   email: string;
   profilePicture: string;
 }
-
-/** register/login — the token plus the session user. */
-export interface AuthResponse {
-  token: string;
-  user: SessionUser;
-}
