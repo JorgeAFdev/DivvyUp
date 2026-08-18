@@ -1,23 +1,41 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { AuthResponse } from '@monorepo/shared';
-import { useAuth } from '../context/userContextAuth';
-import { login as loginRequest, register as registerRequest } from '../utils/authApi';
+import { authClient } from '../utils/authClient';
 
-// Signing in or out swaps whose data the cache holds, so both clear it before
-// the next screen mounts its queries.
-const useSessionMutation = <TVariables>(mutationFn: (variables: TVariables) => Promise<AuthResponse>) => {
-    const { login } = useAuth();
+export interface LoginCredentials {
+    email: string;
+    password: string;
+}
+
+export interface RegisterCredentials {
+    name: string;
+    email: string;
+    password: string;
+}
+
+// Signing in or up swaps whose data the cache holds, so both clear it before the
+// next screen mounts its queries. Better Auth's client updates its own session
+// store on success, so there is nothing else to persist here. The action returns
+// { data, error } instead of throwing, so the error is re-thrown for react-query.
+const useSessionMutation = <TVariables>(
+    action: (variables: TVariables) => Promise<{ error: unknown }>,
+) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn,
-        onSuccess: (session) => {
-            queryClient.clear();
-            login(session);
+        mutationFn: async (variables: TVariables) => {
+            const { error } = await action(variables);
+            if (error) throw error;
+            // Prime the session store before the component navigates: the action
+            // resolves before useSession's atom has the user, so a navigate() to a
+            // guarded route would otherwise bounce back to /login.
+            await authClient.getSession();
         },
+        onSuccess: () => queryClient.clear(),
     });
 };
 
-export const useLogin = () => useSessionMutation(loginRequest);
+export const useLogin = () =>
+    useSessionMutation((credentials: LoginCredentials) => authClient.signIn.email(credentials));
 
-export const useRegister = () => useSessionMutation(registerRequest);
+export const useRegister = () =>
+    useSessionMutation((credentials: RegisterCredentials) => authClient.signUp.email(credentials));

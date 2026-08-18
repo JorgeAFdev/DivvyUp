@@ -1,48 +1,17 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { AuthResponse } from '@monorepo/shared';
-import { getUserToken, removeSession, setStorageObject } from '../utils/localStorage';
+import { authClient } from '../utils/authClient';
 
-interface AuthContextValue {
-  token: string | null;
-  login: (data: AuthResponse) => void;
-  logout: () => void;
-}
+// The single seam onto Better Auth's session store. Components read identity from
+// here (never from localStorage anymore): `user` is null while logged out, and
+// `isPending` is true on the first render while the session cookie is being
+// checked, so route guards can wait instead of bouncing to /login prematurely.
+export const useAuth = () => {
+    const { data, isPending } = authClient.useSession();
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(getUserToken());
-
-  useEffect(() => {
-    const storedToken = getUserToken();
-    if (storedToken) {
-      setToken(storedToken);
-    }
-  }, []);
-
-  const login = (data: AuthResponse) => {
-    setStorageObject(JSON.stringify(data));
-    setToken(data.token);
-  };
-
-  const logout = () => {
-    removeSession();
-    setToken(null);
-  };
-
-  return (
-    <AuthContext.Provider value={{ token, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+    return {
+        user: data?.user ?? null,
+        isPending,
+        signOut: () => authClient.signOut(),
+    };
 };
 
-const useAuth = (): AuthContextValue => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-export { AuthProvider, useAuth };
+export type AuthUser = NonNullable<ReturnType<typeof useAuth>['user']>;
