@@ -1,25 +1,38 @@
 // Temporary smoke test for the members-without-accounts flow. Not meant to stay.
 const api = 'http://localhost:3001/api';
 
-const registerUser = (name, email) =>
-    cy.request('POST', `${api}/auth/register`, { name, email, password: 'Password1' }).its('body');
+// origin set by hand: Better Auth's endpoints 403 "Missing or null Origin" once a
+// session cookie is present, and cy.request (unlike a browser) sends none.
+const ORIGIN = 'http://localhost:3000';
 
-const useSession = (session) =>
-    cy.window().then((win) => win.localStorage.setItem('user-session', JSON.stringify(session)));
+const registerUser = (name, email) =>
+    cy.request({
+        method: 'POST',
+        url: `${api}/auth/sign-up/email`,
+        headers: { origin: ORIGIN },
+        body: { name, email, password: 'Password1' },
+    }).its('body');
+
+const loginAs = (email) =>
+    cy.request({
+        method: 'POST',
+        url: `${api}/auth/sign-in/email`,
+        headers: { origin: ORIGIN },
+        body: { email, password: 'Password1' },
+    });
 
 describe('members without accounts', () => {
     it('runs the whole flow with one account, then lets a second one join', () => {
         const stamp = Date.now();
-        let jorge;
-        let ana;
+        const jorgeEmail = `jorge${stamp}@test.com`;
+        const anaEmail = `ana${stamp}@test.com`;
         let inviteCode;
 
-        registerUser('Jorge', `jorge${stamp}@test.com`).then((body) => { jorge = body; });
-        registerUser('Ana', `ana${stamp}@test.com`).then((body) => { ana = body; });
+        registerUser('Jorge', jorgeEmail);
+        registerUser('Ana', anaEmail);
 
         // --- create a group typing only names -------------------------------
-        cy.visit('/groups');
-        cy.then(() => useSession(jorge));
+        cy.then(() => loginAs(jorgeEmail));
         cy.visit('/groups');
 
         cy.get('#create-group-btn').click();
@@ -64,14 +77,11 @@ describe('members without accounts', () => {
         cy.get('form').find('svg').first().click();
 
         // --- the second account joins through the link ----------------------
-        cy.then(() => {
-            return cy.request({
-                url: `${api}/group/user`,
-                headers: { Authorization: `Bearer ${jorge.token}` },
-            }).then((response) => { inviteCode = response.body[0].inviteCode; });
+        cy.then(() => cy.request(`${api}/group/user`)).then((response) => {
+            inviteCode = response.body[0].inviteCode;
         });
 
-        cy.then(() => useSession(ana));
+        cy.then(() => loginAs(anaEmail));
         cy.then(() => cy.visit(`/join/${inviteCode}`));
 
         cy.contains('Join Piso').should('be.visible');
@@ -86,7 +96,7 @@ describe('members without accounts', () => {
     // The invite link has its own landing now, covered by invite-landing.cy.js.
     // Every other private route still bounces to login keeping the destination.
     it('sends an anonymous visitor to login and back to where they were going', () => {
-        cy.clearLocalStorage();
+        cy.clearCookies();
         cy.visit('/my-expenses');
         cy.url().should('include', '/login?next=%2Fmy-expenses');
         cy.contains('No account yet?').should('be.visible');

@@ -4,14 +4,12 @@ describe('create group', () => {
   beforeEach(() => {
     cy.intercept('POST', `${api}/group`).as('createGroup')
 
-    // The spec used to open /groups with no session and never got past the
-    // redirect to login.
-    cy.request('POST', `${api}/auth/register`, {
+    // sign-up sets the session cookie in Cypress's jar, shared with the app, so
+    // visiting /groups afterwards lands logged in.
+    cy.request('POST', `${api}/auth/sign-up/email`, {
       name: 'Jorge', email: `jorge${Date.now()}@test.com`, password: 'Password1',
-    }).then(({ body }) => {
-      cy.visit('/groups', {
-        onBeforeLoad: (win) => win.localStorage.setItem('user-session', JSON.stringify(body)),
-      })
+    }).then(() => {
+      cy.visit('/groups')
     })
   })
   it('create group flow', () => {

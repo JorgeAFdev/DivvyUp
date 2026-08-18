@@ -1,19 +1,16 @@
-import { createGroup, registerUser, useSession } from '../support/api';
+import { createGroup, registerUser } from '../support/api';
 
 // The whole life of an expense in one go, because what is being guarded is that
 // the balance, the debts and /my-expenses follow every step of it.
 describe('expenses, balance and debts', () => {
     it('creates, edits, settles and deletes, and both screens follow', () => {
-        let session;
         let groupId;
 
-        registerUser('Jorge', `flow${Date.now()}@test.com`).then((body) => { session = body; });
-        cy.then(() => createGroup(session, {
+        registerUser('Jorge', `flow${Date.now()}@test.com`);
+        cy.then(() => createGroup({
             name: 'Viaje', description: 'Finde', members: [{ name: 'Ana' }],
         })).then((group) => { groupId = group._id; });
 
-        cy.visit('/groups');
-        cy.then(() => useSession(session));
         cy.then(() => cy.visit(`/groups/${groupId}/expenses`));
 
         // --- create ---------------------------------------------------------
