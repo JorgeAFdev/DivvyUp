@@ -7,7 +7,7 @@ import Group from "../schemas/group.schema.js";
 import type { GroupHydrated } from "../schemas/group.schema.js";
 import Expense from "../schemas/expense.schema.js";
 import Payment from "../schemas/payment.schema.js";
-import Account from "../schemas/account.js";
+import UserView from "../schemas/userView.js";
 import { signUp, type TestUser } from "./helpers/session.js";
 
 let app: Express;
@@ -441,7 +441,7 @@ describe("GET /user/expenses", () => {
         await post(`/group/join/${created.body.inviteCode}`, claimer.cookie, {
             memberId: created.body.members[1]._id,
         });
-        await Account.deleteOne({ _id: ghost.id });
+        await UserView.deleteOne({ _id: ghost.id });
 
         const response = await get("/user/expenses", claimer.cookie);
 
