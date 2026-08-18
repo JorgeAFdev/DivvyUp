@@ -22,6 +22,7 @@ The project is a **pnpm-workspaces monorepo** driven by **Turborepo**. All works
 - **MUI (Material UI)**
 - **CSS Modules**
 - **Axios**
+- **Better Auth** (React client — cookie session)
 - **React Toastify**
 - **React Tooltip**
 - **Socket.io Client**
@@ -31,7 +32,7 @@ The project is a **pnpm-workspaces monorepo** driven by **Turborepo**. All works
 - **TypeScript** (`strict`)
 - **MongoDB** with **Mongoose** (`InferSchemaType`)
 - **decimal.js** — all monetary math (never native floats)
-- **jsonwebtoken** — header-based `Bearer` auth
+- **Better Auth** — email/password auth with `httpOnly` cookie sessions
 - **Socket.io** — real-time notifications
 - **Cloudinary** (profile images) + **Multer**
 - **Resend** — transactional email
