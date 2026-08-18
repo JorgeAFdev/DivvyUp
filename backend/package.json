@@ -15,10 +15,8 @@
     "clean:e2e": "tsx scripts/clean-e2e.ts"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.7",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.10.5",
     "@types/supertest": "^6.0.2",
@@ -33,13 +31,12 @@
   "dependencies": {
     "@monorepo/shared": "workspace:*",
     "@monorepo/validation": "workspace:*",
-    "bcryptjs": "^2.4.3",
+    "better-auth": "1.6.29",
     "cloudinary": "^2.10.0",
     "cors": "^2.8.6",
     "decimal.js": "^10.6.0",
     "dotenv": "^16.3.1",
     "express": "^4.22.2",
-    "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.24.2",
     "multer": "^2.2.0",
     "resend": "^6.18.1",
