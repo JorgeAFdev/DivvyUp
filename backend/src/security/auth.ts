@@ -22,19 +22,22 @@ export const createAuth = () =>
     betterAuth({
         baseURL: process.env.BETTER_AUTH_URL,
         secret: process.env.BETTER_AUTH_SECRET,
-        // mongoose bundles a different mongodb major than the adapter resolves; the
-        // Db is the same driver handle at runtime, so the cast is only the types.
-        // Db is taken from the adapter's own signature to avoid a direct 'mongodb'
-        // import (not a backend dependency under pnpm's strict node_modules).
-        // transaction:false because we pass mongoose's Db, not a MongoClient, and
-        // the local mongodb-memory-server is a standalone (no replica set, so no
-        // transactions). A single mongodb version is pinned in the root package.json
-        // (pnpm overrides) so the adapter's ObjectId/BSON matches mongoose's driver.
+        // mongoose and the adapter resolve different mongodb majors (pinned to one
+        // in pnpm-workspace.yaml), so the cast is types only. Db comes from the
+        // adapter signature to avoid importing 'mongodb' (not a backend dep).
+        // transaction:false: mongoose's Db is not a MongoClient and the local
+        // mongodb-memory-server is a standalone.
         database: mongodbAdapter(mongoose.connection.db as unknown as Parameters<typeof mongodbAdapter>[0], { transaction: false }),
         emailAndPassword: { enabled: true },
-        // Let MongoDB own _id (an ObjectId); Better Auth reads it back as its hex
-        // string, which is what Group.members[].user stores as the account link.
-        advanced: { database: { generateId: false } },
+        advanced: {
+            // Let MongoDB own _id (an ObjectId); Better Auth reads it back as its
+            // hex string, which is what Group.members[].user stores as the link.
+            database: { generateId: false },
+            // Host-only (no Domain): the API is the sole reader (httpOnly), so the
+            // cookie never needs sharing across hosts. crossSubDomainCookies stays
+            // off — sibling subdomains could only widen it to the root jorgeaf.dev.
+            cookies: { session_token: { name: 'divvyup_session' } },
+        },
         trustedOrigins: [process.env.CLIENT_URL as string],
         hooks: {
             before: createAuthMiddleware(async (ctx) => {
