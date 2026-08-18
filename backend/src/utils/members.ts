@@ -5,9 +5,9 @@ import type { GroupDoc, GroupHydrated, GroupMember } from '../schemas/group.sche
 // of the Subdocument methods a real GroupMember carries.
 type MemberPlain = GroupDoc['members'][number] & { _id: Types.ObjectId };
 
-// What a linked member's account exposes. Never widen it without checking
-// that the password hash is not in the projection.
-const MEMBER_FIELDS = 'name profilePicture';
+// What a linked member's account exposes from Better Auth's `user` collection.
+// Never widen it: email and the auth fields deliberately stay out of the group.
+const MEMBER_FIELDS = 'name image';
 
 // Where a member id sits inside an expense, for hydrateMembers. `as const` so
 // the entries stay literal and can be checked against the target's keys.

@@ -4,7 +4,6 @@
 // Each controller returns res.json(serializeX(doc)), so a field the contract adds
 // or the schema renames fails to compile here instead of drifting onto the wire.
 import type {
-  AuthResponse,
   BalanceEntry,
   Group,
   GroupDetails,
@@ -29,7 +28,7 @@ type IdLike = { toString(): string };
 interface AccountInput {
   _id: IdLike;
   name: string;
-  profilePicture?: string | null;
+  image?: string | null;
 }
 type MemberUser = AccountInput | IdLike | null | undefined;
 
@@ -87,18 +86,20 @@ interface PaymentInput {
 }
 
 interface UserInput {
-  _id: IdLike;
+  id: string;
   name: string;
   email: string;
-  profilePicture?: string | null;
+  image?: string | null;
 }
 
 const isAccount = (user: MemberUser): user is AccountInput =>
   user != null && typeof user === 'object' && 'name' in user;
 
+// Better Auth's user field is `image`; the wire contract keeps exposing it as
+// `profilePicture`, so the frontend avatar code is untouched by the auth swap.
 const serializeAccount = (user: MemberUser): MemberAccount | null =>
   isAccount(user)
-    ? { _id: user._id.toString(), name: user.name, profilePicture: user.profilePicture ?? '' }
+    ? { _id: user._id.toString(), name: user.name, profilePicture: user.image ?? '' }
     : null;
 
 const serializeMember = (member: MemberInput): Member => ({
@@ -210,15 +211,10 @@ const serializeUserExpensesGroup = (entry: UserExpensesGroupInput): UserExpenses
 });
 
 const serializeSessionUser = (user: UserInput): SessionUser => ({
-  id: user._id.toString(),
+  id: user.id,
   name: user.name,
   email: user.email,
-  profilePicture: user.profilePicture ?? '',
-});
-
-const serializeAuthResponse = (token: string, user: UserInput): AuthResponse => ({
-  token,
-  user: serializeSessionUser(user),
+  profilePicture: user.image ?? '',
 });
 
 export {
@@ -229,5 +225,4 @@ export {
   serializeInviteInfo,
   serializeUserExpensesGroup,
   serializeSessionUser,
-  serializeAuthResponse,
 };
