@@ -1,14 +1,13 @@
-const api = 'http://localhost:3001/api';
+import { api, registerUser } from '../support/api';
 
 describe('create group', () => {
   beforeEach(() => {
     cy.intercept('POST', `${api}/group`).as('createGroup')
 
-    // sign-up sets the session cookie in Cypress's jar, shared with the app, so
-    // visiting /groups afterwards lands logged in.
-    cy.request('POST', `${api}/auth/sign-up/email`, {
-      name: 'Jorge', email: `jorge${Date.now()}@test.com`, password: 'Password1',
-    }).then(() => {
+    // registerUser sets the session cookie in Cypress's jar (with the Origin
+    // header Better Auth's CSRF check needs), shared with the app, so visiting
+    // /groups afterwards lands logged in.
+    registerUser('Jorge', `jorge${Date.now()}@test.com`).then(() => {
       cy.visit('/groups')
     })
   })

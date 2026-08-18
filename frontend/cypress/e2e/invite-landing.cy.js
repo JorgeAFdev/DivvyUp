@@ -1,17 +1,11 @@
 // Step 33: someone with no account follows the link and ends up inside the
 // group, without ever pasting the link twice.
-const api = 'http://localhost:3001/api';
+import { registerUser, createGroup } from '../support/api';
 
 const seedGroup = (stamp) =>
-    cy.request('POST', `${api}/auth/sign-up/email`, {
-        name: 'Jorge', email: `jorge${stamp}@test.com`, password: 'Password1',
-    }).then(() =>
-        cy.request({
-            method: 'POST',
-            url: `${api}/group`,
-            body: { name: 'Viaje', description: 'Fin de semana', members: [{ name: 'Ana' }] },
-        }),
-    ).then(({ body }) => body.inviteCode);
+    registerUser('Jorge', `jorge${stamp}@test.com`)
+        .then(() => createGroup({ name: 'Viaje', description: 'Fin de semana', members: [{ name: 'Ana' }] }))
+        .then((body) => body.inviteCode);
 
 describe('landing on an invite without a session', () => {
     it('explains the invite, registers from there and claims a member', () => {
