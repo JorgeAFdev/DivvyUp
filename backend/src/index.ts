@@ -6,6 +6,7 @@ import { toNodeHandler } from 'better-auth/node';
 import { connectDB } from "./mongo/connection/index.js";
 import { socketServer } from './socket/socket.server.js';
 import { createAuth } from './security/auth.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 import router from "./routers/router.js";
 
 const start = async () => {
@@ -31,6 +32,8 @@ const start = async () => {
   app.set('socketio', io);
 
   app.use("/api", router);
+
+  app.use(errorHandler);
 
   const port = process.env.PORT || 3001;
   server.listen(port, () => {

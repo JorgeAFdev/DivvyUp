@@ -15,12 +15,20 @@ const socketServer = (server: HttpServer, auth: Auth) => {
     // room was chosen by a userId the client sent in a 'register' event, so any
     // client could join user:<someone-else> and receive their notifications.
     io.use(async (socket, next) => {
-        const session = await auth.api.getSession({ headers: fromNodeHeaders(socket.request.headers) });
-        if (!session) {
-            return next(new Error('Unauthorized'));
+        try {
+            const session = await auth.api.getSession({ headers: fromNodeHeaders(socket.request.headers) });
+            if (!session) {
+                return next(new Error('Unauthorized'));
+            }
+            socket.data.userId = session.user.id;
+            next();
+        } catch (error) {
+            // socket.io ignores the returned promise, so a throw from getSession
+            // (e.g. the DB briefly down) would be an unhandled rejection and kill
+            // the process. Reject the handshake instead.
+            console.error(error);
+            next(new Error('Unauthorized'));
         }
-        socket.data.userId = session.user.id;
-        next();
     });
 
     io.on('connection', (socket) => {

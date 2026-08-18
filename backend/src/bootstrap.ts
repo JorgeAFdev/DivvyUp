@@ -3,6 +3,7 @@ import express from 'express';
 import { toNodeHandler } from 'better-auth/node';
 import router from './routers/router.js';
 import { createAuth } from './security/auth.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 
 // Test-only app. Must be built after connectDB() resolves: createAuth() reads
 // mongoose.connection.db. Mirrors index.ts — Better Auth handler before
@@ -21,6 +22,8 @@ export const bootstrapApp = () => {
     app.use(express.json());
 
     app.use('/', router);
+
+    app.use(errorHandler);
 
     return app;
 }

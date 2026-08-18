@@ -8,12 +8,18 @@ import type { Auth } from './auth.js';
 export const requireSession = async (req: Request, res: Response, next: NextFunction) => {
     const auth = req.app.get('auth') as Auth;
 
-    const result = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
-    if (!result) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
+    try {
+        const result = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
+        if (!result) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
 
-    const { id, name, email } = result.user;
-    req.user = { id, name, email };
-    next();
+        const { id, name, email } = result.user;
+        req.user = { id, name, email };
+        next();
+    } catch (error) {
+        // A throw here (transient DB error, missing auth on the app) must reach
+        // the error handler, not escape as an unhandled rejection.
+        next(error);
+    }
 };
