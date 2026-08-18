@@ -1,10 +1,11 @@
 # Migración a Better Auth — plan y registro de decisiones
 
-**Estado: PR core completo en local (rama `feat/better-auth-core`).** Tarea 5 del [TODO](../TODO.md).
-Decisiones acordadas el 18-08-2026. Todo verde y verificado: backend (`pnpm typecheck` exit 0,
-**135/135** tests), frontend (`tsc --noEmit` limpio, **36/36** tests) y **Cypress 13/13** (7 specs)
-contra la app corriendo en local. Sólo queda poner las env `BETTER_AUTH_SECRET`/`BETTER_AUTH_URL` en el
-dashboard de Coolify (prod).
+**Estado: PR core abierta ([#126](https://github.com/DivvyUp-app/DivvyUp/pull/126)), por mergear**
+(rama `feat/better-auth-core`). Tarea 5 del [TODO](../TODO.md). Decisiones acordadas el 18-08-2026.
+Todo verde y verificado: backend (`pnpm typecheck` exit 0, **135/135** tests), frontend
+(`tsc --noEmit` limpio, **36/36** tests) y **Cypress 13/13** (7 specs) contra la app corriendo en
+local. Las env `BETTER_AUTH_SECRET` (secreto propio de prod, distinto del local) y `BETTER_AUTH_URL`
+ya están puestas en el dashboard de Coolify.
 
 Este es el documento de referencia de la migración del auth artesanal a
 [Better Aut­h](https://better-auth.com). Es la fuente de verdad del plan mientras dure; el `TODO.md`
@@ -84,14 +85,40 @@ contraseña, login, accounts y sesiones. La red de Cypress sigue verde.
 
 - La sesión de Better Auth viaja en cookie `httpOnly` + `Secure` + `SameSite=Lax`. `Lax` es viable
   porque, hecho el punto 20, front (`divvyup.jorgeaf.dev`) y back (`divvyup-api.jorgeaf.dev`)
-  comparten el dominio registrable `jorgeaf.dev`.
+  comparten el dominio registrable `jorgeaf.dev` — subdominios distintos, pero **same-site** (el
+  "site" es el dominio registrable, no el host), así que un `fetch` del front al back no es cross-site
+  y `Lax` la deja pasar.
+- **Nombre: `divvyup_session`, no el `better-auth.session_token` por defecto** (config
+  `advanced.cookies.session_token.name`). El default delata el framework; renombrarla es la pauta
+  anti-fingerprint de OWASP. Se prefirió un nombre namespaced a la app (patrón `laravel_session`)
+  antes que uno opaco tipo `sid`: la ganancia de opacidad es marginal (es `httpOnly` y host-only, no
+  la ve JS de terceros) y el namespace evita colisiones y es legible en DevTools/logs.
+- **Host-only a propósito: la cookie no lleva `Domain`.** El API es el único que la escribe y el
+  único que la lee (es `httpOnly`; el front sólo hace `fetch` con `credentials`, el navegador la
+  adjunta al destino, que siempre es el API), así que **nunca necesita compartirse entre hosts** y
+  host-only basta. Se deja `crossSubDomainCookies` **desactivado** a conciencia: como `divvyup` y
+  `divvyup-api` son subdominios **hermanos**, el único `Domain` que cubriría a ambos sería la **raíz
+  `jorgeaf.dev`** — no hay un `divvyup*.jorgeaf.dev` intermedio, eso no existe en cookies — y no se
+  quiere scopear la sesión al dominio raíz. Como no hay que compartirla, tampoco hace falta. (Contraste
+  con otro proyecto donde el API cuelga *bajo* el host del front, `api.app.dominio`: allí un `Domain`
+  no-raíz sí cubre a ambos; aquí, hermanos, sólo lo haría el raíz.)
+- **CSRF.** `SameSite=Lax` corta el vector: una petición cross-site desde otro origen (`fetch`/XHR/form
+  POST) **no** lleva la cookie, así que llega sin sesión. La excepción de `Lax` (navegación top-level
+  GET sí la lleva) no expone nada mientras las mutaciones sean POST/PATCH/DELETE, que lo son. Encima
+  Better Auth valida el header `Origin` contra `trustedOrigins` en las peticiones que cambian estado
+  (el `Missing or null Origin` que saltó en la siembra de Cypress) — segunda capa. `credentials: true`
+  en CORS sólo habilita *leer* la respuesta cross-origin; no es protección CSRF por sí mismo.
+- **Verificación en prod pendiente.** El Cypress local corre `localhost:3000 → :3001`, que es el
+  **mismo host, distinto puerto** (las cookies ignoran el puerto), así que **no** ejercita el camino
+  cross-subdominio real. En el primer deploy confirmar en DevTools → Application → Cookies que
+  `divvyup_session` aparece bajo `divvyup-api.jorgeaf.dev` sin `Domain`, y que el `fetch` al API tras
+  el login lleva `Cookie: divvyup_session=…`.
 - Es el motivo de fondo de toda la migración: el token deja de estar en `localStorage`, donde
   cualquier JS de la página lo lee (exposición a XSS de hoy). Hacer esta migración manteniendo el
   token en `localStorage` (plugin `bearer`/`jwt` de BA) sería pagar el coste de BA sin cobrarse su
   beneficio principal, así que se descartó.
 - Peaje: `credentials: true` en el `cors` del back (el `origin` ya está atado a `CLIENT_URL`),
-  `trustedOrigins` en la config de BA, `withCredentials: true` en la instancia de axios. La CSRF la
-  cubre BA (protección propia) más `SameSite=Lax`.
+  `trustedOrigins` en la config de BA, `withCredentials: true` en la instancia de axios.
 - **Desaparece `authHeaders(token)`** de todos los `utils/*Api.ts` (la cookie viaja sola) y la clave
   `user-session` de `localStorage` (`utils/localStorage.ts`).
 
