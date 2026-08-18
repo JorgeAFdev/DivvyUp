@@ -1,22 +1,19 @@
 import supertest from "supertest";
+import type { Express } from "express";
 import { bootstrapApp } from "../bootstrap.js";
 import { disconnectDB, connectDB } from "../mongo/connection/index.js";
-import type { HydratedDocument } from "mongoose";
 import Group from "../schemas/group.schema.js";
 import type { GroupHydrated } from "../schemas/group.schema.js";
 import Expense from "../schemas/expense.schema.js";
 import Payment from "../schemas/payment.schema.js";
-import User from "../schemas/user.schema.js";
-import type { UserDoc, UserMethods } from "../schemas/user.schema.js";
+import { signUp, type TestUser } from "./helpers/session.js";
 
-const app = bootstrapApp();
-const fakeRequest = supertest(app);
+let app: Express;
+let fakeRequest: ReturnType<typeof supertest>;
 
-const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
-
-const post = (path: string, token: string, body?: any) => fakeRequest.post(path).set(auth(token)).send(body);
-const put = (path: string, token: string, body?: any) => fakeRequest.put(path).set(auth(token)).send(body);
-const get = (path: string, token: string) => fakeRequest.get(path).set(auth(token));
+const post = (path: string, cookie: string, body?: any) => fakeRequest.post(path).set("Cookie", cookie).send(body);
+const put = (path: string, cookie: string, body?: any) => fakeRequest.put(path).set("Cookie", cookie).send(body);
+const get = (path: string, cookie: string) => fakeRequest.get(path).set("Cookie", cookie);
 
 const groupBody = {
     name: "Piso",
@@ -41,23 +38,21 @@ const dinnerFor = (group: GroupHydrated) => {
     };
 };
 
-let jorge: HydratedDocument<UserDoc, UserMethods>;
-let ana: HydratedDocument<UserDoc, UserMethods>;
-let jorgeToken: string;
-let anaToken: string;
+let jorge: TestUser;
+let ana: TestUser;
 let group: GroupHydrated;
 
 beforeAll(async () => {
     await connectDB();
-    jorge = await User.create({ name: "Jorge", email: "jorge@user.com", password: "Password1" });
-    ana = await User.create({ name: "Ana", email: "ana@user.com", password: "Password1" });
-    jorgeToken = jorge.generateJWT();
-    anaToken = ana.generateJWT();
+    app = bootstrapApp();
+    fakeRequest = supertest(app);
+    jorge = await signUp(app, { name: "Jorge", email: "jorge@user.com" });
+    ana = await signUp(app, { name: "Ana", email: "ana@user.com" });
 });
 
 beforeEach(async () => {
     await Promise.all([Group.deleteMany({}), Expense.deleteMany({}), Payment.deleteMany({})]);
-    const response = await post("/group", jorgeToken, groupBody);
+    const response = await post("/group", jorge.cookie, groupBody);
     group = (await Group.findById(response.body._id))!;
 });
 
@@ -67,11 +62,11 @@ afterAll(async () => {
 
 describe("POST /group", () => {
     it("creates members by name and links the creator from the JWT", async () => {
-        const response = await post("/group", jorgeToken, groupBody);
+        const response = await post("/group", jorge.cookie, groupBody);
 
         expect(response.status).toBe(201);
         expect(response.body.members.map((m: any) => m.name)).toEqual(["Jorge", "Mamá", "Ana"]);
-        expect(response.body.members[0].user._id).toBe(jorge._id.toString());
+        expect(response.body.members[0].user._id).toBe(jorge.id);
         expect(response.body.members[1].user).toBeNull();
         expect(response.body.inviteCode).toHaveLength(22);
         expect(response.body.balance).toHaveLength(3);
@@ -79,7 +74,7 @@ describe("POST /group", () => {
     });
 
     it("rejects duplicate names, ignoring case and surrounding spaces", async () => {
-        const response = await post("/group", jorgeToken, {
+        const response = await post("/group", jorge.cookie, {
             ...groupBody,
             members: [{ name: "Mamá" }, { name: "  mamá " }],
         });
@@ -89,7 +84,7 @@ describe("POST /group", () => {
     });
 
     it("rejects a member whose name collides with the creator's", async () => {
-        const response = await post("/group", jorgeToken, {
+        const response = await post("/group", jorge.cookie, {
             ...groupBody,
             members: [{ name: "jorge" }],
         });
@@ -98,9 +93,9 @@ describe("POST /group", () => {
     });
 
     it("trims the creator's name before checking for duplicates", async () => {
-        const spaced = await User.create({ name: "Bea ", email: "bea@user.com", password: "Password1" });
+        const spaced = await signUp(app, { name: "Bea ", email: "bea@user.com" });
 
-        const response = await post("/group", spaced.generateJWT(), {
+        const response = await post("/group", spaced.cookie, {
             ...groupBody,
             members: [{ name: "Bea" }],
         });
@@ -110,7 +105,7 @@ describe("POST /group", () => {
     });
 
     it("rejects a member name longer than the group name allows", async () => {
-        const response = await post("/group", jorgeToken, {
+        const response = await post("/group", jorge.cookie, {
             ...groupBody,
             members: [{ name: "A".repeat(31) }],
         });
@@ -120,7 +115,7 @@ describe("POST /group", () => {
     });
 
     it("rejects a member without a name", async () => {
-        const response = await post("/group", jorgeToken, {
+        const response = await post("/group", jorge.cookie, {
             ...groupBody,
             members: [{ name: "  " }],
         });
@@ -131,14 +126,14 @@ describe("POST /group", () => {
 
     it("rejects a missing name", async () => {
         const { name, ...noName } = groupBody;
-        const response = await post("/group", jorgeToken, noName);
+        const response = await post("/group", jorge.cookie, noName);
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("Name is required");
     });
 
     it("rejects a name longer than 30", async () => {
-        const response = await post("/group", jorgeToken, { ...groupBody, name: "A".repeat(31) });
+        const response = await post("/group", jorge.cookie, { ...groupBody, name: "A".repeat(31) });
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("name is too large");
@@ -146,28 +141,28 @@ describe("POST /group", () => {
 
     it("rejects a missing description", async () => {
         const { description, ...noDescription } = groupBody;
-        const response = await post("/group", jorgeToken, noDescription);
+        const response = await post("/group", jorge.cookie, noDescription);
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("Description is required");
     });
 
     it("rejects a description longer than 50", async () => {
-        const response = await post("/group", jorgeToken, { ...groupBody, description: "A".repeat(51) });
+        const response = await post("/group", jorge.cookie, { ...groupBody, description: "A".repeat(51) });
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("description is too large");
     });
 
     it("rejects an empty members list", async () => {
-        const response = await post("/group", jorgeToken, { ...groupBody, members: [] });
+        const response = await post("/group", jorge.cookie, { ...groupBody, members: [] });
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("A group needs at least one member");
     });
 
     it("flattens several field errors in schema order", async () => {
-        const response = await post("/group", jorgeToken, { members: groupBody.members });
+        const response = await post("/group", jorge.cookie, { members: groupBody.members });
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("Name is required. Description is required");
@@ -185,7 +180,7 @@ describe("PUT /group/:groupId", () => {
         await Expense.create(dinnerFor(group));
         const [jorgeId, mamaId, anaId] = idsOf(group);
 
-        const response = await put(`/group/${group._id}`, jorgeToken, {
+        const response = await put(`/group/${group._id}`, jorge.cookie, {
             name: "Piso",
             description: "Gastos del piso",
             members: [
@@ -207,7 +202,7 @@ describe("PUT /group/:groupId", () => {
     });
 
     it("adds a member that comes without an _id", async () => {
-        const response = await put(`/group/${group._id}`, jorgeToken, {
+        const response = await put(`/group/${group._id}`, jorge.cookie, {
             ...groupBody,
             members: [
                 ...idsOf(group).map((_id, i) => ({ _id, name: group.members[i].name })),
@@ -225,7 +220,7 @@ describe("PUT /group/:groupId", () => {
         await Expense.create(dinnerFor(group));
         const [jorgeId, mamaId] = idsOf(group);
 
-        const response = await put(`/group/${group._id}`, jorgeToken, {
+        const response = await put(`/group/${group._id}`, jorge.cookie, {
             ...groupBody,
             members: [{ _id: jorgeId, name: "Jorge" }, { _id: mamaId, name: "Mamá" }],
         });
@@ -242,7 +237,7 @@ describe("PUT /group/:groupId", () => {
         });
         const [jorgeId, mamaId, anaId] = idsOf(group);
 
-        const response = await put(`/group/${group._id}`, jorgeToken, {
+        const response = await put(`/group/${group._id}`, jorge.cookie, {
             ...groupBody,
             members: [{ _id: jorgeId, name: "Jorge" }, { _id: mamaId, name: "Mamá" }],
         });
@@ -263,7 +258,7 @@ describe("PUT /group/:groupId", () => {
         );
         await Expense.findOneAndDelete({ _id: expense._id });
 
-        const response = await put(`/group/${group._id}`, jorgeToken, {
+        const response = await put(`/group/${group._id}`, jorge.cookie, {
             ...groupBody,
             members: [{ _id: jorgeId, name: "Jorge" }, { _id: anaId, name: "Ana" }],
         });
@@ -275,7 +270,7 @@ describe("PUT /group/:groupId", () => {
     it("refuses the same _id twice, which would split one member in two", async () => {
         const [jorgeId, mamaId] = idsOf(group);
 
-        const response = await put(`/group/${group._id}`, jorgeToken, {
+        const response = await put(`/group/${group._id}`, jorge.cookie, {
             ...groupBody,
             members: [
                 { _id: jorgeId, name: "Jorge" },
@@ -295,7 +290,7 @@ describe("PUT /group/:groupId", () => {
         const [jorgeId, mamaId, anaId] = idsOf(group);
         const before = (await Payment.find({ group: group._id, status: "pending" })).map((p) => p._id.toString()).sort();
 
-        const response = await put(`/group/${group._id}`, jorgeToken, {
+        const response = await put(`/group/${group._id}`, jorge.cookie, {
             name: "Piso",
             description: "Otra descripción",
             members: [
@@ -320,7 +315,7 @@ describe("PUT /group/:groupId", () => {
         const [jorgeId, mamaId] = idsOf(group);
         const before = (await Payment.find({ group: group._id, status: "pending" })).map((p) => p._id.toString());
 
-        await put(`/group/${group._id}`, jorgeToken, {
+        await put(`/group/${group._id}`, jorge.cookie, {
             ...groupBody,
             members: [{ _id: jorgeId, name: "Jorge" }, { _id: mamaId, name: "Mamá" }],
         });
@@ -333,7 +328,7 @@ describe("PUT /group/:groupId", () => {
     it("refuses to let you remove yourself", async () => {
         const [, mamaId, anaId] = idsOf(group);
 
-        const response = await put(`/group/${group._id}`, jorgeToken, {
+        const response = await put(`/group/${group._id}`, jorge.cookie, {
             ...groupBody,
             members: [{ _id: mamaId, name: "Mamá" }, { _id: anaId, name: "Ana" }],
         });
@@ -342,9 +337,9 @@ describe("PUT /group/:groupId", () => {
     });
 
     it("rejects an _id that belongs to another group", async () => {
-        const other = await post("/group", jorgeToken, { ...groupBody, name: "Otro" });
+        const other = await post("/group", jorge.cookie, { ...groupBody, name: "Otro" });
 
-        const response = await put(`/group/${group._id}`, jorgeToken, {
+        const response = await put(`/group/${group._id}`, jorge.cookie, {
             ...groupBody,
             members: [{ _id: other.body.members[0]._id, name: "Jorge" }],
         });
@@ -353,13 +348,13 @@ describe("PUT /group/:groupId", () => {
     });
 
     it("rejects someone who is not a member", async () => {
-        const response = await put(`/group/${group._id}`, anaToken, groupBody);
+        const response = await put(`/group/${group._id}`, ana.cookie, groupBody);
 
         expect(response.status).toBe(403);
     });
 
     it("validates the body shape on update too", async () => {
-        const response = await put(`/group/${group._id}`, jorgeToken, { ...groupBody, name: "A".repeat(31) });
+        const response = await put(`/group/${group._id}`, jorge.cookie, { ...groupBody, name: "A".repeat(31) });
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("name is too large");
@@ -368,14 +363,14 @@ describe("PUT /group/:groupId", () => {
 
 describe("GET /group/:groupId", () => {
     it("returns the group with its invite code", async () => {
-        const response = await get(`/group/${group._id}`, jorgeToken);
+        const response = await get(`/group/${group._id}`, jorge.cookie);
 
         expect(response.status).toBe(200);
         expect(response.body.inviteCode).toBe(group.inviteCode);
     });
 
     it("rejects someone who is not a member", async () => {
-        const response = await get(`/group/${group._id}`, anaToken);
+        const response = await get(`/group/${group._id}`, ana.cookie);
 
         expect(response.status).toBe(403);
     });
@@ -389,7 +384,7 @@ describe("GET /group/:groupId", () => {
 
 describe("GET /group/user", () => {
     it("returns the groups the user is a member of", async () => {
-        const response = await get("/group/user", jorgeToken);
+        const response = await get("/group/user", jorge.cookie);
 
         expect(response.status).toBe(200);
         expect(response.body).toHaveLength(1);
@@ -397,23 +392,23 @@ describe("GET /group/user", () => {
     });
 
     it("returns an empty list, not a 404, until the user joins one", async () => {
-        const empty = await get("/group/user", anaToken);
+        const empty = await get("/group/user", ana.cookie);
         expect(empty.status).toBe(200);
         expect(empty.body).toEqual([]);
 
         const [, , anaId] = idsOf(group);
-        await post(`/group/join/${group.inviteCode}`, anaToken, { memberId: anaId });
+        await post(`/group/join/${group.inviteCode}`, ana.cookie, { memberId: anaId });
 
-        const response = await get("/group/user", anaToken);
+        const response = await get("/group/user", ana.cookie);
         expect(response.status).toBe(200);
         expect(response.body).toHaveLength(1);
     });
 
     it("never exposes a member's email", async () => {
         const [, , anaId] = idsOf(group);
-        await post(`/group/join/${group.inviteCode}`, anaToken, { memberId: anaId });
+        await post(`/group/join/${group.inviteCode}`, ana.cookie, { memberId: anaId });
 
-        const response = await get("/group/user", jorgeToken);
+        const response = await get("/group/user", jorge.cookie);
         const linked = response.body[0].members.filter((m: any) => m.user);
 
         expect(linked).toHaveLength(2);
@@ -428,7 +423,7 @@ describe("GET /group/:groupId/groupDetails", () => {
         await Expense.create(dinnerFor(group));
         const [, mamaId] = idsOf(group);
 
-        const response = await get(`/group/${group._id}/groupDetails`, jorgeToken);
+        const response = await get(`/group/${group._id}/groupDetails`, jorge.cookie);
 
         expect(response.status).toBe(200);
         expect(response.body.inviteCode).toBe(group.inviteCode);
@@ -446,7 +441,7 @@ describe("GET /group/:groupId/groupDetails", () => {
     });
 
     it("rejects someone who is not a member", async () => {
-        const response = await get(`/group/${group._id}/groupDetails`, anaToken);
+        const response = await get(`/group/${group._id}/groupDetails`, ana.cookie);
 
         expect(response.status).toBe(403);
     });
@@ -456,7 +451,7 @@ describe("DELETE /group/:groupId", () => {
     it("deletes the group with its expenses and its payments", async () => {
         await Expense.create(dinnerFor(group));
 
-        const response = await fakeRequest.delete(`/group/${group._id}`).set(auth(jorgeToken));
+        const response = await fakeRequest.delete(`/group/${group._id}`).set("Cookie", jorge.cookie);
 
         expect(response.status).toBe(204);
         expect(await Group.findById(group._id)).toBeNull();
@@ -473,35 +468,35 @@ describe(":groupId ObjectId validation", () => {
     const missingId = "0123456789abcdef01234567";
 
     it("400s an unparseable id on GET", async () => {
-        const response = await get(`/group/${badId}`, jorgeToken);
+        const response = await get(`/group/${badId}`, jorge.cookie);
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("Invalid group ID");
     });
 
     it("400s an unparseable id on GET groupDetails", async () => {
-        const response = await get(`/group/${badId}/groupDetails`, jorgeToken);
+        const response = await get(`/group/${badId}/groupDetails`, jorge.cookie);
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("Invalid group ID");
     });
 
     it("400s an unparseable id on DELETE", async () => {
-        const response = await fakeRequest.delete(`/group/${badId}`).set(auth(jorgeToken));
+        const response = await fakeRequest.delete(`/group/${badId}`).set("Cookie", jorge.cookie);
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("Invalid group ID");
     });
 
     it("checks the id before the body on PUT", async () => {
-        const response = await put(`/group/${badId}`, jorgeToken, { name: "" });
+        const response = await put(`/group/${badId}`, jorge.cookie, { name: "" });
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("Invalid group ID");
     });
 
     it("lets a well-formed but unknown id through to the not-found check", async () => {
-        const response = await fakeRequest.delete(`/group/${missingId}`).set(auth(jorgeToken));
+        const response = await fakeRequest.delete(`/group/${missingId}`).set("Cookie", jorge.cookie);
 
         expect(response.status).toBe(404);
     });
@@ -509,7 +504,7 @@ describe(":groupId ObjectId validation", () => {
 
 describe("GET /group/join/:inviteCode", () => {
     it("shows only the members without an account", async () => {
-        const response = await get(`/group/join/${group.inviteCode}`, anaToken);
+        const response = await get(`/group/join/${group.inviteCode}`, ana.cookie);
 
         expect(response.status).toBe(200);
         expect(response.body.name).toBe("Piso");
@@ -518,13 +513,13 @@ describe("GET /group/join/:inviteCode", () => {
     });
 
     it("tells a member they are already in", async () => {
-        const response = await get(`/group/join/${group.inviteCode}`, jorgeToken);
+        const response = await get(`/group/join/${group.inviteCode}`, jorge.cookie);
 
         expect(response.body.alreadyMember).toBe(true);
     });
 
     it("404s on an unknown code", async () => {
-        const response = await get("/group/join/nope", anaToken);
+        const response = await get("/group/join/nope", ana.cookie);
 
         expect(response.status).toBe(404);
     });
@@ -548,7 +543,7 @@ describe("GET /group/invite/:inviteCode", () => {
 
     it("404s on a code that was already reset", async () => {
         const stale = group.inviteCode;
-        await post(`/group/${group._id}/invite-code/regenerate`, jorgeToken);
+        await post(`/group/${group._id}/invite-code/regenerate`, jorge.cookie);
 
         const response = await fakeRequest.get(`/group/invite/${stale}`);
 
@@ -561,10 +556,10 @@ describe("POST /group/join/:inviteCode", () => {
         await Expense.create(dinnerFor(group));
         const [, , anaId] = idsOf(group);
 
-        const response = await post(`/group/join/${group.inviteCode}`, anaToken, { memberId: anaId });
+        const response = await post(`/group/join/${group.inviteCode}`, ana.cookie, { memberId: anaId });
 
         expect(response.status).toBe(200);
-        expect(response.body.members[2].user._id).toBe(ana._id.toString());
+        expect(response.body.members[2].user._id).toBe(ana.id);
 
         const debts = await Payment.find({ group: group._id, from: anaId, status: "pending" });
         expect(debts).toHaveLength(1);
@@ -574,7 +569,7 @@ describe("POST /group/join/:inviteCode", () => {
     it("refuses a member that is already linked", async () => {
         const [jorgeId] = idsOf(group);
 
-        const response = await post(`/group/join/${group.inviteCode}`, anaToken, { memberId: jorgeId });
+        const response = await post(`/group/join/${group.inviteCode}`, ana.cookie, { memberId: jorgeId });
 
         expect(response.status).toBe(409);
     });
@@ -582,17 +577,17 @@ describe("POST /group/join/:inviteCode", () => {
     it("refuses someone who is already a member", async () => {
         const [, mamaId] = idsOf(group);
 
-        const response = await post(`/group/join/${group.inviteCode}`, jorgeToken, { memberId: mamaId });
+        const response = await post(`/group/join/${group.inviteCode}`, jorge.cookie, { memberId: mamaId });
 
         expect(response.status).toBe(409);
     });
 
     it("creates a new linked member from a name, with a balance entry at 0", async () => {
-        const response = await post(`/group/join/${group.inviteCode}`, anaToken, { name: "Ana G." });
+        const response = await post(`/group/join/${group.inviteCode}`, ana.cookie, { name: "Ana G." });
 
         expect(response.status).toBe(200);
         expect(response.body.members).toHaveLength(4);
-        expect(response.body.members[3].user._id).toBe(ana._id.toString());
+        expect(response.body.members[3].user._id).toBe(ana.id);
 
         const updated = (await Group.findById(group._id))!;
         const entry = updated.balance.find((b) => b.member.toString() === updated.members[3]._id.toString());
@@ -600,34 +595,34 @@ describe("POST /group/join/:inviteCode", () => {
     });
 
     it("refuses a name already taken in the group", async () => {
-        const response = await post(`/group/join/${group.inviteCode}`, anaToken, { name: "Ana" });
+        const response = await post(`/group/join/${group.inviteCode}`, ana.cookie, { name: "Ana" });
 
         expect(response.status).toBe(400);
     });
 
     it("refuses a body with neither memberId nor name", async () => {
-        const response = await post(`/group/join/${group.inviteCode}`, anaToken, {});
+        const response = await post(`/group/join/${group.inviteCode}`, ana.cookie, {});
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("A memberId or a name is required");
     });
 
     it("refuses a whitespace-only name as if it were absent", async () => {
-        const response = await post(`/group/join/${group.inviteCode}`, anaToken, { name: "   " });
+        const response = await post(`/group/join/${group.inviteCode}`, ana.cookie, { name: "   " });
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("A memberId or a name is required");
     });
 
     it("400s an unparseable memberId", async () => {
-        const response = await post(`/group/join/${group.inviteCode}`, anaToken, { memberId: "not-an-id" });
+        const response = await post(`/group/join/${group.inviteCode}`, ana.cookie, { memberId: "not-an-id" });
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("Invalid member ID");
     });
 
     it("trims the new member's name", async () => {
-        const response = await post(`/group/join/${group.inviteCode}`, anaToken, { name: "  Bea  " });
+        const response = await post(`/group/join/${group.inviteCode}`, ana.cookie, { name: "  Bea  " });
 
         expect(response.status).toBe(200);
         expect(response.body.members[3].name).toBe("Bea");
@@ -636,26 +631,26 @@ describe("POST /group/join/:inviteCode", () => {
 
 describe("POST /group/:groupId/invite-code/regenerate", () => {
     it("invalidates the previous link", async () => {
-        const response = await post(`/group/${group._id}/invite-code/regenerate`, jorgeToken);
+        const response = await post(`/group/${group._id}/invite-code/regenerate`, jorge.cookie);
 
         expect(response.status).toBe(200);
         expect(response.body.inviteCode).not.toBe(group.inviteCode);
 
-        const stale = await get(`/group/join/${group.inviteCode}`, anaToken);
+        const stale = await get(`/group/join/${group.inviteCode}`, ana.cookie);
         expect(stale.status).toBe(404);
 
-        const fresh = await get(`/group/join/${response.body.inviteCode}`, anaToken);
+        const fresh = await get(`/group/join/${response.body.inviteCode}`, ana.cookie);
         expect(fresh.status).toBe(200);
     });
 
     it("rejects someone who is not a member", async () => {
-        const response = await post(`/group/${group._id}/invite-code/regenerate`, anaToken);
+        const response = await post(`/group/${group._id}/invite-code/regenerate`, ana.cookie);
 
         expect(response.status).toBe(403);
     });
 
     it("400s an unparseable groupId", async () => {
-        const response = await post(`/group/not-a-valid-object-id/invite-code/regenerate`, jorgeToken);
+        const response = await post(`/group/not-a-valid-object-id/invite-code/regenerate`, jorge.cookie);
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe("Invalid group ID");

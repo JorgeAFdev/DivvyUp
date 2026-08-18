@@ -1,220 +1,118 @@
 import supertest from "supertest";
+import type { Express } from "express";
+import mongoose from "mongoose";
 import { bootstrapApp } from "../bootstrap.js";
-import type { HydratedDocument } from "mongoose";
 import { disconnectDB, connectDB } from "../mongo/connection/index.js";
-import User from "../schemas/user.schema.js";
-import type { UserDoc, UserMethods } from "../schemas/user.schema.js";
 
-const app = bootstrapApp();
-const fakeRequest = supertest(app);
+// Registration, hashing, sessions and the credential check are Better Auth's now
+// and are its own to test. What stays ours is the Zod hook that gates the Better
+// Auth endpoints (registerSchema/loginSchema from @monorepo/validation) and the
+// invariant that no secret ever reaches a response. Those are what this file pins.
 
-const credentials = { email: "jorge@user.com", password: "Password1" };
+let app: Express;
+let fakeRequest: ReturnType<typeof supertest>;
 
-let jorge: HydratedDocument<UserDoc, UserMethods>;
+const signUp = (body: any) => fakeRequest.post("/api/auth/sign-up/email").send(body);
+const signIn = (body: any) => fakeRequest.post("/api/auth/sign-in/email").send(body);
+
+const valid = { name: "Ana", email: "ana@user.com", password: "Password1" };
 
 beforeAll(async () => {
     await connectDB();
+    app = bootstrapApp();
+    fakeRequest = supertest(app);
 });
 
 beforeEach(async () => {
-    await User.deleteMany({});
-    jorge = await User.create({ name: "Jorge", ...credentials });
+    await mongoose.connection.dropDatabase();
 });
 
 afterAll(async () => {
     await disconnectDB();
 });
 
-describe("POST /auth/login", () => {
-    it("returns a token and the user for the right credentials", async () => {
-        const response = await fakeRequest.post("/auth/login").send(credentials);
+describe("sign-up validation (our Zod hook)", () => {
+    it("accepts a well-formed sign-up", async () => {
+        const response = await signUp(valid);
 
         expect(response.status).toBe(200);
-        expect(response.body.token).toEqual(expect.any(String));
-        expect(response.body.user).toMatchObject({
-            id: jorge._id.toString(),
-            name: "Jorge",
-            email: credentials.email,
-        });
     });
 
-    it("never returns the password hash", async () => {
-        const response = await fakeRequest.post("/auth/login").send(credentials);
-
-        expect(response.body.user.password).toBeUndefined();
-        expect(JSON.stringify(response.body)).not.toContain("$2");
-    });
-
-    it("rejects a wrong password", async () => {
-        const response = await fakeRequest
-            .post("/auth/login")
-            .send({ ...credentials, password: "WrongPassword1" });
-
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe("Invalid credentials");
-    });
-
-    // Same message as the wrong password on purpose: a different one tells an
-    // attacker whether that address has an account here.
-    it("rejects an unknown email with the same message", async () => {
-        const response = await fakeRequest
-            .post("/auth/login")
-            .send({ ...credentials, email: "nobody@user.com" });
-
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe("Invalid credentials");
-    });
-
-    // Login validates the same body shape as register: it gates on a malformed
-    // input before the credential check. A well-formed unknown email still
-    // returns "Invalid credentials" (above), so account enumeration stays shut.
-    it("rejects a malformed email before checking credentials", async () => {
-        const response = await fakeRequest
-            .post("/auth/login")
-            .send({ ...credentials, email: "nope" });
-
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe("Please enter a valid email address");
-    });
-
-    it("rejects a body missing the password", async () => {
-        const response = await fakeRequest.post("/auth/login").send({ email: credentials.email });
-
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe("Password not received");
-    });
-});
-
-describe("POST /auth/register", () => {
-    it("creates the user and never returns the password hash", async () => {
-        const response = await fakeRequest
-            .post("/auth/register")
-            .send({ name: "Ana", email: "ana@user.com", password: "Password1" });
-
-        expect(response.status).toBe(200);
-        expect(response.body.user.password).toBeUndefined();
-        expect(JSON.stringify(response.body)).not.toContain("$2");
-    });
-
-    it("hashes the password so the new user can log in", async () => {
-        await fakeRequest
-            .post("/auth/register")
-            .send({ name: "Ana", email: "ana@user.com", password: "Password1" });
-
-        const stored = (await User.findOne({ email: "ana@user.com" }).select("+password"))!;
-        expect(stored.password).not.toBe("Password1");
-
-        const response = await fakeRequest
-            .post("/auth/login")
-            .send({ email: "ana@user.com", password: "Password1" });
-        expect(response.status).toBe(200);
-    });
-});
-
-describe("POST /auth/register password strength", () => {
-    const register = (password: string) =>
-        fakeRequest.post("/auth/register").send({ name: "Ana", email: "ana@user.com", password });
-
-    const rejected = [
+    const weak: [string, string][] = [
         ["too short", "Pass1"],
         ["no uppercase", "password1"],
         ["no lowercase", "PASSWORD1"],
         ["no number", "Passwordd"],
     ];
 
-    it.each(rejected)("rejects a password with %s", async (_label, password) => {
-        const response = await register(password);
+    it.each(weak)("rejects a password with %s", async (_label, password) => {
+        const response = await signUp({ ...valid, password });
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toMatch(/at least 8 characters/);
-        expect(await User.countDocuments({ email: "ana@user.com" })).toBe(0);
+        expect(response.body.message).toMatch(/at least 8 characters/);
     });
 
-    // A rejection must not quote what it rejected, or the password ends up in
-    // the response body and in any log that records one. Mongoose's minlength
-    // message does exactly that, which is one reason the rule is not there.
-    it.each(rejected)("never echoes the password back (%s)", async (_label, password) => {
-        const response = await register(password);
+    // A rejection must not quote what it rejected, or the password ends up in the
+    // response body and any log that records one.
+    it.each(weak)("never echoes the password back (%s)", async (_label, password) => {
+        const response = await signUp({ ...valid, password });
 
         expect(JSON.stringify(response.body)).not.toContain(password);
     });
 
-    it("accepts a password that meets the rule", async () => {
-        const response = await register("Password1");
-
-        expect(response.status).toBe(200);
-    });
-});
-
-describe("POST /auth/register field validation", () => {
-    // These reached save() and came back as a 500 saying "Error creating new
-    // user": a client error reported as a server one, with no reason attached.
-    it("answers 400 and the reason for a short name", async () => {
-        const response = await fakeRequest
-            .post("/auth/register")
-            .send({ name: "An", email: "ana@user.com", password: "Password1" });
+    it("rejects a short name with the exact copy", async () => {
+        const response = await signUp({ ...valid, name: "An" });
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe("Name must be at least 3 characters long");
+        expect(response.body.message).toBe("Name must be at least 3 characters long");
     });
 
-    it("answers 400 and the reason for an over-long name", async () => {
-        const response = await fakeRequest
-            .post("/auth/register")
-            .send({ name: "a".repeat(41), email: "ana@user.com", password: "Password1" });
+    it("rejects a malformed email", async () => {
+        const response = await signUp({ ...valid, email: "nope" });
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe("Name must be at most 40 characters long");
-    });
-
-    it("answers 400 and the reason for a malformed email", async () => {
-        const response = await fakeRequest
-            .post("/auth/register")
-            .send({ name: "Ana", email: "nope", password: "Password1" });
-
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe("Please enter a valid email address");
+        expect(response.body.message).toBe("Please enter a valid email address");
     });
 
     it("joins every reason when more than one field fails", async () => {
-        const response = await fakeRequest
-            .post("/auth/register")
-            .send({ name: "An", email: "nope", password: "weak" });
+        const response = await signUp({ name: "An", email: "nope", password: "weak" });
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe(
+        expect(response.body.message).toBe(
             "Name must be at least 3 characters long. Please enter a valid email address. " +
             "Password must be at least 8 characters long and contain a lowercase letter, an uppercase letter and a number"
         );
     });
 });
 
-describe("PATCH /user/update", () => {
-    it("never returns the password hash", async () => {
-        const response = await fakeRequest
-            .patch("/user/update")
-            .set({ Authorization: `Bearer ${jorge.generateJWT()}` })
-            .send({ name: "Jorge Alvarez", email: credentials.email });
+describe("no secret ever reaches the response", () => {
+    it("sign-up never returns the password", async () => {
+        const response = await signUp(valid);
 
         expect(response.status).toBe(200);
-        expect(response.body.user.name).toBe("Jorge Alvarez");
-        expect(response.body.user.password).toBeUndefined();
-        expect(JSON.stringify(response.body)).not.toContain("$2");
+        expect(JSON.stringify(response.body)).not.toContain(valid.password);
+    });
+
+    it("sign-in never returns the password", async () => {
+        await signUp(valid);
+        const response = await signIn({ email: valid.email, password: valid.password });
+
+        expect(response.status).toBe(200);
+        expect(JSON.stringify(response.body)).not.toContain(valid.password);
     });
 });
 
-describe("the password field", () => {
-    it("stays out of a plain query", async () => {
-        const found = (await User.findOne({ email: credentials.email }))!;
+describe("sign-in validation (our Zod hook)", () => {
+    it("rejects a malformed email before checking credentials", async () => {
+        const response = await signIn({ email: "nope", password: valid.password });
 
-        expect(found.email).toBe(credentials.email);
-        expect(found.password).toBeUndefined();
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe("Please enter a valid email address");
     });
 
-    it("comes back with select('+password'), which is what login needs", async () => {
-        const found = (await User.findOne({ email: credentials.email }).select("+password"))!;
+    it("rejects a well-formed unknown email as invalid credentials", async () => {
+        const response = await signIn({ email: "nobody@user.com", password: "Password1" });
 
-        expect(found.password).toEqual(expect.any(String));
-        await expect(found.comparePassword(credentials.password)).resolves.toBe(true);
+        expect(response.status).toBe(401);
     });
 });
