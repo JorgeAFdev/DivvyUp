@@ -36,11 +36,11 @@ describe("PATCH /user/update", () => {
         expect(response.body.user.name).toBe("Jorge A");
     });
 
-    it("leaves the email untouched (email change is deferred)", async () => {
+    it("rejects an email change (deferred to a later PR)", async () => {
         const response = await patch({ name: "Jorge A", email: "jorgea@user.com" }, jorge.cookie);
 
-        expect(response.status).toBe(200);
-        expect(response.body.user.email).toBe("jorge@user.com");
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe("Email cannot be changed");
     });
 
     it("never returns the password hash", async () => {

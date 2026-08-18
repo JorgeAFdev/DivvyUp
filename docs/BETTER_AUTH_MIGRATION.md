@@ -152,7 +152,9 @@ contraseña, login, accounts y sesiones. La red de Cypress sigue verde.
   **nombre y foto**; el **email queda de sólo lectura** (campo visible pero deshabilitado en el
   form). El cambio de email se aplaza al child PR de verificación, porque hacerlo bien necesita el
   flujo `changeEmail` de BA con verificación, y hacerlo a mano escribiría un email sin verificar
-  directo en la colección — justo lo que ese PR viene a arreglar.
+  directo en la colección — justo lo que ese PR viene a arreglar. El endpoint **rechaza con 400** un
+  email distinto al de la sesión en vez de ignorarlo y responder 200: el schema sigue exigiendo el
+  campo, así que el cliente reenvía el actual y un intento de cambio falla en claro.
 
 ### Validación (`@monorepo/validation`)
 
