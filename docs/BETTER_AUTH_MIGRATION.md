@@ -1,12 +1,13 @@
 # Migración a Better Auth — plan y registro de decisiones
 
-**Estado: PR core ([#126](https://github.com/DivvyUp-app/DivvyUp/pull/126)) mergeada y en prod
-(18-08-2026).** En marcha ahora el **child PR 2 — Google OAuth** (rama `feat/better-auth-google`,
-decisiones acordadas el 19-08-2026; detalle abajo). Tarea 5 del [TODO](../TODO.md). El core quedó
-todo verde y verificado: backend (`pnpm typecheck` exit 0, **135/135** tests), frontend
-(`tsc --noEmit` limpio, **36/36** tests) y **Cypress 13/13** (7 specs) contra la app corriendo en
-local. Las env `BETTER_AUTH_SECRET` (secreto propio de prod, distinto del local) y `BETTER_AUTH_URL`
-ya están puestas en el dashboard de Coolify.
+**Estado: PR core ([#126](https://github.com/DivvyUp-app/DivvyUp/pull/126)) y child PR 2 — Google
+OAuth ([#128](https://github.com/DivvyUp-app/DivvyUp/pull/128)) mergeadas y en prod.** En marcha
+ahora el **child PR 3 — verificación de email + Resend + cambio de email** (rama
+`feat/better-auth-email-verification`, decisiones acordadas el 19-08-2026; detalle abajo). Tarea 5 del
+[TODO](../TODO.md). El core quedó todo verde y verificado: backend (`pnpm typecheck` exit 0,
+**135/135** tests), frontend (`tsc --noEmit` limpio, **36/36** tests) y **Cypress 13/13** (7 specs)
+contra la app corriendo en local. Las env `BETTER_AUTH_SECRET` (secreto propio de prod, distinto del
+local) y `BETTER_AUTH_URL` ya están puestas en el dashboard de Coolify.
 
 Este es el documento de referencia de la migración del auth artesanal a
 [Better Aut­h](https://better-auth.com). Es la fuente de verdad del plan mientras dure; el `TODO.md`
@@ -37,8 +38,8 @@ La migración entra por partes, cada child PR **deja la app funcionando y es rev
 5. Más adelante, si interesa: GitHub/Apple (cada uno es sólo otro OAuth client), y endurecer el gate
    de `emailVerified` en el login (`requireEmailVerification`).
 
-Este documento detalla el **PR core** (abajo) y el **child PR 2 (Google OAuth)** (al final). Los
-child PRs 3–4 se detallarán al abordarlos.
+Este documento detalla el **PR core** (abajo), el **child PR 2 (Google OAuth)** y el **child PR 3
+(verificación de email)** (al final). El child PR 4 se detallará al abordarlo.
 
 ---
 
@@ -323,3 +324,101 @@ la config y una decisión: **la vinculación de cuentas**.
   contraseña **vincula** el account de Google en vez de fallar.
 - `pnpm typecheck` (back y front) en verde; la red existente sin regresiones.
 - Verificado a mano el round-trip completo en local (redirect a Google, callback, sesión activa).
+
+---
+
+## Child PR 3: verificación de email + Resend + cambio de email
+
+Le da por fin **un llamante a `services/email`** (el Resend del punto 6, que hasta ahora nadie
+usaba) y desbloquea el **cambio de email del perfil**, que el core dejó de sólo lectura.
+
+### Verificación de email — soft, no bloquea login
+
+- `emailVerification.sendOnSignUp: true` manda un link de verificación en el alta, vía
+  `sendVerificationEmail`. `autoSignInAfterVerification: true` deja al user logueado tras pulsar el
+  link.
+- **La copy de los correos vive en `services/authEmails.ts`**, no inline en `auth.ts`: ese fichero es
+  composición (declara *qué* usa BA), no el sitio de la redacción de un email. `auth.ts` referencia
+  las funciones; las plantillas (y el correo de reset del child PR 4, o una versión HTML) caen todas
+  en un solo módulo. Ambas componen texto plano a través de `sendEmail` (Resend).
+- **`requireEmailVerification` se queda OFF a conciencia.** La verificación no cierra la puerta al
+  login todavía; endurecer ese gate es el punto 5 del plan, con su banner/reenvío. Aquí es soft: el
+  valor de este PR es dar llamante a Resend, marcar `emailVerified` y habilitar el cambio de email,
+  no meter fricción. Se descartó el gate duro para no arrastrar el punto 5 a este PR.
+- El link redirige al front **`/email-verified`** (ruta pública, el link puede abrirse sin sesión).
+  El `signUp.email` del front pasa ese `callbackURL` **absoluto** (mismo motivo que Google: relativo
+  resolvería contra el origin de la API).
+- **`sendVerificationEmail` sirve a dos casos**: el alta **y** el segundo paso de un cambio de email
+  (BA lo reusa para el email nuevo y no da forma de distinguirlos), así que su copy es **neutral** de
+  dirección, no un "welcome" de alta.
+
+### Cambio de email — por el backend, flujo nativo de BA
+
+- **Decisión: lo maneja el backend, no `authClient.changeEmail` desde el front.** Matiz que la movió:
+  `authClient.changeEmail` **no es** validación de front — es una llamada al endpoint de BA en el
+  server, que valida igual. Pero enrutarlo por el controlador (`updateUser`) hace correr **nuestra
+  Zod** (`userUpdateSchema`) sobre el nuevo email y deja el perfil **unificado** (name/foto/email en
+  un solo path). El perfil ya tenía controlador backend, así que encaja ahí.
+- `updateUser`: si `req.body.email !== req.user.email`, llama `auth.api.changeEmail({ body: { newEmail,
+  callbackURL }, headers })` en vez del antiguo 400.
+- **Es un flujo de DOS pasos** (para una cuenta con email verificado, que es lo normal; leído en
+  `update-user.mjs` + `email-verification.mjs`):
+  1. `sendChangeEmailConfirmation` manda un link al email **actual**. Pulsarlo **no cambia nada**:
+     BA genera un segundo token y **manda un segundo correo al email nuevo** (vía `sendVerificationEmail`).
+  2. El cambio se aplica **solo al pulsar el link del segundo correo, en la bandeja del email nuevo**
+     (`updateUserByEmail`). Confirma que controlas la bandeja **vieja** (anti-hijack: una sesión robada
+     no mueve la cuenta) **y** la **nueva**.
+  Hasta el paso 2 la respuesta sigue llevando el email viejo; el front muestra un toast "revisa tu
+  bandeja" al detectar el cambio.
+- **Landing propia `/email-change`** para el flujo de cambio (copy "revisa tu nuevo email para
+  finalizar"), distinta de `/email-verified` del alta. Motivo: BA usa **el mismo `callbackURL`** para
+  los dos pasos del cambio (el paso 2 hereda el del paso 1), así que ambos caen en `/email-change`. Se
+  descartó reusar `/email-verified` a secas (decía "Email verified" tras el paso 1, falso "ya está").
+- **Feedback de éxito solo al final, detectado en el front.** La pestaña que pide el cambio guarda el
+  email nuevo pendiente (`utils/pendingEmailChange.ts`, `localStorage` — no es un token, y el link se
+  abre en otra pestaña); `/email-change` compara la sesión (que trae el email nuevo **solo** tras el
+  paso 2, cuando `updateUserByEmail` corre y BA reescribe la cookie) contra ese pendiente y, si
+  coinciden, redirige a `/email-verified`. Así paso 1 = "revisa tu bandeja", paso 2 = éxito. Si el link
+  se abre en otro navegador (sin el `localStorage`), degrada a la copy pendiente — sigue siendo cierto.
+- **Restringido a cuentas con contraseña (solo-Google es read-only).** Un user que entró solo con
+  Google no tiene account `credential`: su email **es** su identidad de proveedor, y sigue entrando por
+  Google gane o pierda ese email, así que cambiarlo local solo desincroniza sin darle nada. El backend
+  lo comprueba con `auth.api.listUserAccounts` (`some(providerId === 'credential')`) y 400ea si no lo
+  hay; el front lee la misma señal con `useHasPassword` (`authClient.listAccounts`) y deja el campo
+  `disabled` con la nota "Managed by your Google login". El caso mixto (contraseña + Google vinculado)
+  **sí** puede cambiarlo: tiene credencial, y el link Google matchea por `sub`, no por email. Se
+  descartó dejarlo abierto: técnicamente BA lo permite, pero el resultado (login por gmail, email de
+  cuenta distinto) confunde sin aportar.
+
+### Enumeración de `/register` — deferida a conciencia (NO cerrada)
+
+- El plan decía "cierra de paso la enumeración". **Se decide dejarla con el comportamiento por
+  defecto de BA** (un alta con email existente devuelve `USER_ALREADY_EXISTS`, que delata). Razón:
+  GitHub/GitLab y la mayoría revelan en el registro por UX ("ya tienes cuenta, entra o resetea"), y
+  para una app de gastos entre amigos el riesgo (fuga de "este email usa DivvyUp") no compensa el
+  trabajo de respuesta idéntica + email al owner. El **login sí sigue cerrado** (email desconocido bien
+  formado da el mismo `Invalid email or password`). Si algún día se quiere cerrar register, es
+  interceptar el `USER_ALREADY_EXISTS` y desviarlo a un 200 genérico + `sendEmail` al owner.
+
+### Tests
+
+- El `sendOnSignUp` dispara `sendEmail` en **cada** alta, así que `vitest.setup.js` mockea `resend`
+  global (no-op); `email.test.ts` re-mockea `resend` en local para seguir aseverando el payload.
+- `user.test.ts`: el test del 400 al cambiar email pasa a aseverar que un email válido responde
+  **200** y mantiene el email viejo (cambio diferido a la confirmación). **137/137 backend verdes**,
+  **36/36 front**.
+- El round-trip real (recibir el correo, pulsar el link) es **manual**, como Google.
+
+### Setup / prod
+
+- `RESEND_FROM` en Coolify debe ser un **dominio verificado** en Resend (`send.jorgeaf.dev`);
+  `onboarding@resend.dev` (sandbox) sólo entrega al dueño de la cuenta, así que un user real no
+  recibiría nada. El dominio está listo en prod.
+
+### Definición de "hecho" para el child PR 3
+
+- Alta manda verificación; el link marca `emailVerified` y loguea. Login **no** exige verificación.
+- Cambiar el email del perfil manda confirmación al email actual; pulsarla manda un 2º link al email
+  nuevo, y sólo ese segundo click aplica el cambio.
+- `pnpm typecheck` (back y front) en verde, tests sin regresiones (137/137, 36/36).
+- Verificado a mano en local el round-trip de verificación y el de cambio de email.
