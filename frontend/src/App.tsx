@@ -5,6 +5,8 @@ import Groups from "./pages/groups/groups";
 import GroupDetails from "./pages/groups/groupDetails/groupDetails";
 import MyExpenses from "./pages/user/expenses/myExpenses";
 import Join from "./pages/join/join";
+import EmailVerified from "./pages/emailVerified/emailVerified";
+import EmailChange from "./pages/emailChange/emailChange";
 import NoMatch from "./pages/noMatch/noMatch";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import User from "./pages/user/userProfile/user";
@@ -28,6 +30,8 @@ function App() {
               <Route path="/groups/:groupId/expenses" element={<RequireAuth><GroupDetails /></RequireAuth>} />
               <Route path="/my-expenses" element={<RequireAuth><MyExpenses /></RequireAuth>} />
               <Route path="/join/:inviteCode" element={<Join />} />
+              <Route path="/email-verified" element={<EmailVerified />} />
+              <Route path="/email-change" element={<EmailChange />} />
               <Route path="*" element={<NoMatch />} />
             </Route>
           </Routes>

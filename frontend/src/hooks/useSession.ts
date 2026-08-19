@@ -66,4 +66,7 @@ export const useLogin = () =>
     useSessionMutation((credentials: LoginCredentials) => authClient.signIn.email(credentials));
 
 export const useRegister = () =>
-    useSessionMutation((credentials: RegisterCredentials) => authClient.signUp.email(credentials));
+    useSessionMutation((credentials: RegisterCredentials) =>
+        // Absolute so the verification link lands on the frontend, not the API origin.
+        authClient.signUp.email({ ...credentials, callbackURL: `${window.location.origin}/email-verified` }),
+    );
