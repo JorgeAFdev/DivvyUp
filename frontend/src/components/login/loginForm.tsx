@@ -7,6 +7,7 @@ import { useLogin, type LoginCredentials } from '../../hooks/useSession';
 import { toast } from 'react-toastify';
 import { nextDestination } from '../../utils/nextDestination';
 import { apiErrorMessage } from '../../utils/apiError';
+import SocialAuth from '../auth/socialAuth';
 
 
 const Login = () => {
@@ -32,6 +33,8 @@ const Login = () => {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className={styles.loginContainer} >
       <h2 className={styles.loginTitle}>Login</h2>
+
+      <SocialAuth />
 
       <label htmlFor="email" className={styles.loginLabel}>Email</label>
       <input

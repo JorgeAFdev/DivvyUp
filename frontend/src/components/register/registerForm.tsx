@@ -8,6 +8,7 @@ import { toast } from 'react-toastify';
 import { nextDestination } from '../../utils/nextDestination';
 import { apiErrorMessage } from '../../utils/apiError';
 import { PASSWORD_HINT } from '../../utils/validation';
+import SocialAuth from '../auth/socialAuth';
 
 const RegisterForm = () => {
     const { register, handleSubmit, formState: { errors } } = useForm<RegisterCredentials>({
@@ -32,6 +33,8 @@ const RegisterForm = () => {
     return (
         <form className={styles.registerContainer} onSubmit={handleSubmit(onSubmit)}>
             <h2 className={styles.registerTitle}>Register</h2>
+
+            <SocialAuth />
 
             <label className={styles.registerLabel} htmlFor="register-name">
                 Name

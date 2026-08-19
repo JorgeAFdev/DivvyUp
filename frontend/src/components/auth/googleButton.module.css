@@ -1,0 +1,29 @@
+.googleButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 15px;
+  padding: 10px;
+  background-color: var(--bg-color);
+  color: var(--color);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: var(--theme-transition), background 0.3s;
+}
+
+.googleButton:hover:not(:disabled) {
+  background-color: var(--secondary-bg-color);
+}
+
+.googleButton:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.googleIcon {
+  font-size: 20px;
+}

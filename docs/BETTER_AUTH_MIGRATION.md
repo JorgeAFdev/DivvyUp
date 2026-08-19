@@ -1,8 +1,9 @@
 # Migración a Better Auth — plan y registro de decisiones
 
-**Estado: PR core abierta ([#126](https://github.com/DivvyUp-app/DivvyUp/pull/126)), por mergear**
-(rama `feat/better-auth-core`). Tarea 5 del [TODO](../TODO.md). Decisiones acordadas el 18-08-2026.
-Todo verde y verificado: backend (`pnpm typecheck` exit 0, **135/135** tests), frontend
+**Estado: PR core ([#126](https://github.com/DivvyUp-app/DivvyUp/pull/126)) mergeada y en prod
+(18-08-2026).** En marcha ahora el **child PR 2 — Google OAuth** (rama `feat/better-auth-google`,
+decisiones acordadas el 19-08-2026; detalle abajo). Tarea 5 del [TODO](../TODO.md). El core quedó
+todo verde y verificado: backend (`pnpm typecheck` exit 0, **135/135** tests), frontend
 (`tsc --noEmit` limpio, **36/36** tests) y **Cypress 13/13** (7 specs) contra la app corriendo en
 local. Las env `BETTER_AUTH_SECRET` (secreto propio de prod, distinto del local) y `BETTER_AUTH_URL`
 ya están puestas en el dashboard de Coolify.
@@ -36,7 +37,8 @@ La migración entra por partes, cada child PR **deja la app funcionando y es rev
 5. Más adelante, si interesa: GitHub/Apple (cada uno es sólo otro OAuth client), y endurecer el gate
    de `emailVerified` en el login (`requireEmailVerification`).
 
-El resto de este documento detalla el **PR core**. Los child PRs 2–4 se detallarán al abordarlos.
+Este documento detalla el **PR core** (abajo) y el **child PR 2 (Google OAuth)** (al final). Los
+child PRs 3–4 se detallarán al abordarlos.
 
 ---
 
@@ -259,3 +261,65 @@ contraseña, login, accounts y sesiones. La red de Cypress sigue verde.
 - `pnpm typecheck` (el gate de PR) y los tests de backend en verde con sesiones reales. **✅ 135/135.**
 - Cypress en verde contra la app corriendo (comprobando que apunta a `/test`, no a `/prod`). **✅ 13/13.**
 - El socket sólo emite a salas de identidades verificadas por sesión.
+
+---
+
+## Child PR 2: Google OAuth
+
+Objetivo acotado: **segundo método de login**, nada más. La app sigue igual; se añade "Continue with
+Google" junto al email/contraseña. Better Auth ya trae el flujo OAuth entero, así que el peso está en
+la config y una decisión: **la vinculación de cuentas**.
+
+### Backend (`security/auth.ts`)
+
+- `socialProviders.google` con `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`. Better Auth **auto-monta**
+  `/api/auth/callback/google`: no hay ruta ni controlador nuestro que tocar, sólo registrar esa
+  redirect URI en el cliente de Google Cloud (local `:3001` y prod).
+- **Vinculación de cuentas: activada sólo para Google** (`account.accountLinking.enabled: true`,
+  `trustedProviders: ['google']`). El caso es "el mismo email ya tiene cuenta por contraseña y ahora
+  entra por Google": Better Auth exige `email` único en `user`, así que no caben dos usuarios — o se
+  vinculan o se rechaza. **Se vinculan**: Google verifica el email que devuelve, así que quien entra es
+  el dueño real de ese email, la misma persona; se añade el `account` de Google al user existente en
+  vez de colisionar. Se restringe a `google` a conciencia (`trustedProviders`): **nunca** vincular por
+  la palabra de un proveedor que no verifique el email, o sería un vector de apropiación de cuenta. Se
+  descartó el rechazo + vinculación manual desde el perfil: más UI y fricción para blindar un caso que
+  la verificación de Google ya cierra.
+- **Avatar y datos al vincular.** El avatar de Google entra en `user.image` (el mismo campo que escribe
+  una subida a Cloudinary; el serializer lo mapea a `profilePicture` del contrato), como URL externa
+  tal cual — no se recircula por Cloudinary. `updateUserInfoOnLink` se deja en su default `false`: si ya
+  tenías avatar/nombre, vincular Google **no** los pisa. `member.name` sigue siendo del grupo, intacto.
+- Sin cambios en Docker ni Cloudflare Pages: `better-auth` ya es dep de ambos; no hay dependencia nueva.
+
+### Frontend
+
+- `components/auth/googleButton.tsx`, montado vía `components/auth/socialAuth.tsx` (los proveedores +
+  un divider "or") **arriba** de ambos forms, sobre email/contraseña: el social es el camino rápido, así
+  que va primero, y `socialAuth` es el único sitio donde entra un segundo proveedor (GitHub, planeado).
+  Con Google el registro y el login son el mismo acto. Llama `authClient.signIn.social({ provider:
+  'google', callbackURL, errorCallbackURL })`.
+- **No pasa por `useSession`/react-query como el email.** `signIn.social` es un **redirect full-page** a
+  Google: el éxito no vuelve a este handler (la app remonta en el callback con la sesión ya puesta), así
+  que no hay `waitForSession` ni `navigate` — sólo se maneja localmente el fallo al ni siquiera arrancar
+  el redirect. `callbackURL` respeta el `?next=` vía `nextDestination(search)`; `errorCallbackURL` es
+  `/login`.
+
+### Env / setup
+
+- Nuevas env de backend (local + Coolify prod): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
+- Cliente de Google Cloud (**Web application**) con redirect URIs
+  `http://localhost:3001/api/auth/callback/google` y
+  `https://divvyup-api.jorgeaf.dev/api/auth/callback/google`.
+
+### Tests
+
+- El flujo OAuth es externo (redirect a Google), así que **no se e2e-tea**: ni Cypress ni un test de
+  backend pueden completar el consentimiento. La verificación es **manual en local** contra el cliente
+  de Google. El resto de la red (email/contraseña, grupos, ledger) sigue verde e independiente de este
+  cambio.
+
+### Definición de "hecho" para el child PR 2
+
+- Login y registro con Google funcionan; un email nuevo crea el user, un email ya existente por
+  contraseña **vincula** el account de Google en vez de fallar.
+- `pnpm typecheck` (back y front) en verde; la red existente sin regresiones.
+- Verificado a mano el round-trip completo en local (redirect a Google, callback, sesión activa).

@@ -29,6 +29,16 @@ export const createAuth = () =>
         // mongodb-memory-server is a standalone.
         database: mongodbAdapter(mongoose.connection.db as unknown as Parameters<typeof mongodbAdapter>[0], { transaction: false }),
         emailAndPassword: { enabled: true },
+        socialProviders: {
+            google: {
+                clientId: process.env.GOOGLE_CLIENT_ID as string,
+                clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+            },
+        },
+        // Trusted for linking only because Google verifies the email: a Google
+        // sign-in matching an existing account is provably the same person. Never
+        // link on a provider that does not verify the email.
+        account: { accountLinking: { enabled: true, trustedProviders: ['google'] } },
         advanced: {
             // Let MongoDB own _id (an ObjectId); Better Auth reads it back as its
             // hex string, which is what Group.members[].user stores as the link.
