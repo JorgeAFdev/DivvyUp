@@ -89,6 +89,10 @@ MONGO_URL=<your_mongo_db_url>
 # and the backend's own origin (no /api/auth suffix — Better Auth appends it).
 BETTER_AUTH_SECRET=<your_better_auth_secret>
 BETTER_AUTH_URL=http://localhost:3001
+# Google OAuth (a Google Cloud "Web application" client). Authorized redirect URI:
+# http://localhost:3001/api/auth/callback/google (add the prod one in the cloud client).
+GOOGLE_CLIENT_ID=<your_google_client_id>
+GOOGLE_CLIENT_SECRET=<your_google_client_secret>
 RESEND_API_KEY=<your_resend_api_key>
 # Optional; defaults to "DivvyUp <onboarding@resend.dev>" (Resend's test sender)
 RESEND_FROM=<your_verified_sender>
