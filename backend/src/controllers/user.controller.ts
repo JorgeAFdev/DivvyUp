@@ -10,13 +10,20 @@ const updateUser = async (req: Request, res: Response) => {
         const auth = req.app.get('auth') as Auth;
         const headers = fromNodeHeaders(req.headers);
 
-        // Name and picture only. Email is auth-sensitive: changing it goes through
-        // Better Auth's verification flow, which lands in a later child PR, so it
-        // is read-only here. Reject a differing email with 400 rather than accept
-        // it, drop it, and answer 200 "success" — the schema still requires the
-        // field, so the client echoes the current one.
+        // A new email does not switch here: Better Auth confirms it from the current
+        // address first, so the session (and this response) keep the old one until
+        // that link is clicked.
         if (req.body.email !== req.user.email) {
-            return res.status(400).json({ error: 'Email cannot be changed' });
+            const accounts = await auth.api.listUserAccounts({ headers });
+            const hasPassword = accounts.some((account) => account.providerId === 'credential');
+            if (!hasPassword) {
+                return res.status(400).json({ error: 'Email is managed by your Google login' });
+            }
+
+            await auth.api.changeEmail({
+                body: { newEmail: req.body.email, callbackURL: `${process.env.CLIENT_URL}/email-change` },
+                headers,
+            });
         }
 
         const changes: { name: string; image?: string } = { name: req.body.name };
