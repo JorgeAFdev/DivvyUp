@@ -4,7 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { userUpdateSchema } from "@monorepo/validation";
 import { toast } from "react-toastify";
-import { useUpdateProfile } from "../../hooks/useProfile";
+import { useUpdateProfile, useHasPassword } from "../../hooks/useProfile";
+import { useAuth } from "../../context/userContextAuth";
+import { setPendingEmailChange } from "../../utils/pendingEmailChange";
 import { apiErrorMessage } from "../../utils/apiError";
 import styles from "./userEditForm.module.css";
 import { IoCloseOutline } from "react-icons/io5";
@@ -31,6 +33,9 @@ const UserEditForm = ({ user, onClose }: { user: EditableUser; onClose: () => vo
     });
 
     const mutation = useUpdateProfile();
+    const { data: hasPassword } = useHasPassword();
+    const { refetch } = useAuth();
+    const emailManagedByProvider = hasPassword === false;
 
     useEffect(() => {
         if (user) {
@@ -40,15 +45,25 @@ const UserEditForm = ({ user, onClose }: { user: EditableUser; onClose: () => vo
     }, [user, setValue]);
 
     const onSubmit = (data: UserEditFormValues) => {
+        const emailChanged = data.email !== user.email;
+
         mutation.mutate(
             { ...data, profilePicture: data.profilePicture?.[0] },
             {
                 onSuccess: () => {
-                    // The profile screen reads the user from the Better Auth session;
-                    // reloading refetches it so the new name/picture land there.
-                    toast.success("User updated successfully 🎉");
+                    // The update goes through our API, not through authClient, so
+                    // nothing invalidates the cached session the UI reads its name
+                    // and picture from.
+                    refetch();
+                    if (emailChanged) {
+                        setPendingEmailChange(data.email);
+                    }
+                    toast.success(
+                        emailChanged
+                            ? "Check your current inbox to confirm the email change."
+                            : "User updated successfully 🎉",
+                    );
                     onClose();
-                    window.location.reload();
                 },
                 onError: (error) => {
                     toast.error(apiErrorMessage(error, "there was an error updating the user"));
@@ -78,13 +93,12 @@ const UserEditForm = ({ user, onClose }: { user: EditableUser; onClose: () => vo
 
             <label className={styles.formLabel}>
                 Email
+                {emailManagedByProvider && <span className={styles.hint}>Managed by your Google login</span>}
             </label>
-            {/* Read-only in the core Better Auth PR: changing email goes through the
-                verification flow, which lands in a later child PR. */}
             <input
                 type="email"
                 className={styles.formInput}
-                disabled
+                disabled={emailManagedByProvider}
                 {...register("email")}
             />
             {errors.email && <p className={styles.errorMessage}>{errors.email.message}</p>}

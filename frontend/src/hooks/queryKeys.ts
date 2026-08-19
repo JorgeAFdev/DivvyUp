@@ -6,4 +6,5 @@ export const queryKeys = {
     userExpenses: () => ['myExpenses'] as const,
     invite: (inviteCode: string) => ['invite', inviteCode] as const,
     inviteName: (inviteCode: string) => ['inviteName', inviteCode] as const,
+    accounts: () => ['accounts'] as const,
 };

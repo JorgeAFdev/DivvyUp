@@ -1,3 +1,14 @@
+import { vi } from 'vitest';
+
+// sendOnSignUp fires services/email on every sign-up, so every test that seeds a
+// session would otherwise make a real Resend call. Stub the SDK globally; the
+// email service's own test re-mocks 'resend' locally to assert the payload.
+vi.mock('resend', () => ({
+    Resend: vi.fn(() => ({
+        emails: { send: vi.fn().mockResolvedValue({ data: { id: 'test' }, error: null }) },
+    })),
+}));
+
 // Better Auth reads these at call time, like jwt.ts used to read jwt_secret, so
 // they only need to exist before the first request. CLIENT_URL feeds
 // trustedOrigins; supertest sends no Origin, but the value must be present.
