@@ -4,6 +4,7 @@ import { mongodbAdapter } from 'better-auth/adapters/mongodb';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import type { ZodType } from 'zod';
 import { registerSchema, loginSchema } from '@monorepo/validation';
+import { sendVerificationEmail, sendChangeEmailConfirmation } from '../services/authEmails.js';
 
 // Same flattening the retired `validate` middleware used, so the auth error copy
 // (the shared password/email rules and their text) stays identical to before the
@@ -28,7 +29,20 @@ export const createAuth = () =>
         // transaction:false: mongoose's Db is not a MongoClient and the local
         // mongodb-memory-server is a standalone.
         database: mongodbAdapter(mongoose.connection.db as unknown as Parameters<typeof mongodbAdapter>[0], { transaction: false }),
+        // requireEmailVerification stays off: verification is soft here, it does not
+        // gate login (that hardening is a later child PR).
         emailAndPassword: { enabled: true },
+        emailVerification: {
+            sendOnSignUp: true,
+            autoSignInAfterVerification: true,
+            sendVerificationEmail,
+        },
+        user: {
+            changeEmail: {
+                enabled: true,
+                sendChangeEmailConfirmation,
+            },
+        },
         socialProviders: {
             google: {
                 clientId: process.env.GOOGLE_CLIENT_ID as string,
