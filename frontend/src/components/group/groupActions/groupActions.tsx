@@ -2,6 +2,9 @@ import { useState, type Dispatch, type MouseEvent, type SetStateAction } from 'r
 import type { Group } from '@monorepo/shared';
 import Modal from '../../modal/modal';
 import GroupForm from '../groupForm/groupForm';
+import { MdEdit, MdRefresh } from 'react-icons/md';
+import { FaTrashAlt } from 'react-icons/fa';
+import { TbDotsVertical, TbShare2 } from 'react-icons/tb';
 import Icon from '../../icon/icon';
 import IconButton from '@mui/material/IconButton';
 import MenuItem from '@mui/material/MenuItem';
@@ -77,23 +80,23 @@ const GroupActions = ({ group, myMemberId, editGroup, editPending, isEditing, se
     return (
         <>
             <IconButton aria-label="Group actions" sx={{ color: 'text.primary' }} id="basic-button" aria-controls={open ? 'basic-menu' : undefined} aria-haspopup="true" aria-expanded={open ? 'true' : undefined} onClick={handleClick}>
-                <Icon variant='dots' className='dots' />
+                <Icon icon={TbDotsVertical} size={20} data-type="dots" />
             </IconButton>
             <AppMenu id="basic-menu" anchorEl={anchorEl} open={open} onClose={handleClose} MenuListProps={{ 'aria-labelledby': 'basic-button', }}>
                 <MenuItem sx={menuItemStyle} onClick={() => { setIsEditing(true); handleClose(); }}>
-                    <Icon variant='edit' />
+                    <Icon icon={MdEdit} />
                     Edit group
                 </MenuItem>
                 <MenuItem sx={menuItemStyle} id="share-invite-link" onClick={() => { shareInviteLink(); handleClose(); }}>
-                    <Icon variant='share' />
+                    <Icon icon={TbShare2} />
                     Share invite link
                 </MenuItem>
                 <MenuItem sx={menuItemStyle} id="reset-invite-link" onClick={() => { resetInviteLink(); handleClose(); }}>
-                    <Icon variant='refresh' />
+                    <Icon icon={MdRefresh} />
                     Reset invite link
                 </MenuItem>
                 <MenuItem sx={menuItemStyle} onClick={() => { onDelete(); handleClose(); }}>
-                    <Icon variant='delete' id="deleteGroup" />
+                    <Icon icon={FaTrashAlt} id="deleteGroup" />
                     Delete group
                 </MenuItem>
             </AppMenu>

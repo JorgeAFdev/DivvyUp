@@ -1,7 +1,8 @@
 import { useState } from "react";
 import type { Member } from "@monorepo/shared";
+import { MdAddCircleOutline } from "react-icons/md";
 import Modal from "../../modal/modal";
-import Icon from "../../icon/icon"
+import Fab from "../../fab/fab";
 import { useParams } from "react-router-dom";
 import ExpenseForm from "../expenseForm/expenseForm";
 import { toast } from "react-toastify";
@@ -31,7 +32,7 @@ const CreateExpense = ({ groupMembers }: { groupMembers: Member[] }) => {
 
     return (
         <div>
-            <Icon className={'add'} handleClick={openModal} />
+            <Fab icon={MdAddCircleOutline} label="Create expense" onClick={openModal} data-type="add" />
             {isModalOpen && <Modal><ExpenseForm title='Create Expense' onClose={closeModal} onSubmit={handleCreateExpense} groupMembers={groupMembers} isPending={createExpense.isPending} /></Modal>}
         </div>
     )
