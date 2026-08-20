@@ -1,7 +1,12 @@
+import MenuItem from '@mui/material/MenuItem';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/userContextAuth';
 
-const Logout = () => {
+// The menu item is the interactive element, so this renders the MenuItem itself
+// rather than a <button> nested inside one (invalid ARIA). signOut updates the
+// session store, which re-renders the header to its guest variant, so a plain
+// navigate home is enough — no page reload.
+const Logout = ({ onClose }: { onClose?: () => void }) => {
     const navigate = useNavigate();
     const { user, signOut } = useAuth();
 
@@ -9,14 +14,13 @@ const Logout = () => {
         return null;
     }
 
-    const doLogout = async () => {
+    const handleLogout = async () => {
+        onClose?.();
         await signOut();
         navigate('/');
-        window.location.reload();
-    }
-    return (
-        <button onClick={doLogout} style={{ all: 'unset', cursor: 'pointer' }}>Logout</button>
-    )
-}
+    };
+
+    return <MenuItem onClick={handleLogout}>Logout</MenuItem>;
+};
 
 export default Logout;
