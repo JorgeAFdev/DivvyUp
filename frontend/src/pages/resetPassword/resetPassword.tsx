@@ -8,7 +8,7 @@ import { MdErrorOutline } from 'react-icons/md';
 import { useResetPassword } from '../../hooks/useSession';
 import { apiErrorMessage } from '../../utils/apiError';
 import { PASSWORD_HINT, CONFIRM_PASSWORD_MISMATCH } from '../../utils/validation';
-import styles from './resetPassword.module.css';
+import styles from '../../components/auth/authForm.module.css';
 import Button from '../../components/button/button';
 import ButtonLink from '../../components/button/buttonLink';
 import StatusScreen from '../../components/statusScreen/statusScreen';

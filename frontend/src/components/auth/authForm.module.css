@@ -2,11 +2,8 @@
   max-width: 400px;
   margin: auto;
   padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  background-color: var(--secondary-bg-color);
   color: var(--color);
   transition: var(--theme-transition);
 }
@@ -17,6 +14,13 @@
   font-weight: bold;
   font-size: 30px;
   margin: 0;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--placeholder-color);
+  font-size: 0.9rem;
+  margin: 6px 0 10px;
 }
 
 .label {
@@ -64,6 +68,12 @@
 .submit {
   width: 100%;
   margin-top: 15px;
+}
+
+.forgot {
+  margin-top: 10px;
+  align-self: flex-end;
+  font-size: 0.8125rem;
 }
 
 .switch {
