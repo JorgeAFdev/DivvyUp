@@ -3,8 +3,8 @@ import { betterAuth } from 'better-auth';
 import { mongodbAdapter } from 'better-auth/adapters/mongodb';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import type { ZodType } from 'zod';
-import { registerSchema, loginSchema } from '@monorepo/validation';
-import { sendVerificationEmail, sendChangeEmailConfirmation } from '../services/authEmails.js';
+import { registerSchema, loginSchema, resetPasswordSchema } from '@monorepo/validation';
+import { sendVerificationEmail, sendChangeEmailConfirmation, sendResetPasswordEmail } from '../services/authEmails.js';
 
 // Same flattening the retired `validate` middleware used, so the auth error copy
 // (the shared password/email rules and their text) stays identical to before the
@@ -31,7 +31,13 @@ export const createAuth = () =>
         database: mongodbAdapter(mongoose.connection.db as unknown as Parameters<typeof mongodbAdapter>[0], { transaction: false }),
         // requireEmailVerification stays off: verification is soft here, it does not
         // gate login (that hardening is a later child PR).
-        emailAndPassword: { enabled: true },
+        emailAndPassword: {
+            enabled: true,
+            sendResetPassword: sendResetPasswordEmail,
+            // A reset usually follows a compromise, so applying it kills every other
+            // live session: any device still logged in with the old password is out.
+            revokeSessionsOnPasswordReset: true,
+        },
         emailVerification: {
             sendOnSignUp: true,
             autoSignInAfterVerification: true,
@@ -67,6 +73,10 @@ export const createAuth = () =>
             before: createAuthMiddleware(async (ctx) => {
                 if (ctx.path === '/sign-up/email') enforce(registerSchema, ctx.body);
                 if (ctx.path === '/sign-in/email') enforce(loginSchema, ctx.body);
+                // The reset body is { newPassword, token }; enforce the strength rule
+                // here so it holds on reset, not just at sign-up. /forget-password is
+                // left unhooked: its response is neutral, so a bad email leaks nothing.
+                if (ctx.path === '/reset-password') enforce(resetPasswordSchema, ctx.body);
             }),
         },
     });

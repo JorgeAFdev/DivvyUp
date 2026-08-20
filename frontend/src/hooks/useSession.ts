@@ -70,3 +70,31 @@ export const useRegister = () =>
         // Absolute so the verification link lands on the frontend, not the API origin.
         authClient.signUp.email({ ...credentials, callbackURL: `${window.location.origin}/email-verified` }),
     );
+
+export interface ResetPasswordVars {
+    newPassword: string;
+    token: string;
+}
+
+// Plain mutations, not useSessionMutation: neither changes the session on this
+// client (the reset page is public; resetPassword does not sign in), so there is
+// no waitForSession or cache clear to do.
+export const useForgetPassword = () =>
+    useMutation({
+        mutationFn: async (email: string) => {
+            // Absolute so the reset link lands on the frontend, not the API origin.
+            const { error } = await authClient.requestPasswordReset({
+                email,
+                redirectTo: `${window.location.origin}/reset-password`,
+            });
+            if (error) throw error;
+        },
+    });
+
+export const useResetPassword = () =>
+    useMutation({
+        mutationFn: async ({ newPassword, token }: ResetPasswordVars) => {
+            const { error } = await authClient.resetPassword({ newPassword, token });
+            if (error) throw error;
+        },
+    });

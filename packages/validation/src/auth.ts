@@ -37,5 +37,19 @@ export const loginSchema = z.object({
     password: passwordField,
 });
 
+// No server hook enforces this: the reset request is answered the same whether or
+// not the email exists, so a malformed one leaks nothing. Frontend form only.
+export const forgetPasswordSchema = z.object({
+    email: emailField,
+});
+
+// `newPassword` (not `password`) matches Better Auth's reset body key, so one
+// schema drives both the backend `before` hook and the frontend form.
+export const resetPasswordSchema = z.object({
+    newPassword: passwordField,
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ForgetPasswordInput = z.infer<typeof forgetPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

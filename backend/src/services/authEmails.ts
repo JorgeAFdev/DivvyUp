@@ -18,6 +18,21 @@ export const sendVerificationEmail = ({ user, url }: { user: { email: string }; 
         }),
     );
 
+// Neutral by design: the request is answered the same whether or not the address
+// has an account, so this mail may land in an inbox that never asked for it.
+export const sendResetPasswordEmail = ({ user, url }: { user: { email: string }; url: string }) =>
+    sendEmail(
+        user.email,
+        'Reset your DivvyUp password',
+        `Reset your DivvyUp password:\n\n${url}\n\nIf you did not request this, ignore this email and your password stays the same.`,
+        layout({
+            heading: 'Reset your password',
+            body: ['Click below to choose a new password for your DivvyUp account. The link expires after a while.'],
+            action: { label: 'Reset password', url },
+            footnote: 'If you did not request this, ignore this email and your password stays the same.',
+        }),
+    );
+
 export const sendChangeEmailConfirmation = ({
     user,
     newEmail,

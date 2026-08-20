@@ -7,6 +7,8 @@ import MyExpenses from "./pages/user/expenses/myExpenses";
 import Join from "./pages/join/join";
 import EmailVerified from "./pages/emailVerified/emailVerified";
 import EmailChange from "./pages/emailChange/emailChange";
+import ForgotPassword from "./pages/forgotPassword/forgotPassword";
+import ResetPassword from "./pages/resetPassword/resetPassword";
 import NoMatch from "./pages/noMatch/noMatch";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import User from "./pages/user/userProfile/user";
@@ -32,6 +34,8 @@ function App() {
               <Route path="/join/:inviteCode" element={<Join />} />
               <Route path="/email-verified" element={<EmailVerified />} />
               <Route path="/email-change" element={<EmailChange />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<NoMatch />} />
             </Route>
           </Routes>

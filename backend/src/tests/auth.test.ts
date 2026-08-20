@@ -14,6 +14,7 @@ let fakeRequest: ReturnType<typeof supertest>;
 
 const signUp = (body: any) => fakeRequest.post("/api/auth/sign-up/email").send(body);
 const signIn = (body: any) => fakeRequest.post("/api/auth/sign-in/email").send(body);
+const resetPassword = (body: any) => fakeRequest.post("/api/auth/reset-password").send(body);
 
 const valid = { name: "Ana", email: "ana@user.com", password: "Password1" };
 
@@ -135,5 +136,30 @@ describe("sign-in validation (our Zod hook)", () => {
         expect(wrongPassword.status).toBe(401);
         expect(unknownEmail.status).toBe(401);
         expect(unknownEmail.body).toEqual(wrongPassword.body);
+    });
+});
+
+// The reset step reuses register's strength rule via the same hook, so it 400s on
+// a weak new password before the token is even checked. Pin that, and that the
+// rejection never quotes the rejected password.
+describe("reset-password validation (our Zod hook)", () => {
+    const weak: [string, string][] = [
+        ["too short", "Pass1"],
+        ["no uppercase", "password1"],
+        ["no lowercase", "PASSWORD1"],
+        ["no number", "Passwordd"],
+    ];
+
+    it.each(weak)("rejects a weak new password with %s", async (_label, password) => {
+        const response = await resetPassword({ newPassword: password, token: "any-token" });
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toMatch(/at least 8 characters/);
+    });
+
+    it.each(weak)("never echoes the new password back (%s)", async (_label, password) => {
+        const response = await resetPassword({ newPassword: password, token: "any-token" });
+
+        expect(JSON.stringify(response.body)).not.toContain(password);
     });
 });
