@@ -13,12 +13,6 @@
     justify-content: space-between;
 }
 
-.btn {
-    width: 25px;
-    height: 25px;
-    cursor: pointer;
-}
-
 .formFields {
     margin: 15px 0;
 }
@@ -96,10 +90,6 @@
     display: flex;
     gap: 5px;
     align-items: center;
-}
-
-.redBtn {
-    color: #c00;
 }
 
 .addMember {

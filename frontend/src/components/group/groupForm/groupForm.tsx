@@ -6,6 +6,8 @@ import type { Member } from "@monorepo/shared";
 import type { GroupInput } from "../../../utils/groupApi";
 import styles from "./groupform.module.css";
 import { IoCloseOutline } from "react-icons/io5";
+import IconButton from "@mui/material/IconButton";
+import CloseButton from "../../closeButton/closeButton";
 import Button from "../../button/button";
 
 // hasAccount is a UI-only flag (it tags a member as claimed), not part of the
@@ -63,7 +65,7 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
         <form onSubmit={handleSubmit(handleFormSubmit)} className={styles.form}>
             <div className={styles.top}>
                 <h2>{title}</h2>
-                <IoCloseOutline className={styles.btn} onClick={onClose} />
+                <CloseButton onClick={onClose} />
             </div>
 
             <div className={styles.formFields}>
@@ -116,11 +118,15 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
                                 )}
                                 <div>
                                     {(!lockedMemberId || field._id !== lockedMemberId) && fields.length > minMembers && (
-                                        <IoCloseOutline
-                                            className={`${styles.btn} ${styles.redBtn}`}
+                                        <IconButton
+                                            aria-label={`Remove member ${index + 1}`}
+                                            type="button"
                                             onClick={() => remove(index)}
                                             id={`remove-member-${index}`}
-                                        />
+                                            sx={{ padding: 0, color: '#c00' }}
+                                        >
+                                            <IoCloseOutline size={25} />
+                                        </IconButton>
                                     )}
                                 </div>
                             </div>

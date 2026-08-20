@@ -5,7 +5,7 @@ import { expenseSchema } from "@monorepo/validation";
 import type { HydratedExpense, Member } from "@monorepo/shared";
 import type { ExpenseInput } from "../../../utils/expenseApi";
 import styles from "./expenseform.module.css";
-import { IoCloseOutline } from "react-icons/io5";
+import CloseButton from "../../closeButton/closeButton";
 import Button from "../../button/button";
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
@@ -44,7 +44,7 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
         <form onSubmit={handleSubmit(handleFormSubmit)} className={styles.form}>
             <div className={styles.top}>
                 <h2>{title}</h2>
-                <IoCloseOutline className={styles.btn} onClick={onClose} />
+                <CloseButton onClick={onClose} />
             </div>
 
             <div className={styles.formFields}>

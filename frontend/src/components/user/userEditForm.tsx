@@ -9,7 +9,7 @@ import { useAuth } from "../../context/userContextAuth";
 import { setPendingEmailChange } from "../../utils/pendingEmailChange";
 import { apiErrorMessage } from "../../utils/apiError";
 import styles from "./userEditForm.module.css";
-import { IoCloseOutline } from "react-icons/io5";
+import CloseButton from "../closeButton/closeButton";
 import Button from "../button/button";
 
 // The file field is not in the shared body schema, so it is added here as a
@@ -79,7 +79,7 @@ const UserEditForm = ({ user, onClose }: { user: EditableUser; onClose: () => vo
         <form onSubmit={handleSubmit(onSubmit)} className={styles.formContainer}>
             <div className={styles.top}>
                 <h2 className={styles.formTitle}>Edit Profile</h2>
-                <IoCloseOutline className={styles.btn} onClick={onClose} />
+                <CloseButton onClick={onClose} />
             </div>
 
             <label className={styles.formLabel}>
