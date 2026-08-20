@@ -111,7 +111,7 @@ botones e enlaces-CTA de la app (auth, perfil, group, expense, debt, join, invit
 `dots` pasaron a `IconButton` con `aria-label`. El botón "Confirm" del `useConfirmationToast` quedó en
 el token accesible. El `logout` dejó de anidar un `<button>` dentro del `MenuItem`: ahora `Logout`
 rinde el propio `MenuItem` (patrón de `ThemeMenuItem`) y hace `signOut` + `navigate('/')` sin el
-reload innecesario. **Follow-up restante:** el `StatusScreen` (punto 19).
+reload innecesario. **Follow-up:** el `StatusScreen` (punto 19), ya hecho.
 
 Contexto original de la tarea, conservado abajo.
 
@@ -211,7 +211,17 @@ que está por debajo de mínimos (44 de iOS, 48 de Android) y sale del `padding:
 hamburguesa no, porque el botón se queda igual. Y el mínimo de 48 para botones de sólo icono es la
 misma conversación que el punto 17.
 
-## 19. Un `StatusScreen` para las landings de resultado
+## 19. Un `StatusScreen` para las landings de resultado — DONE el 20-08-2026
+
+**Entregado:** `components/statusScreen/statusScreen.tsx` (contenedor centrado + icono + título +
+texto; el CTA entra como `children`, slot abierto, no una prop `linkTo`) con su
+`statusScreen.module.css`, que ahora vive **una sola vez**. Las cuatro pantallas
+(`emailVerified`, `emailChange`, el éxito de `forgotPassword` y el token inválido de `resetPassword`)
+lo componen. Borrado `emailVerified.module.css` y con él los `import styles from
+'../emailVerified/emailVerified.module.css'` de emailChange/forgot/reset: ninguna page tira ya del
+CSS de otra.
+
+Contexto original de la tarea, conservado abajo.
 
 Cuatro pantallas comparten **exactamente** el mismo layout centrado —icono + título + texto + un
 CTA—: `pages/emailVerified`, `pages/emailChange`, y los estados de éxito (forgot) y de token
