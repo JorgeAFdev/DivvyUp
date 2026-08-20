@@ -10,6 +10,8 @@ import { apiErrorMessage } from '../../utils/apiError';
 import { PASSWORD_HINT, CONFIRM_PASSWORD_MISMATCH } from '../../utils/validation';
 import styles from './resetPassword.module.css';
 import landing from '../emailVerified/emailVerified.module.css';
+import Button from '../../components/button/button';
+import ButtonLink from '../../components/button/buttonLink';
 
 // confirmPassword is a client-only field (Better Auth never receives it), so the
 // base contract schema is extended locally to keep the resolver from stripping it.
@@ -38,7 +40,7 @@ const ResetPassword = () => {
                 <MdErrorOutline className={landing.icon} aria-hidden />
                 <h1 className={landing.title}>Invalid reset link</h1>
                 <p className={landing.text}>This link is missing or has expired. Request a new one to continue.</p>
-                <Link to="/forgot-password" className={landing.link}>Request a new link</Link>
+                <ButtonLink to="/forgot-password">Request a new link</ButtonLink>
             </div>
         );
     }
@@ -89,7 +91,7 @@ const ResetPassword = () => {
             />
             {errors.confirmPassword && <p id="reset-confirm-error" className={styles.error}>{errors.confirmPassword.message}</p>}
 
-            <button type="submit" className={styles.submitBtn} disabled={resetPassword.isPending}>Reset password</button>
+            <Button type="submit" className={styles.submit} loading={resetPassword.isPending}>Reset password</Button>
 
             <p className={styles.switch}>
                 <Link to="/login">Back to login</Link>

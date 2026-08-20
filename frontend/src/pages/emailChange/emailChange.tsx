@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { MdMarkEmailUnread } from 'react-icons/md';
+import ButtonLink from '../../components/button/buttonLink';
 import { useAuth } from '../../context/userContextAuth';
 import { getPendingEmailChange, clearPendingEmailChange } from '../../utils/pendingEmailChange';
 import styles from '../emailVerified/emailVerified.module.css';
@@ -30,7 +31,7 @@ const EmailChange = () => {
                 We emailed a link to your new address to finish changing your email. The change takes
                 effect once you open it.
             </p>
-            <Link to="/profile" className={styles.link}>Go to your profile</Link>
+            <ButtonLink to="/profile">Go to your profile</ButtonLink>
         </div>
     );
 };
