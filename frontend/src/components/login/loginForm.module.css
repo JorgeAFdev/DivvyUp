@@ -53,21 +53,11 @@
   margin-top: 5px;
 }
 
-.loginSubmitBtn {
-  background-color: #007bff;
-  color: white;
-  font-size: 16px;
+.submit {
+  width: 100%;
   margin-top: 15px;
-  padding: 10px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background 0.3s;
 }
 
-.loginSubmitBtn:hover {
-  background-color: #0056b3;
-}
 .loginForgot {
     margin-top: 10px;
     align-self: flex-end;
