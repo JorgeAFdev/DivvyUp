@@ -1,0 +1,62 @@
+/* text-align is pinned so an ancestor's centering (e.g. the profile modal) never
+   reaches the field: the label sat centered above a left-aligned input otherwise. */
+.label {
+  display: block;
+  text-align: left;
+  font-weight: bold;
+  color: var(--color);
+  margin: 15px 0 5px 0;
+  transition: var(--theme-transition);
+}
+
+.control {
+  position: relative;
+}
+
+.input {
+  width: 100%;
+  text-align: left;
+  padding: 14px;
+  background-color: var(--secondary-bg-color);
+  border: 1px solid var(--border-color);
+  color: var(--color);
+  border-radius: 5px;
+  font-size: 16px;
+  outline: none;
+  transition: var(--theme-transition), box-shadow 300ms ease-in-out;
+}
+
+.input::placeholder {
+  color: var(--placeholder-color);
+}
+
+/* Before :focus so the blue focus ring wins while editing, red shows at rest. */
+.input[aria-invalid="true"] {
+  border-color: red;
+}
+
+.input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* Room for the visibility toggle so the value never runs under it. */
+.hasTrailing {
+  padding-right: 48px;
+}
+
+.hint {
+  color: var(--color);
+  text-align: left;
+  transition: var(--theme-transition);
+  opacity: 0.7;
+  font-size: 13px;
+  margin: 6px 0 0 0;
+}
+
+.error {
+  color: red;
+  text-align: left;
+  font-size: 14px;
+  margin-top: 5px;
+}

@@ -9,6 +9,8 @@ import { nextDestination } from '../../utils/nextDestination';
 import { apiErrorMessage } from '../../utils/apiError';
 import SocialAuth from '../auth/socialAuth';
 import Button from '../button/button';
+import FormField from '../formField/formField';
+import PasswordInput from '../formField/passwordInput';
 
 
 const Login = () => {
@@ -37,28 +39,21 @@ const Login = () => {
 
       <SocialAuth />
 
-      <label htmlFor="email" className={styles.label}>Email</label>
-      <input
+      <FormField
         id="email"
-        aria-invalid={errors.email ? 'true' : 'false'}
-        aria-describedby={errors.email ? 'login-email-error' : undefined}
-        {...register('email')}
+        label="Email"
         placeholder="Email"
-        className={styles.input}
+        error={errors.email}
+        {...register('email')}
       />
-      {errors.email && <p id="login-email-error" className={styles.error}>{errors.email.message}</p>}
 
-      <label htmlFor="password" className={styles.label}>Password</label>
-      <input
+      <PasswordInput
         id="password"
-        aria-invalid={errors.password ? 'true' : 'false'}
-        aria-describedby={errors.password ? 'login-password-error' : undefined}
-        {...register('password')}
+        label="Password"
         placeholder="Password"
-        type="password"
-        className={styles.input}
+        error={errors.password}
+        {...register('password')}
       />
-      {errors.password && <p id="login-password-error" className={styles.error}>{errors.password.message}</p>}
 
       <Link to="/forgot-password" className={styles.forgot}>Forgot password?</Link>
 

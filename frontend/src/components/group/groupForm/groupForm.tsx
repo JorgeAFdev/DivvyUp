@@ -9,6 +9,7 @@ import { IoCloseOutline } from "react-icons/io5";
 import IconButton from "@mui/material/IconButton";
 import CloseButton from "../../closeButton/closeButton";
 import Button from "../../button/button";
+import FormField from "../../formField/formField";
 
 // hasAccount is a UI-only flag (it tags a member as claimed), not part of the
 // shared input contract, so it is added here as a passthrough — like the file
@@ -69,36 +70,26 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
             </div>
 
             <div className={styles.formFields}>
-                <div className={styles.formField}>
-                    <label htmlFor="name" className={styles.label}>Name</label>
-                    <input
-                        id="name"
-                        type="text"
-                        placeholder="Trip to Madrid"
-                        autoFocus
-                        {...register("name")}
-                        className={`${styles.input} ${errors.name ? styles.errorInput : ""}`}
-                    />
-                    {errors.name && (
-                        <span className={styles.errorText}>{errors.name.message}</span>
-                    )}
-                </div>
+                <FormField
+                    id="name"
+                    label="Name"
+                    type="text"
+                    placeholder="Trip to Madrid"
+                    autoFocus
+                    error={errors.name}
+                    {...register("name")}
+                />
 
-                <div className={styles.formField}>
-                    <label htmlFor="description" className={styles.label}>Description</label>
-                    <input
-                        id="description"
-                        type="text"
-                        placeholder="Trip to madrid in february"
-                        {...register("description")}
-                        className={`${styles.input} ${errors.description ? styles.errorInput : ""}`}
-                    />
-                    {errors.description && (
-                        <span className={styles.errorText}>{errors.description.message}</span>
-                    )}
-                </div>
+                <FormField
+                    id="description"
+                    label="Description"
+                    type="text"
+                    placeholder="Trip to madrid in february"
+                    error={errors.description}
+                    {...register("description")}
+                />
 
-                <div className={styles.formField}>
+                <div className={styles.members}>
                     <label className={styles.label}>Group members</label>
                     <p className={styles.hint}>
                         Their name is enough. Anyone can join later from the group link and pick themselves off this list.

@@ -11,6 +11,7 @@ import { apiErrorMessage } from "../../utils/apiError";
 import styles from "./userEditForm.module.css";
 import CloseButton from "../closeButton/closeButton";
 import Button from "../button/button";
+import FormField from "../formField/formField";
 
 // The file field is not in the shared body schema, so it is added here as a
 // passthrough — like registerForm — or the resolver would strip the upload.
@@ -82,27 +83,23 @@ const UserEditForm = ({ user, onClose }: { user: EditableUser; onClose: () => vo
                 <CloseButton onClick={onClose} />
             </div>
 
-            <label className={styles.formLabel}>
-                Name
-            </label>
-            <input
+            <FormField
+                id="profile-name"
+                label="Name"
                 type="text"
-                className={styles.formInput}
+                error={errors.name}
                 {...register("name")}
             />
-            {errors.name && <p className={styles.errorMessage}>{errors.name.message}</p>}
 
-            <label className={styles.formLabel}>
-                Email
-                {emailManagedByProvider && <span className={styles.hint}>Managed by your Google login</span>}
-            </label>
-            <input
+            <FormField
+                id="profile-email"
+                label="Email"
                 type="email"
-                className={styles.formInput}
                 disabled={emailManagedByProvider}
+                hint={emailManagedByProvider ? "Managed by your Google login" : undefined}
+                error={errors.email}
                 {...register("email")}
             />
-            {errors.email && <p className={styles.errorMessage}>{errors.email.message}</p>}
 
             <label className={styles.formLabel}>
                 Profile Picture
