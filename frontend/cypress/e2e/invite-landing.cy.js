@@ -29,6 +29,7 @@ describe('landing on an invite without a session', () => {
             cy.get('input[name="name"]').type('Ana');
             cy.get('input[name="email"]').type(`ana${stamp}@test.com`);
             cy.get('input[name="password"]').type('Password1');
+            cy.get('input[name="confirmPassword"]').type('Password1');
             cy.get('button[type="submit"]').click();
 
             // straight back to the invite, no pasting the link again
