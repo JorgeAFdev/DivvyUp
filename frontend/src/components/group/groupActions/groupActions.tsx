@@ -3,7 +3,7 @@ import type { Group } from '@monorepo/shared';
 import Modal from '../../modal/modal';
 import GroupForm from '../groupForm/groupForm';
 import Icon from '../../icon/icon';
-import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
 import MenuItem from '@mui/material/MenuItem';
 import AppMenu from '../../menu/appMenu';
 import { toast } from 'react-toastify';
@@ -17,12 +17,13 @@ interface GroupActionsProps {
     group: Group;
     myMemberId?: string;
     editGroup: (data: GroupInput) => void;
+    editPending?: boolean;
     isEditing: boolean;
     setIsEditing: Dispatch<SetStateAction<boolean>>;
     onDelete: () => void;
 }
 
-const GroupActions = ({ group, myMemberId, editGroup, isEditing, setIsEditing, onDelete }: GroupActionsProps) => {
+const GroupActions = ({ group, myMemberId, editGroup, editPending, isEditing, setIsEditing, onDelete }: GroupActionsProps) => {
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const open = Boolean(anchorEl);
     const handleClick = (event: MouseEvent<HTMLElement>) => {
@@ -75,9 +76,9 @@ const GroupActions = ({ group, myMemberId, editGroup, isEditing, setIsEditing, o
 
     return (
         <>
-            <Button sx={{ color: 'text.primary', minWidth: '0px' }} id="basic-button" aria-controls={open ? 'basic-menu' : undefined} aria-haspopup="true" aria-expanded={open ? 'true' : undefined} onClick={handleClick}>
+            <IconButton aria-label="Group actions" sx={{ color: 'text.primary' }} id="basic-button" aria-controls={open ? 'basic-menu' : undefined} aria-haspopup="true" aria-expanded={open ? 'true' : undefined} onClick={handleClick}>
                 <Icon variant='dots' className='dots' />
-            </Button>
+            </IconButton>
             <AppMenu id="basic-menu" anchorEl={anchorEl} open={open} onClose={handleClose} MenuListProps={{ 'aria-labelledby': 'basic-button', }}>
                 <MenuItem sx={menuItemStyle} onClick={() => { setIsEditing(true); handleClose(); }}>
                     <Icon variant='edit' />
@@ -102,6 +103,7 @@ const GroupActions = ({ group, myMemberId, editGroup, isEditing, setIsEditing, o
                         title='Edit group'
                         onClose={() => setIsEditing(false)}
                         onSubmit={editGroup}
+                        isPending={editPending}
                         groupMembers={group.members}
                         lockedMemberId={myMemberId}
                         defaultValues={group}
