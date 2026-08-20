@@ -1,6 +1,8 @@
 import { toast } from 'react-toastify';
 import { Button, type ButtonProps } from '@mui/material';
 
+const baseButtonSx = { borderRadius: '8px', textTransform: 'none', fontWeight: 'bold' } as const;
+
 interface ConfirmationToastOptions {
     message?: string;
     onConfirm: () => void;
@@ -36,11 +38,9 @@ export const useConfirmationToast = () => {
                         {...confirmRest}
                         sx={[
                             {
-                                backgroundColor: "primary.dark",
-                                borderRadius: "8px",
-                                textTransform: "none",
-                                fontWeight: "bold",
-                                "&:hover": { backgroundColor: "primary.main" },
+                                backgroundColor: "var(--primary-color-strong)",
+                                "&:hover": { backgroundColor: "var(--primary-color-strong-hover)" },
+                                ...baseButtonSx,
                             },
                             ...(confirmSx ? (Array.isArray(confirmSx) ? confirmSx : [confirmSx]) : []),
                         ]}
@@ -56,11 +56,7 @@ export const useConfirmationToast = () => {
                         }}
                         {...cancelRest}
                         sx={[
-                            {
-                                borderRadius: "8px",
-                                textTransform: "none",
-                                fontWeight: "bold",
-                            },
+                            baseButtonSx,
                             ...(cancelSx ? (Array.isArray(cancelSx) ? cancelSx : [cancelSx]) : []),
                         ]}
                     >
