@@ -10,6 +10,7 @@ import { setPendingEmailChange } from "../../utils/pendingEmailChange";
 import { apiErrorMessage } from "../../utils/apiError";
 import styles from "./userEditForm.module.css";
 import { IoCloseOutline } from "react-icons/io5";
+import Button from "../button/button";
 
 // The file field is not in the shared body schema, so it is added here as a
 // passthrough — like registerForm — or the resolver would strip the upload.
@@ -133,9 +134,9 @@ const UserEditForm = ({ user, onClose }: { user: EditableUser; onClose: () => vo
                 )}
             </div>
 
-            <button type="submit" className={styles.button} disabled={mutation.isPending}>
-                {mutation.isPending ? "Saving..." : "Save changes"}
-            </button>
+            <Button type="submit" className={styles.fullWidth} loading={mutation.isPending}>
+                Save changes
+            </Button>
         </form>
     );
 };
