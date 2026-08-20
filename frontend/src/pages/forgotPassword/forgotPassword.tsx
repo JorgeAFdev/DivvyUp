@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 import { MdMarkEmailRead } from 'react-icons/md';
 import { useForgetPassword } from '../../hooks/useSession';
 import { apiErrorMessage } from '../../utils/apiError';
-import styles from './forgotPassword.module.css';
+import styles from '../../components/auth/authForm.module.css';
 import Button from '../../components/button/button';
 import ButtonLink from '../../components/button/buttonLink';
 import StatusScreen from '../../components/statusScreen/statusScreen';
