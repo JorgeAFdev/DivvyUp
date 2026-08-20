@@ -8,9 +8,9 @@ import { MdMarkEmailRead } from 'react-icons/md';
 import { useForgetPassword } from '../../hooks/useSession';
 import { apiErrorMessage } from '../../utils/apiError';
 import styles from './forgotPassword.module.css';
-import landing from '../emailVerified/emailVerified.module.css';
 import Button from '../../components/button/button';
 import ButtonLink from '../../components/button/buttonLink';
+import StatusScreen from '../../components/statusScreen/statusScreen';
 
 const ForgotPassword = () => {
     const { register, handleSubmit, formState: { errors } } = useForm<ForgetPasswordInput>({
@@ -32,14 +32,13 @@ const ForgotPassword = () => {
     // answer never reveals which, so account enumeration stays shut.
     if (sent) {
         return (
-            <div className={landing.container}>
-                <MdMarkEmailRead className={landing.icon} aria-hidden />
-                <h1 className={landing.title}>Check your inbox</h1>
-                <p className={landing.text}>
-                    If that address has a DivvyUp account, we sent it a link to reset your password.
-                </p>
+            <StatusScreen
+                icon={MdMarkEmailRead}
+                title="Check your inbox"
+                text="If that address has a DivvyUp account, we sent it a link to reset your password."
+            >
                 <ButtonLink to="/login">Back to login</ButtonLink>
-            </div>
+            </StatusScreen>
         );
     }
 
