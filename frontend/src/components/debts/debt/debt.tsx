@@ -1,4 +1,4 @@
-import { Button } from '@mui/material';
+import Button from '../../button/button';
 import type { HydratedPayment } from '@monorepo/shared';
 import styles from './debt.module.css'
 import { toast } from 'react-toastify';
@@ -31,14 +31,7 @@ const Debt = ({ debt, groupId }: { debt: HydratedPayment; groupId: string }) => 
     return (
         <li className={styles.debt}>
             <p>{debt.from?.name} owes <strong>{debt.amount}€</strong> to {debt.to?.name}</p>
-            <Button
-                variant="contained"
-                color="primary"
-                size="small"
-                onClick={handlePayDebt}
-                disabled={settleDebt.isPending}
-                sx={{ backgroundColor: "primary.dark", borderRadius: "8px", textTransform: "none", fontWeight: "bold", "&:hover": { backgroundColor: "primary.main" } }}
-            >
+            <Button size="sm" onClick={handlePayDebt} loading={settleDebt.isPending}>
                 Mark as paid
             </Button>
         </li>
