@@ -15,6 +15,11 @@
        theme/appTheme.js reads these same names and hands them to MUI. */
     --primary-color: #1e90ff;
     --primary-color-dark: #3c8ccd;
+    /* Filled-button blue: dark enough that white text clears WCAG AA (5.07:1),
+       which none of the brand blues do. Same value in both themes because the
+       fill is its own background, so it lives in :root with no body.dark twin. */
+    --primary-color-strong: #0b6ecf;
+    --primary-color-strong-hover: #0959a8;
     --color: #252424;
     --bg-color: #f8f7f7;
     --secondary-bg-color: #f0f0f0;
