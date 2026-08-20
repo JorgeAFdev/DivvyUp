@@ -59,6 +59,8 @@ const Login = () => {
       />
       {errors.password && <p id="login-password-error" className={styles.loginError}>{errors.password.message}</p>}
 
+      <Link to="/forgot-password" className={styles.loginForgot}>Forgot password?</Link>
+
       <button type="submit" className={styles.loginSubmitBtn} disabled={login.isPending}>Login</button>
 
       <p className={styles.loginSwitch}>
