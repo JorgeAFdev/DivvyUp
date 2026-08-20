@@ -1,26 +1,38 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { registerSchema } from '@monorepo/validation';
 import styles from './registerForm.module.css';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useRegister, type RegisterCredentials } from '../../hooks/useSession';
+import { useRegister } from '../../hooks/useSession';
 import { toast } from 'react-toastify';
 import { nextDestination } from '../../utils/nextDestination';
 import { apiErrorMessage } from '../../utils/apiError';
-import { PASSWORD_HINT } from '../../utils/validation';
+import { PASSWORD_HINT, CONFIRM_PASSWORD_MISMATCH } from '../../utils/validation';
 import SocialAuth from '../auth/socialAuth';
 
+// confirmPassword is a client-only field (Better Auth never receives it), so the
+// shared contract schema is extended locally to keep the resolver from stripping it.
+const registerFormSchema = registerSchema
+    .extend({ confirmPassword: z.string() })
+    .refine((data) => data.password === data.confirmPassword, {
+        message: CONFIRM_PASSWORD_MISMATCH,
+        path: ['confirmPassword'],
+    });
+
+type RegisterFormValues = z.infer<typeof registerFormSchema>;
+
 const RegisterForm = () => {
-    const { register, handleSubmit, formState: { errors } } = useForm<RegisterCredentials>({
-        resolver: zodResolver(registerSchema),
+    const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormValues>({
+        resolver: zodResolver(registerFormSchema),
     });
 
     const navigate = useNavigate();
     const { search } = useLocation();
     const mutation = useRegister();
 
-    const onSubmit = (data: RegisterCredentials) => {
-        mutation.mutate(data, {
+    const onSubmit = ({ confirmPassword: _confirmPassword, ...credentials }: RegisterFormValues) => {
+        mutation.mutate(credentials, {
             onSuccess: () => {
                 navigate(nextDestination(search));
             },
@@ -87,6 +99,22 @@ const RegisterForm = () => {
                 {PASSWORD_HINT}
             </p>
             {errors.password && <p id="register-password-error" className={styles.registerErrorMessage}>{errors.password.message}</p>}
+
+            <label
+                className={styles.registerLabel} htmlFor="register-confirm-password">
+                Confirm password
+            </label>
+
+            <input
+                id="register-confirm-password"
+                className={styles.registerInput}
+                type="password"
+                placeholder="********"
+                aria-invalid={errors.confirmPassword ? 'true' : 'false'}
+                aria-describedby={errors.confirmPassword ? 'register-confirm-password-error' : undefined}
+                {...register('confirmPassword')}
+            />
+            {errors.confirmPassword && <p id="register-confirm-password-error" className={styles.registerErrorMessage}>{errors.confirmPassword.message}</p>}
 
             <button type="submit" className={styles.registerSubmitButton} disabled={mutation.isPending}>Register</button>
 
