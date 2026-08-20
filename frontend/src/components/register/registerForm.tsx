@@ -10,6 +10,7 @@ import { nextDestination } from '../../utils/nextDestination';
 import { apiErrorMessage } from '../../utils/apiError';
 import { PASSWORD_HINT, CONFIRM_PASSWORD_MISMATCH } from '../../utils/validation';
 import SocialAuth from '../auth/socialAuth';
+import Button from '../button/button';
 
 // confirmPassword is a client-only field (Better Auth never receives it), so the
 // shared contract schema is extended locally to keep the resolver from stripping it.
@@ -116,7 +117,7 @@ const RegisterForm = () => {
             />
             {errors.confirmPassword && <p id="register-confirm-password-error" className={styles.registerErrorMessage}>{errors.confirmPassword.message}</p>}
 
-            <button type="submit" className={styles.registerSubmitButton} disabled={mutation.isPending}>Register</button>
+            <Button type="submit" className={styles.submit} loading={mutation.isPending}>Register</Button>
 
             <p className={styles.registerSwitch}>
                 Already have an account? <Link to={`/login${search}`}>Login</Link>

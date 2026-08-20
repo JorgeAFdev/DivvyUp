@@ -6,6 +6,7 @@ import type { Member } from "@monorepo/shared";
 import type { GroupInput } from "../../../utils/groupApi";
 import styles from "./groupform.module.css";
 import { IoCloseOutline } from "react-icons/io5";
+import Button from "../../button/button";
 
 // hasAccount is a UI-only flag (it tags a member as claimed), not part of the
 // shared input contract, so it is added here as a passthrough — like the file
@@ -23,9 +24,10 @@ interface GroupFormProps {
     defaultValues?: { name?: string; description?: string };
     groupMembers?: Member[];
     lockedMemberId?: string;
+    isPending?: boolean;
 }
 
-const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers, lockedMemberId }: GroupFormProps) => {
+const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers, lockedMemberId, isPending = false }: GroupFormProps) => {
     // An existing group cannot go down to a single member: with one participant
     // the expense form sends a boolean instead of a list.
     const minMembers = groupMembers ? 2 : 1;
@@ -127,17 +129,15 @@ const GroupForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers,
                             )}
                         </div>
                     ))}
-                    <button className={styles.addBtn} type="button" onClick={() => append({ name: "" })} id="add-member">
+                    <Button variant="ghost" type="button" onClick={() => append({ name: "" })} id="add-member" className={styles.addMember}>
                         Add Member
-                    </button>
+                    </Button>
                 </div>
             </div>
 
 
             <div className={styles.submit}>
-                <button type="submit" className={styles.submitButton} id='submit-btn'>
-                    {title}
-                </button>
+                <Button type="submit" id="submit-btn" loading={isPending}>{title}</Button>
             </div>
         </form>
     );

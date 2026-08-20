@@ -32,7 +32,7 @@ const CreateExpense = ({ groupMembers }: { groupMembers: Member[] }) => {
     return (
         <div>
             <Icon className={'add'} handleClick={openModal} />
-            {isModalOpen && <Modal><ExpenseForm title='Create Expense' onClose={closeModal} onSubmit={handleCreateExpense} groupMembers={groupMembers} /></Modal>}
+            {isModalOpen && <Modal><ExpenseForm title='Create Expense' onClose={closeModal} onSubmit={handleCreateExpense} groupMembers={groupMembers} isPending={createExpense.isPending} /></Modal>}
         </div>
     )
 }

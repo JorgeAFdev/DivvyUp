@@ -93,8 +93,8 @@ describe('The header component', () => {
         expect(button).toHaveAttribute('aria-expanded', 'true');
 
         // Logout goes last and behind its own divider on purpose: it is
-        // destructive, it reloads the page, and Profile used to sit right on
-        // top of it in a touch target.
+        // destructive (it ends the session and navigates home), and Profile
+        // used to sit right on top of it in a touch target.
         expect(screen.getAllByRole('menuitem').map((item) => item.textContent))
             .toEqual(['Groups', 'Expenses', 'Profile', 'Dark mode', 'Logout']);
     });

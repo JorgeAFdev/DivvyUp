@@ -39,9 +39,7 @@ const UserMenu = () => {
                 <MenuItem onClick={handleMenuClose} component={Link} to="/profile" >
                     Profile
                 </MenuItem>
-                <MenuItem onClick={handleMenuClose} >
-                    <Logout />
-                </MenuItem>
+                <Logout onClose={handleMenuClose} />
             </AppMenu>
         </div>
     );

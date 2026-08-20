@@ -83,6 +83,7 @@ const Group = ({ group }: { group: GroupType }) => {
                         group={group}
                         myMemberId={myMemberId}
                         editGroup={handleEditGroup}
+                        editPending={updateGroup.isPending}
                         onDelete={handleDeleteExpense}
                         isEditing={isEditing}
                         setIsEditing={setIsEditing}

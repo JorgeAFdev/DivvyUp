@@ -1,0 +1,105 @@
+.button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: var(--btn-padding);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: var(--btn-font-size);
+    font-family: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--transition-base), border-color var(--transition-base), color var(--transition-base);
+}
+
+.button:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Height is driven by padding + content (no fixed height), so a size is just its
+   padding and type scale. A variant never restates them, and ghost only drops
+   the padding while keeping the size's font-size. */
+.sm {
+    --btn-padding: 6px 12px;
+    --btn-font-size: 0.875rem;
+}
+
+.md {
+    --btn-padding: 10px 15px;
+    --btn-font-size: 1rem;
+}
+
+.lg {
+    --btn-padding: 14px 22px;
+    --btn-font-size: 1.0625rem;
+}
+
+.primary {
+    background-color: var(--primary-color-strong);
+    color: white;
+}
+
+.primary:hover:not(:disabled) {
+    background-color: var(--primary-color-strong-hover);
+}
+
+.secondary {
+    background-color: var(--secondary-bg-color);
+    border-color: var(--border-color);
+    color: var(--color);
+}
+
+.secondary:hover:not(:disabled) {
+    border-color: var(--color);
+}
+
+/* ghost is a text link, not a boxed button: it drops the box but keeps the
+   size's font-size. */
+.ghost {
+    padding: 4px 0;
+    background-color: transparent;
+    color: var(--color);
+}
+
+.ghost:hover:not(:disabled) {
+    opacity: 0.7;
+}
+
+/* Keep the label in flow (holds the button's width, so loading causes no jump)
+   and in the accessibility tree (opacity, unlike visibility/display, does not
+   drop it — the button keeps its name), with the spinner centred over it. */
+.loadingLabel {
+    opacity: 0;
+}
+
+.spinner {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: button-spin 0.6s linear infinite;
+}
+
+@keyframes button-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .spinner {
+        animation-duration: 1.5s;
+    }
+}

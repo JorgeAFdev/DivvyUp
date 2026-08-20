@@ -9,6 +9,8 @@ import { useForgetPassword } from '../../hooks/useSession';
 import { apiErrorMessage } from '../../utils/apiError';
 import styles from './forgotPassword.module.css';
 import landing from '../emailVerified/emailVerified.module.css';
+import Button from '../../components/button/button';
+import ButtonLink from '../../components/button/buttonLink';
 
 const ForgotPassword = () => {
     const { register, handleSubmit, formState: { errors } } = useForm<ForgetPasswordInput>({
@@ -36,7 +38,7 @@ const ForgotPassword = () => {
                 <p className={landing.text}>
                     If that address has a DivvyUp account, we sent it a link to reset your password.
                 </p>
-                <Link to="/login" className={landing.link}>Back to login</Link>
+                <ButtonLink to="/login">Back to login</ButtonLink>
             </div>
         );
     }
@@ -57,7 +59,7 @@ const ForgotPassword = () => {
             />
             {errors.email && <p id="forgot-email-error" className={styles.error}>{errors.email.message}</p>}
 
-            <button type="submit" className={styles.submitBtn} disabled={forgetPassword.isPending}>Send reset link</button>
+            <Button type="submit" className={styles.submit} loading={forgetPassword.isPending}>Send reset link</Button>
 
             <p className={styles.switch}>
                 Remembered it? <Link to="/login">Back to login</Link>

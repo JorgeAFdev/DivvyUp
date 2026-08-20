@@ -29,7 +29,7 @@ const CreateGroup = () => {
     return (
         <div>
             <Icon className={'add'} handleClick={openModal} id='create-group-btn' />
-            {isModalOpen && <Modal><GroupForm title='Create group' onClose={closeModal} onSubmit={handleCreateGroup} /></Modal>}
+            {isModalOpen && <Modal><GroupForm title='Create group' onClose={closeModal} onSubmit={handleCreateGroup} isPending={createGroup.isPending} /></Modal>}
         </div>
     )
 }

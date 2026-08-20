@@ -8,6 +8,7 @@ import { toast } from 'react-toastify';
 import { nextDestination } from '../../utils/nextDestination';
 import { apiErrorMessage } from '../../utils/apiError';
 import SocialAuth from '../auth/socialAuth';
+import Button from '../button/button';
 
 
 const Login = () => {
@@ -61,7 +62,7 @@ const Login = () => {
 
       <Link to="/forgot-password" className={styles.loginForgot}>Forgot password?</Link>
 
-      <button type="submit" className={styles.loginSubmitBtn} disabled={login.isPending}>Login</button>
+      <Button type="submit" className={styles.submit} loading={login.isPending}>Login</Button>
 
       <p className={styles.loginSwitch}>
         No account yet? <Link to={`/register${search}`}>Register</Link>

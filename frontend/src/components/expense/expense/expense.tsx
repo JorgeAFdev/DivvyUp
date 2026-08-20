@@ -72,7 +72,7 @@ const Expense = ({ expense, groupId, groupMembers }: ExpenseProps) => {
                 <div className={styles.right}>
                     <p><strong>{expense.totalAmount}€</strong></p>
                     <div className={styles.actions}>
-                        <ExpenseActions groupMembers={groupMembers} handleEditExpense={handleEditExpense} onDelete={handleDeleteExpense} isEditing={isEditing} setIsEditing={setIsEditing} defaultValues={expense} />
+                        <ExpenseActions groupMembers={groupMembers} handleEditExpense={handleEditExpense} editPending={updateExpense.isPending} onDelete={handleDeleteExpense} isEditing={isEditing} setIsEditing={setIsEditing} defaultValues={expense} />
                     </div>
                 </div>
             </div>

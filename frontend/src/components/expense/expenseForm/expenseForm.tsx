@@ -6,6 +6,7 @@ import type { HydratedExpense, Member } from "@monorepo/shared";
 import type { ExpenseInput } from "../../../utils/expenseApi";
 import styles from "./expenseform.module.css";
 import { IoCloseOutline } from "react-icons/io5";
+import Button from "../../button/button";
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
@@ -15,9 +16,10 @@ interface ExpenseFormProps {
     title: string;
     defaultValues?: Partial<HydratedExpense>;
     groupMembers: Member[];
+    isPending?: boolean;
 }
 
-const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers }: ExpenseFormProps) => {
+const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMembers, isPending = false }: ExpenseFormProps) => {
     const {
         register,
         handleSubmit,
@@ -118,9 +120,7 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
 
 
             <div className={styles.submit}>
-                <button type="submit" className={styles.submitButton}>
-                    {title}
-                </button>
+                <Button type="submit" loading={isPending}>{title}</Button>
             </div>
         </form>
     );

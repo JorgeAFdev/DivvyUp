@@ -102,27 +102,6 @@
     color: #c00;
 }
 
-.addBtn {
-    all: unset;
-    cursor: pointer;
+.addMember {
     margin-top: 5px;
-    color: var(--primary-color-dark);
-}
-
-.addBtn:hover {
-    color: var(--primary-color);
-}
-
-.submitButton {
-    background-color: var(--primary-color-dark);
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-}
-
-.submitButton:hover {
-    background-color: var(--primary-color);
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Modal from "../modal/modal";
 import UserEditForm, { type EditableUser } from "./userEditForm";
+import Button from "../button/button";
 import styles from "./userEditForm.module.css";
 
 const UserEdit = ({ user }: { user: EditableUser }) => {
@@ -8,7 +9,7 @@ const UserEdit = ({ user }: { user: EditableUser }) => {
 
     return (
         <>
-            <button className={styles.button} onClick={() => setIsOpen(true)}>Edit profile </button>
+            <Button className={styles.fullWidth} onClick={() => setIsOpen(true)}>Edit profile</Button>
 
             {isOpen && (
                 <Modal>

@@ -69,16 +69,6 @@
     transition: var(--theme-transition);
 }
 
-.link {
-    all: unset;
-    cursor: pointer;
-    color: var(--primary-color-dark);
-}
-
-.link:hover {
-    color: var(--primary-color);
-}
-
 .actions {
     display: flex;
     gap: 12px;
