@@ -4,7 +4,7 @@ import { mongodbAdapter } from 'better-auth/adapters/mongodb';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import type { ZodType } from 'zod';
 import { registerSchema, loginSchema, resetPasswordSchema } from '@monorepo/validation';
-import { sendVerificationEmail, sendChangeEmailConfirmation, sendResetPasswordEmail } from '../services/authEmails.js';
+import { sendVerificationEmail, sendChangeEmailConfirmation, sendResetPasswordEmail, sendPasswordlessAccountEmail } from '../services/authEmails.js';
 
 // Same flattening the retired `validate` middleware used, so the auth error copy
 // (the shared password/email rules and their text) stays identical to before the
@@ -17,6 +17,17 @@ const enforce = (schema: ZodType, body: unknown) => {
         });
     }
 };
+
+// No mongoose model owns Better Auth's `account` collection, so read it raw; the
+// adapter stores userId as an ObjectId (generateId:false), not the hex string.
+const accountProvidersOf = async (userId: string): Promise<string[]> =>
+    (
+        await mongoose.connection
+            .collection('account')
+            .find({ userId: new mongoose.Types.ObjectId(userId) })
+            .project({ providerId: 1 })
+            .toArray()
+    ).map((account) => account.providerId as string);
 
 // Built after connectDB() resolves: mongodbAdapter needs a live mongoose.connection.db.
 export const createAuth = () =>
@@ -33,7 +44,17 @@ export const createAuth = () =>
         // gate login (that hardening is a later child PR).
         emailAndPassword: {
             enabled: true,
-            sendResetPassword: sendResetPasswordEmail,
+            // Gate the reset link on an existing credential: Better Auth's
+            // resetPassword would otherwise CREATE one from it, silently adding a
+            // password to a social-only account that never chose one.
+            sendResetPassword: async (data) => {
+                const providers = await accountProvidersOf(data.user.id);
+                if (providers.includes('credential')) {
+                    await sendResetPasswordEmail(data);
+                } else if (providers.length > 0) {
+                    await sendPasswordlessAccountEmail({ user: data.user, provider: providers[0] });
+                }
+            },
             // A reset usually follows a compromise, so applying it kills every other
             // live session: any device still logged in with the old password is out.
             revokeSessionsOnPasswordReset: true,

@@ -33,6 +33,31 @@ export const sendResetPasswordEmail = ({ user, url }: { user: { email: string };
         }),
     );
 
+const PROVIDER_NAMES: Record<string, string> = { google: 'Google' };
+const providerName = (providerId?: string) => (providerId && PROVIDER_NAMES[providerId]) || 'your connected login';
+
+// Sent to a social-only account in place of a reset link (see auth.ts's
+// sendResetPassword branch); it has no password to reset.
+export const sendPasswordlessAccountEmail = ({ user, provider }: { user: { email: string }; provider?: string }) => {
+    const name = providerName(provider);
+    const loginUrl = `${process.env.CLIENT_URL}/login`;
+    return sendEmail(
+        user.email,
+        'About your DivvyUp sign-in',
+        `You asked to reset your DivvyUp password, but this account has no password: you sign in with ${name}. ` +
+            `Go to the login page and use the ${name} button:\n\n${loginUrl}\n\nIf you did not request this, ignore this email.`,
+        layout({
+            heading: `You sign in with ${name}`,
+            body: [
+                `You asked to reset your DivvyUp password, but this account has no password to reset.`,
+                `You sign in with ${name}, so head to the login page and use the ${name} button.`,
+            ],
+            action: { label: `Continue with ${name}`, url: loginUrl },
+            footnote: 'If you did not request this, ignore this email.',
+        }),
+    );
+};
+
 export const sendChangeEmailConfirmation = ({
     user,
     newEmail,

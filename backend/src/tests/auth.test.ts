@@ -3,6 +3,8 @@ import type { Express } from "express";
 import mongoose from "mongoose";
 import { bootstrapApp } from "../bootstrap.js";
 import { disconnectDB, connectDB } from "../mongo/connection/index.js";
+import * as authEmails from "../services/authEmails.js";
+import { signUp as signUpSession } from "./helpers/session.js";
 
 // Registration, hashing, sessions and the credential check are Better Auth's now
 // and are its own to test. What stays ours is the Zod hook that gates the Better
@@ -161,5 +163,52 @@ describe("reset-password validation (our Zod hook)", () => {
         const response = await resetPassword({ newPassword: password, token: "any-token" });
 
         expect(JSON.stringify(response.body)).not.toContain(password);
+    });
+});
+
+// A credential account gets the reset link, a social-only one gets the
+// passwordless note instead, and the HTTP response stays neutral either way.
+describe("reset-password routes by whether the account has a password", () => {
+    const requestReset = (email: string) =>
+        fakeRequest.post("/api/auth/request-password-reset").send({ email });
+
+    // Turns the seeded password account into a Google-only one: drop its credential
+    // row and add a google account, mirroring how a real social-only user looks.
+    const makeGoogleOnly = async (userId: string) => {
+        const accounts = mongoose.connection.collection("account");
+        const _id = new mongoose.Types.ObjectId(userId);
+        await accounts.deleteMany({ userId: _id, providerId: "credential" });
+        await accounts.insertOne({ userId: _id, providerId: "google", accountId: "google-sub-123" });
+    };
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it("sends the reset mail for an account that has a password", async () => {
+        const resetMail = vi.spyOn(authEmails, "sendResetPasswordEmail");
+        const guideMail = vi.spyOn(authEmails, "sendPasswordlessAccountEmail");
+        await signUpSession(app, { name: "Ana", email: "ana@user.com" });
+
+        const response = await requestReset("ana@user.com");
+
+        expect(response.status).toBe(200);
+        expect(resetMail).toHaveBeenCalledOnce();
+        expect(guideMail).not.toHaveBeenCalled();
+    });
+
+    it("sends the guidance mail (not a reset link) for a Google-only account", async () => {
+        const resetMail = vi.spyOn(authEmails, "sendResetPasswordEmail");
+        const guideMail = vi.spyOn(authEmails, "sendPasswordlessAccountEmail");
+        const user = await signUpSession(app, { name: "Gil", email: "gil@user.com" });
+        await makeGoogleOnly(user.id);
+
+        const response = await requestReset("gil@user.com");
+
+        // Same neutral response as a real account: the branch leaks nothing on the wire.
+        expect(response.status).toBe(200);
+        expect(resetMail).not.toHaveBeenCalled();
+        expect(guideMail).toHaveBeenCalledOnce();
+        expect(guideMail.mock.calls[0][0].provider).toBe("google");
     });
 });
