@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MdMarkEmailUnread } from 'react-icons/md';
 import ButtonLink from '../../components/button/buttonLink';
+import StatusScreen from '../../components/statusScreen/statusScreen';
 import { useAuth } from '../../context/userContextAuth';
 import { getPendingEmailChange, clearPendingEmailChange } from '../../utils/pendingEmailChange';
-import styles from '../emailVerified/emailVerified.module.css';
 
 // Both steps of an email change land here (Better Auth reuses one callbackURL),
 // and only the second one leaves the session on the new address. Matching it
@@ -24,15 +24,13 @@ const EmailChange = () => {
     }, [isPending, user, navigate]);
 
     return (
-        <div className={styles.container}>
-            <MdMarkEmailUnread className={styles.icon} aria-hidden />
-            <h1 className={styles.title}>Almost there</h1>
-            <p className={styles.text}>
-                We emailed a link to your new address to finish changing your email. The change takes
-                effect once you open it.
-            </p>
+        <StatusScreen
+            icon={MdMarkEmailUnread}
+            title="Almost there"
+            text="We emailed a link to your new address to finish changing your email. The change takes effect once you open it."
+        >
             <ButtonLink to="/profile">Go to your profile</ButtonLink>
-        </div>
+        </StatusScreen>
     );
 };
 

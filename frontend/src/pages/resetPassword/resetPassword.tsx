@@ -9,9 +9,9 @@ import { useResetPassword } from '../../hooks/useSession';
 import { apiErrorMessage } from '../../utils/apiError';
 import { PASSWORD_HINT, CONFIRM_PASSWORD_MISMATCH } from '../../utils/validation';
 import styles from './resetPassword.module.css';
-import landing from '../emailVerified/emailVerified.module.css';
 import Button from '../../components/button/button';
 import ButtonLink from '../../components/button/buttonLink';
+import StatusScreen from '../../components/statusScreen/statusScreen';
 
 // confirmPassword is a client-only field (Better Auth never receives it), so the
 // base contract schema is extended locally to keep the resolver from stripping it.
@@ -36,12 +36,13 @@ const ResetPassword = () => {
 
     if (!token) {
         return (
-            <div className={landing.container}>
-                <MdErrorOutline className={landing.icon} aria-hidden />
-                <h1 className={landing.title}>Invalid reset link</h1>
-                <p className={landing.text}>This link is missing or has expired. Request a new one to continue.</p>
+            <StatusScreen
+                icon={MdErrorOutline}
+                title="Invalid reset link"
+                text="This link is missing or has expired. Request a new one to continue."
+            >
                 <ButtonLink to="/forgot-password">Request a new link</ButtonLink>
-            </div>
+            </StatusScreen>
         );
     }
 
