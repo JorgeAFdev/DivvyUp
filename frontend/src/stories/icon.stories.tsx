@@ -1,18 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { MdAddCircleOutline, MdEdit, MdOutlineDarkMode } from 'react-icons/md';
+import { FaTrashAlt } from 'react-icons/fa';
 import Icon from '../components/icon/icon';
 
 const meta: Meta<typeof Icon> = {
     component: Icon,
-    argTypes: {
-        variant: {
-            control: { type: 'select' },
-            options: ['add', 'edit', 'delete', 'light', 'dark', 'dots'],
-        },
-        className: {
-            control: { type: 'select' },
-            options: ['add', 'icon'],
-        },
-    },
 };
 
 export default meta;
@@ -21,24 +13,26 @@ type Story = StoryObj<typeof Icon>;
 
 export const iconBasic: Story = {
     args: {
-        className: 'add',
+        icon: MdAddCircleOutline,
+        size: 45,
     },
 };
 
 export const iconEdit: Story = {
     args: {
-        variant: 'edit',
+        icon: MdEdit,
     },
 };
 
 export const iconDelete: Story = {
     args: {
-        variant: 'delete',
+        icon: FaTrashAlt,
     },
 };
 
 export const iconTheme: Story = {
     args: {
-        variant: 'dark',
+        icon: MdOutlineDarkMode,
+        size: 25,
     },
 };

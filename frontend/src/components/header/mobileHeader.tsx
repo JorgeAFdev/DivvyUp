@@ -4,6 +4,7 @@ import { Divider, IconButton, MenuItem, useTheme } from '@mui/material';
 import styles from './header.module.css';
 import HeaderLogo from './headerLogo';
 import { ThemeMenuItem } from './themeToggle';
+import { MdMenu } from 'react-icons/md';
 import AppMenu from '../menu/appMenu';
 import Icon from '../icon/icon';
 import Notifications from '../notifications/notifications';
@@ -35,7 +36,7 @@ const MobileHeader = () => {
                     onClick={(event) => setAnchorEl(event.currentTarget)}
                     sx={{ color: theme.palette.text.primary }}
                 >
-                    <Icon variant="menu" className='menu' />
+                    <Icon icon={MdMenu} size={26} />
                 </IconButton>
                 <AppMenu
                     id="header-menu"

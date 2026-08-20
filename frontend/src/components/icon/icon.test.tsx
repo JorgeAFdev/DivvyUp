@@ -1,48 +1,35 @@
-import { fireEvent, render } from '@testing-library/react';
-import Icon, { type IconVariant } from './icon';
+import { render } from '@testing-library/react';
+import { MdEdit } from 'react-icons/md';
+import Icon from './icon';
 
 const svgOf = (container: HTMLElement) => container.querySelector('svg');
 
-const htmlFor = (variant: string) => svgOf(render(<Icon variant={variant as IconVariant} />).container)!.innerHTML;
-
-// Every variant but 'add', which is the fallback these are compared against.
-const VARIANTS: IconVariant[] = ['edit', 'delete', 'light', 'dark', 'dots', 'share', 'refresh', 'menu'];
-
 describe('The icon component', () => {
-    it('tags the rendered icon with the variant it was asked for', () => {
-        const { container } = render(<Icon variant="menu" />);
+    it('renders the glyph it is handed', () => {
+        const { container } = render(<Icon icon={MdEdit} />);
 
-        expect(svgOf(container)).toHaveAttribute('data-type', 'menu');
+        expect(svgOf(container)).toBeInTheDocument();
     });
 
-    // A variant whose import gets dropped does not throw: iconsByVariant[variant]
-    // is undefined and it degrades to the add icon, silently and everywhere.
-    it.each(VARIANTS)('renders an icon of its own for %s', (variant) => {
-        expect(htmlFor(variant)).not.toBe(htmlFor('add'));
+    it('carries the base class and merges an extra className', () => {
+        const { container } = render(<Icon icon={MdEdit} className="extra" />);
+
+        expect(svgOf(container)).toHaveClass('icon', 'extra');
     });
 
-    it('falls back to the add icon for an unknown variant', () => {
-        expect(htmlFor('nope')).toBe(htmlFor('add'));
+    it('defaults to size 18 and honours an explicit size', () => {
+        const { container: byDefault } = render(<Icon icon={MdEdit} />);
+        expect(svgOf(byDefault)).toHaveAttribute('height', '18');
+
+        const { container: sized } = render(<Icon icon={MdEdit} size={25} />);
+        expect(svgOf(sized)).toHaveAttribute('height', '25');
     });
 
-    it('defaults to the add icon with no variant', () => {
-        const { container } = render(<Icon />);
+    it('forwards id and data-type to the svg', () => {
+        const { container } = render(<Icon icon={MdEdit} id="deleteGroup" data-type="dots" />);
+        const svg = svgOf(container)!;
 
-        expect(svgOf(container)!.innerHTML).toBe(htmlFor('add'));
-    });
-
-    it('calls handleClick when clicked', () => {
-        const handleClick = vi.fn();
-        const { container } = render(<Icon variant="dots" handleClick={handleClick} />);
-
-        fireEvent.click(svgOf(container)!);
-
-        expect(handleClick).toHaveBeenCalledTimes(1);
-    });
-
-    it('carries the base class plus the one the className names', () => {
-        const { container } = render(<Icon variant="dark" className="theme" />);
-
-        expect(svgOf(container)).toHaveClass('icon', 'theme');
+        expect(svg).toHaveAttribute('id', 'deleteGroup');
+        expect(svg).toHaveAttribute('data-type', 'dots');
     });
 });

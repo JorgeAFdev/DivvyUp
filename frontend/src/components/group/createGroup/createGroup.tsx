@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { MdAddCircleOutline } from "react-icons/md";
 import GroupForm from "../groupForm/groupForm";
-import Icon from "../../icon/icon";
+import Fab from "../../fab/fab";
 import Modal from "../../modal/modal";
 import { toast } from "react-toastify";
 import { useCreateGroup } from "../../../hooks/useGroups";
@@ -28,7 +29,7 @@ const CreateGroup = () => {
 
     return (
         <div>
-            <Icon className={'add'} handleClick={openModal} id='create-group-btn' />
+            <Fab icon={MdAddCircleOutline} label="Create group" onClick={openModal} id="create-group-btn" data-type="add" />
             {isModalOpen && <Modal><GroupForm title='Create group' onClose={closeModal} onSubmit={handleCreateGroup} isPending={createGroup.isPending} /></Modal>}
         </div>
     )
