@@ -1,5 +1,5 @@
-import { Link, useParams } from 'react-router-dom';
-import { Button } from '@mui/material';
+import { useParams } from 'react-router-dom';
+import ButtonLink from '../../components/button/buttonLink';
 import { useInviteName } from '../../hooks/useInvite';
 import styles from './join.module.css';
 
@@ -39,12 +39,12 @@ const InviteLanding = () => {
                 yourself from the member list, and you will come straight back here.
             </p>
             <div className={styles.actions}>
-                <Button variant="contained" component={Link} to={`/login?next=${next}`} id="invite-login">
+                <ButtonLink size="sm" to={`/login?next=${next}`} id="invite-login">
                     Sign in
-                </Button>
-                <Button variant="outlined" component={Link} to={`/register?next=${next}`} id="invite-register">
+                </ButtonLink>
+                <ButtonLink variant="secondary" size="sm" to={`/register?next=${next}`} id="invite-register">
                     Create account
-                </Button>
+                </ButtonLink>
             </div>
         </div>
     );

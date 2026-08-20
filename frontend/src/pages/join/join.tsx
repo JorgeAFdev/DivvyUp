@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button } from '@mui/material';
 import { toast } from 'react-toastify';
+import Button from '../../components/button/button';
+import ButtonLink from '../../components/button/buttonLink';
 import { useAuth } from '../../context/userContextAuth';
 import { useInvite, useJoinGroup } from '../../hooks/useInvite';
 import type { JoinGroupInput } from '../../utils/groupApi';
@@ -52,7 +53,7 @@ const Join = () => {
                 <p className={styles.text}>
                     {apiErrorMessage(error, 'Ask whoever shared it for the current link.')}
                 </p>
-                <Button variant="contained" onClick={() => navigate('/groups')}>Go to my groups</Button>
+                <ButtonLink size="sm" to="/groups">Go to my groups</ButtonLink>
             </div>
         );
     }
@@ -65,9 +66,9 @@ const Join = () => {
         return (
             <div className={styles.card}>
                 <h2 className={styles.title}>You are already in {group.name}</h2>
-                <Button variant="contained" onClick={() => navigate(`/groups/${group._id}/expenses`)}>
+                <ButtonLink size="sm" to={`/groups/${group._id}/expenses`}>
                     Open the group
-                </Button>
+                </ButtonLink>
             </div>
         );
     }
@@ -116,14 +117,14 @@ const Join = () => {
                         autoFocus
                         id="new-member-name"
                     />
-                    <Button type="submit" variant="contained" disabled={!newName.trim() || mutation.isPending}>
+                    <Button size="sm" type="submit" disabled={!newName.trim()} loading={mutation.isPending}>
                         Join
                     </Button>
                 </form>
             ) : (
-                <button type="button" className={styles.link} onClick={() => setIsNaming(true)} id="not-on-the-list">
+                <Button variant="ghost" type="button" onClick={() => setIsNaming(true)} id="not-on-the-list">
                     I am not on the list
-                </button>
+                </Button>
             )}
         </div>
     );
