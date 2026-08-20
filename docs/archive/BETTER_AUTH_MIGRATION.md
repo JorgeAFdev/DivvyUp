@@ -1,19 +1,20 @@
 # Migración a Better Auth — plan y registro de decisiones
 
-**Estado: PR core ([#126](https://github.com/DivvyUp-app/DivvyUp/pull/126)) y child PR 2 — Google
-OAuth ([#128](https://github.com/DivvyUp-app/DivvyUp/pull/128)) mergeadas y en prod.** En marcha
-ahora el **child PR 3 — verificación de email + Resend + cambio de email** (rama
-`feat/better-auth-email-verification`, decisiones acordadas el 19-08-2026; detalle abajo). Tarea 5 del
-[TODO](../TODO.md). El core quedó todo verde y verificado: backend (`pnpm typecheck` exit 0,
-**135/135** tests), frontend (`tsc --noEmit` limpio, **36/36** tests) y **Cypress 13/13** (7 specs)
-contra la app corriendo en local. Las env `BETTER_AUTH_SECRET` (secreto propio de prod, distinto del
-local) y `BETTER_AUTH_URL` ya están puestas en el dashboard de Coolify.
+> **Estado: migración COMPLETA — documento archivado (20-08-2026).** Los cuatro child PRs entraron y
+> están en prod: core ([#126](https://github.com/DivvyUp-app/DivvyUp/pull/126)), Google OAuth
+> ([#128](https://github.com/DivvyUp-app/DivvyUp/pull/128)), verificación + Resend + cambio de email
+> ([#129](https://github.com/DivvyUp-app/DivvyUp/pull/129)) y **reset de contraseña** (el PR que archiva
+> este doc). El auth artesanal (JWT en `localStorage`, `bcryptjs`, `security/jwt.ts`, controlador
+> `/auth` propio) queda retirado: Better Auth es la única autoridad de registro, hashing, credenciales,
+> sesiones (cookie `divvyup_session` httpOnly) y OAuth. **Absorbe también el punto 1 del TODO** (revisar
+> la autenticación): no se montó el esquema access+refresh porque BA ya trae sesión por cookie con
+> rotación. Lo único que queda es **opcional** — el punto 5 de la lista de abajo (GitHub/Apple, y
+> endurecer `requireEmailVerification`).
 
-Este es el documento de referencia de la migración del auth artesanal a
-[Better Aut­h](https://better-auth.com). Es la fuente de verdad del plan mientras dure; el `TODO.md`
-sólo lleva el epic de alto nivel y un enlace aquí. Cuando cada PR entre y esté en producción, lo que
-describe _cómo se comporta el código_ se mueve a `CLAUDE.md` y este fichero se archiva en
-`docs/archive/`, conservando sólo lo que no se reconstruye leyendo el repo: qué se decidió y por qué.
+Este documento fue la fuente de verdad del plan durante la migración del auth artesanal a
+[Better Aut­h](https://better-auth.com). Ya ejecutada, lo que describe _cómo se comporta el código_ vive
+en `CLAUDE.md` (sección *Auth*); aquí se conserva sólo el registro de decisiones — qué se decidió y por
+qué, lo que no se reconstruye leyendo el repo. El plan de abajo describe lo ejecutado.
 
 ## Por qué Better Auth y no el esquema access+refresh del punto 1
 
@@ -38,8 +39,8 @@ La migración entra por partes, cada child PR **deja la app funcionando y es rev
 5. Más adelante, si interesa: GitHub/Apple (cada uno es sólo otro OAuth client), y endurecer el gate
    de `emailVerified` en el login (`requireEmailVerification`).
 
-Este documento detalla el **PR core** (abajo), el **child PR 2 (Google OAuth)** y el **child PR 3
-(verificación de email)** (al final). El child PR 4 se detallará al abordarlo.
+Este documento detalla el **PR core** (abajo), el **child PR 2 (Google OAuth)**, el **child PR 3
+(verificación de email)** y el **child PR 4 (reset de contraseña)** (al final).
 
 ---
 
@@ -422,3 +423,129 @@ usaba) y desbloquea el **cambio de email del perfil**, que el core dejó de sól
   nuevo, y sólo ese segundo click aplica el cambio.
 - `pnpm typecheck` (back y front) en verde, tests sin regresiones (137/137, 36/36).
 - Verificado a mano en local el round-trip de verificación y el de cambio de email.
+
+---
+
+## Child PR 4: reset de contraseña
+
+Cierra el epic. Better Auth ya trae el flujo entero (`forget-password` → correo con token →
+`reset-password`), así que el peso está en la config, la copy del correo y dos pantallas nuevas en el
+front. Reusa el `services/email` (Resend) y el `layout` de correo que trajo el child PR 3, y el mismo
+patrón de landing pública que `/email-verified` y `/email-change`.
+
+### Backend (`security/auth.ts` + `services/authEmails.ts`)
+
+- `emailAndPassword.sendResetPassword({ user, url })` → nuevo `sendResetPasswordEmail` en
+  `authEmails.ts`, componiendo texto plano + HTML por el `layout` compartido, como los otros dos
+  correos. El `url` redirige al front **`/reset-password`** (ruta pública, el link se abre sin
+  sesión) con el token en query.
+- **Better Auth auto-monta las rutas de reset**: no hay ruta ni controlador nuestro que tocar, igual
+  que el callback de Google. El front llama a los métodos del cliente
+  (`authClient.requestPasswordReset` / `authClient.resetPassword`).
+- **Gotcha del nombre del método**: el cliente expone **`requestPasswordReset`**, no `forgetPassword`
+  (BA lo renombró; `forgetPassword` sigue como alias del endpoint en el server, pero el tipo del
+  cliente ya no lo ofrece y el typecheck lo rechaza). El path del segundo paso, `/reset-password`, no
+  cambia — es el que enforca el hook.
+- **`revokeSessionsOnPasswordReset: true`.** Un reset suele venir de una cuenta comprometida, así que
+  al aplicarlo se **invalidan todas las demás sesiones**: cualquier dispositivo que siguiera logueado
+  con la contraseña vieja queda fuera, y quien resetea vuelve a entrar limpio. Se descartó el default
+  (`false`, deja las sesiones vivas): más cómodo, pero deja al atacante dentro justo cuando el dueño
+  acaba de recuperar la cuenta.
+- **Hook `before` para la fuerza de contraseña en `/reset-password`**, igual que sign-up/sign-in. El
+  body de BA en ese paso es `{ newPassword, token }`, así que el schema valida **`newPassword`** (no
+  `password`). Así la regla de fuerza (8+, mayús/minús/dígito) y su copy siguen viviendo en un solo
+  sitio (`@monorepo/validation`) y BA sigue siendo la autoridad de servidor: sin el hook, el reset
+  quedaría a merced del `minPasswordLength` por defecto y se podría poner una contraseña débil por el
+  endpoint saltándose el form.
+- **`/forget-password` NO lleva hook.** La respuesta es neutral pase lo que pase (ver enumeración), y
+  un email malformado no matchea a nadie; la validación de shape del email se queda en el front, solo
+  por UX.
+- **No hay auto-login tras el reset.** `resetPassword` de BA no crea sesión; se manda a `/login` a
+  reautenticarse con la contraseña nueva (que acaba de demostrar que conoce). Se descartó encadenar un
+  `signIn` automático: haría que un link de reset otorgara sesión activa directa.
+
+### Enumeración: cerrada por diseño, cubre también solo-Google
+
+- `forgetPassword` responde **OK exista o no** el email (BA no delata), y la UI muestra un mensaje
+  **neutral** ("si esa dirección tiene cuenta, te enviamos un enlace"), idéntico en ambos casos. Es
+  coherente con la postura del login (child PR 3): la enumeración de `/register` se dejó abierta a
+  conciencia, pero recuperación y login **siguen cerrados**.
+- **Cubre de paso las cuentas solo-Google** sin ramificar: un user sin account `credential` no tiene
+  contraseña que resetear, así que BA no manda correo — y no se le puede decir "usas Google" sin
+  filtrar que ese email existe. El mensaje neutral es, por tanto, la única copy correcta; no hay un
+  branch tipo `useHasPassword` como en el cambio de email, porque aquí es pre-sesión y no sabemos quién
+  es.
+
+### Validación (`@monorepo/validation/auth.ts`)
+
+- `resetPasswordSchema = z.object({ newPassword: passwordField })` — reusa el `passwordField`
+  existente y sirve **a la vez** al hook `before` del backend y al form de reset del front (el cliente
+  llama con `newPassword`, misma clave que el body de BA).
+- `forgetPasswordSchema = z.object({ email: emailField })` — solo para el form de solicitud del front.
+- **`confirmPassword` NO entra aquí.** Es un campo solo-cliente: BA nunca lo recibe, y este paquete es
+  el contrato del wire que el backend enforca. Vive como extensión local del schema en cada form (ver
+  abajo).
+
+### Frontend
+
+- **Link "Forgot password?" en `loginForm`** → navega a `/forgot-password`. Login **no** cambia por lo
+  demás.
+- **Ruta pública `/forgot-password`**: form con email (`zodResolver(forgetPasswordSchema)`) →
+  `authClient.requestPasswordReset({ email, redirectTo: `${origin}/reset-password` })`. Al enviar, el
+  form se sustituye **inline** por el mensaje neutral (estado de confirmación fijo en pantalla, no un
+  toast que desaparece), igual de verdadero exista la cuenta o no.
+- **Ruta pública `/reset-password`** (page bajo `src/pages/`, patrón de `/email-verified`): lee el
+  `token` de la query, form de nueva contraseña → `authClient.resetPassword({ newPassword, token })`.
+  Éxito: toast "Password updated, please log in" + `navigate('/login')`. Token ausente o inválido →
+  estado de error con enlace a `/forgot-password`.
+- Ambas rutas en `App.tsx` **sin `RequireAuth`** (el link se abre sin sesión), junto a
+  `/email-verified` y `/email-change`.
+
+### Confirmar contraseña (reset + register)
+
+- Se añade un campo **confirmar contraseña** al form de reset **y** al de register (login no: no
+  aporta). Reduce el lockout por typo en una contraseña que no se ve.
+- **Es solo-cliente**: BA no recibe `confirmPassword`. Se modela como **extensión local** del schema
+  en cada form (el idioma que ya marca el `CLAUDE.md`: "un form con un campo que el body compartido no
+  describe extiende el schema localmente"), nunca en `@monorepo/validation` — meterlo ahí lo mandaría
+  al wire y el hook del backend lo exigiría:
+
+  ```ts
+  const registerFormSchema = registerSchema
+    .extend({ confirmPassword: z.string() })
+    .refine((d) => d.password === d.confirmPassword,
+      { message: CONFIRM_PASSWORD_MISMATCH, path: ['confirmPassword'] });
+  ```
+
+  El reset hace lo mismo sobre `resetPasswordSchema` (clave `newPassword`). En `onSubmit` se
+  desestructura `confirmPassword` **fuera** antes de `mutate`, porque `useRegister` hace
+  `{ ...credentials }` directo a `signUp.email` y no debe viajar.
+- **`CONFIRM_PASSWORD_MISMATCH = 'Passwords do not match'`** va en `frontend/src/utils/validation.ts`,
+  junto a `PASSWORD_HINT`: copy presentacional de cliente, no una regla del contrato. Como los dos
+  forms que lo consumen son del front, no cruza el límite del paquete `@monorepo/validation`.
+
+### Tests
+
+- **Backend**: `auth.test.ts` pina el rechazo de fuerza en `/reset-password` (copy exacta, flatten,
+  y que no eco de la contraseña rechazada), como ya hace con sign-up/sign-in — **+8 tests**, backend
+  queda **145/145**. El hook corre `before`, así que 400ea antes de comprobar el token, que es lo que
+  deja testearlo sin uno válido. El round-trip real (recibir el correo, pulsar el link con token) es
+  **manual** en local, como la verificación y Google — **verificado el 20-08-2026** (correo recibido,
+  reset aplicado y login con la contraseña nueva OK).
+- **Frontend**: el mismatch de confirmar contraseña se valida en cliente (`zodResolver`); no añade red
+  de CI nueva (los tests de front guardan intención, no el pipeline). Sigue **36/36**.
+
+### Setup / prod
+
+- **Sin env ni plumbing nuevos.** Reusa `RESEND_API_KEY`/`RESEND_FROM` (ya en Coolify desde el child
+  PR 3) y `CLIENT_URL`. No hay dependencia nueva, así que Docker y Cloudflare Pages no cambian.
+
+### Definición de "hecho" para el child PR 4
+
+- "Forgot password?" en login lleva a solicitar el reset; el correo trae un link con token que abre
+  `/reset-password`, y poner una contraseña nueva válida la aplica e invalida las demás sesiones.
+- La solicitud responde igual exista o no el email (enumeración cerrada), y una cuenta solo-Google no
+  recibe correo sin que la UI lo delate.
+- Reset y register piden confirmar contraseña; login no.
+- `pnpm typecheck` (back y front) en verde, tests sin regresiones. **✅ 145/145 back, 36/36 front.**
+- Verificado a mano en local el round-trip completo de reset. **✅ 20-08-2026.**

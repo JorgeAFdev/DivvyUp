@@ -1,33 +1,5 @@
 # TODO
 
-## 1. Revisar la autenticación completa
-
-**Estado actual (verificado):**
-
-- `generateJWT()` en `backend/src/schemas/user.schema.js:46-59` calcula `expirationDay` (hoy + 60 días) y **nunca lo usa**: la llamada acaba en `jwt.sign(payload, secret, {})` con el objeto de opciones vacío. Los tokens emitidos **no caducan nunca**.
-- El token se guarda en `localStorage`, clave `user-session`, junto con los datos de usuario (`frontend/src/utils/localStorage.js:10`). Accesible desde cualquier JS de la página.
-- No hay logout de servidor ni forma de revocar un token ya emitido: `logout()` solo borra el `localStorage` (`frontend/src/context/userContextAuth.jsx`).
-- No hay refresh token. `jwtMiddleware` (`backend/src/security/jwt.js`) solo verifica firma.
-
-**A decidir:**
-
-- ¿Añadir `expiresIn` al `jwt.sign()`? Es una línea, pero **invalida todas las sesiones activas** en el momento del deploy: los tokens actuales no tienen `exp` y los nuevos sí. Hay que asumir que todo el mundo tiene que volver a loguearse.
-- ¿Merece la pena el esquema accessToken (en memoria) + refreshToken (cookie `httpOnly` + `Secure` + `SameSite`)? Es la respuesta correcta al XSS, pero implica: endpoint `/auth/refresh`, almacenar/rotar refresh tokens en BD para poder revocarlos, manejar el arranque de la app (access token en memoria se pierde al refrescar la página, hay que pedir uno nuevo antes del primer render), CORS con `credentials: true` y CSRF al pasar a cookies.
-- Coste añadido en este proyecto: con el punto 20 hecho, front (`divvyup.jorgeaf.dev`) y back (`divvyup-api.jorgeaf.dev`) van bajo el mismo dominio registrable, así que la cookie es same-site y puede ser `SameSite=Lax` (antes, con Pages + Koyeb en dominios distintos, obligaba `SameSite=None; Secure`).
-- Alternativa intermedia si el esquema completo es demasiado: `expiresIn` corto + re-login, sin refresh token.
-
-**Suelto, del mismo repaso:**
-
-- **El `secret` ya se lee en el momento de la llamada**, no a nivel de módulo (arreglado con el paso a ESM, punto 13): `user.schema.js` y `security/jwt.js` leen `process.env.jwt_secret` dentro de `generateJWT()` y del middleware, así que el orden de carga frente a `dotenv.config()` deja de importar y el workaround de los tests desapareció.
-- **El login ya no distingue email desconocido de contraseña incorrecta**: ambas ramas responden `Invalid credentials` (arreglado el 04-08-2026, PR #82). `POST /auth/register` sí sigue enumerando, con su `Email already registered`, y ahí la fuga es inherente: no puedes permitir dos cuentas con el mismo correo sin decirlo. Taparla de verdad pide verificación por email, que es del punto 5.
-- **`password` con `select: false` y validación de registro en `registrationErrors()` — HECHO** (PR
-  #82/#83). Las reglas que dejaron vivas están en `CLAUDE.md`, sección *Auth*. Lo que queda abierto
-  de ahí: el regex de fuerza está escrito en `auth.routes.js` y en `registerForm.jsx` a la vez, que
-  es lo que viene a arreglar el punto 11.
-- **No existe endpoint de cambio ni de reset de contraseña.** `user.routes.js` sólo tiene
-  `PATCH /update` (nombre, email, foto) y `GET /expenses`, así que las cuentas creadas antes de la
-  regla de fuerza siguen entrando y no pueden ponerse al día. Eso es del punto 5.
-
 ## 3. Landing page
 
 **Estado actual (verificado):**
@@ -39,54 +11,6 @@
 
 - Lo mínimo para tapar el agujero es un `<Route index element={...} />` dentro del layout. Redirigir a `/groups` si hay token y a `/login` si no es de una línea, y sirve mientras no exista landing.
 - Para la landing de verdad: qué cuenta (el proyecto ya tiene capturas y copy en el `README.md` que se pueden reaprovechar), y si debe redirigir a `/groups` cuando el usuario ya está logueado.
-
-## 5. Auth con Better Auth (login/register con Google y demás proveedores) — EPIC
-
-Sustituir el auth artesanal por [Better Auth](https://better-auth.com): sesión por cookie `httpOnly`
-en vez del JWT en `localStorage`, y login social (Google, luego GitHub/Apple) sin escribir el OAuth a
-mano. Absorbe el punto 1 (no se monta el esquema access+refresh: BA ya trae sesiones con cookie y
-rotación).
-
-**Plan y decisiones detalladas: [docs/BETTER_AUTH_MIGRATION.md](docs/BETTER_AUTH_MIGRATION.md)** — es
-la fuente de verdad. Aquí sólo el desglose de alto nivel; entra por child PRs, cada uno dejando la app
-funcionando:
-
-1. **Core** — email/contraseña por BA + sesión cookie, retirando el mecanismo custom. Sin social, sin
-   verificación, sin reset.
-2. **Google OAuth** — segundo método; arrastra OAuth client en GCP y vinculación de cuentas.
-3. **Verificación de email + Resend** (le da el llamante al punto 6) + cambio de email del perfil.
-4. **Reset de contraseña.**
-5. Después, si interesa: GitHub/Apple; endurecer el gate de `emailVerified` en login.
-
-## 6. Descablear el correo de bienvenida (y los que vengan) con Resend
-
-El servicio de email ya está montado (punto 19), pero no se llama desde ningún sitio: la bienvenida
-al registrar sigue **comentada** en `auth.controller.js:54` y ni siquiera importa el módulo.
-
-**A tener en cuenta:**
-
-- Importar `sendEmail` de `services/email.js` y llamarlo tras crear el usuario. **Envolver la
-  llamada en el controlador** (`.catch()` o try/catch aparte del flujo de registro) para que un
-  fallo de email **no tumbe el registro**: `sendEmail` lanza a propósito, y la bienvenida es
-  best-effort.
-- Con el remitente de pruebas (`onboarding@resend.dev`) el correo sólo llega al email dueño de la
-  cuenta de Resend, así que probarlo con usuarios reales exige verificar antes un dominio (SPF/DKIM),
-  que hoy no existe — mismo peaje que apunta el punto 19.
-- El reset de contraseña (parte del punto 5) es el otro llamante, y ahí el throw **sí** importa: si
-  el correo no se pudo mandar, la operación tiene que fallar de cara al usuario, no seguir como si
-  nada.
-
-**Dominio verificado: la entrega a usuarios reales ya no está bloqueada.** El subdominio de envío
-`send.jorgeaf.dev` está verificado en Resend (SPF/DKIM/return-path en el DNS de Cloudflare), y el
-`from` es `RESEND_FROM=DivvyUp <noreply@send.jorgeaf.dev>`. Con eso `sendEmail` entrega a cualquier
-destinatario, no sólo a la cuenta de Resend. Lo que queda de este punto es puramente descablear el
-llamante; no hay bloqueante de infraestructura.
-
-Para la historia (por qué se eligió así): la entrega a destinatarios arbitrarios **exige** verificar
-el dominio del `from` con control del DNS — no es cosa de Resend, es de cualquier proveedor. Los
-subdominios por defecto de Cloudflare Pages y del PaaS del back no valían (su DNS no es nuestro), y un
-dominio ajeno al proyecto como `from` se lee como phishing. Se resolvió comprando `jorgeaf.dev` en
-Cloudflare y verificando el subdominio `send`.
 
 ## 10. `react-router` 7.18.1 tiene un aviso de seguridad, y el parche es un major
 
