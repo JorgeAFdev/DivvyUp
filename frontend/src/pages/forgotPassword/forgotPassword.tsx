@@ -10,6 +10,7 @@ import { apiErrorMessage } from '../../utils/apiError';
 import styles from '../../components/auth/authForm.module.css';
 import Button from '../../components/button/button';
 import ButtonLink from '../../components/button/buttonLink';
+import FormField from '../../components/formField/formField';
 import StatusScreen from '../../components/statusScreen/statusScreen';
 
 const ForgotPassword = () => {
@@ -47,16 +48,13 @@ const ForgotPassword = () => {
             <h2 className={styles.title}>Reset your password</h2>
             <p className={styles.subtitle}>Enter your email and we will send you a link to choose a new password.</p>
 
-            <label htmlFor="forgot-email" className={styles.label}>Email</label>
-            <input
+            <FormField
                 id="forgot-email"
-                aria-invalid={errors.email ? 'true' : 'false'}
-                aria-describedby={errors.email ? 'forgot-email-error' : undefined}
-                {...register('email')}
+                label="Email"
                 placeholder="Email"
-                className={styles.input}
+                error={errors.email}
+                {...register('email')}
             />
-            {errors.email && <p id="forgot-email-error" className={styles.error}>{errors.email.message}</p>}
 
             <Button type="submit" className={styles.submit} loading={forgetPassword.isPending}>Send reset link</Button>
 

@@ -11,6 +11,8 @@ import { apiErrorMessage } from '../../utils/apiError';
 import { PASSWORD_HINT, CONFIRM_PASSWORD_MISMATCH } from '../../utils/validation';
 import SocialAuth from '../auth/socialAuth';
 import Button from '../button/button';
+import FormField from '../formField/formField';
+import PasswordInput from '../formField/passwordInput';
 
 // confirmPassword is a client-only field (Better Auth never receives it), so the
 // shared contract schema is extended locally to keep the resolver from stripping it.
@@ -49,73 +51,38 @@ const RegisterForm = () => {
 
             <SocialAuth />
 
-            <label className={styles.label} htmlFor="register-name">
-                Name
-            </label>
-
-            <input
+            <FormField
                 id="register-name"
-                className={styles.input}
-                type="text"
+                label="Name"
                 placeholder="Enter your name.."
-                aria-invalid={errors.name ? 'true' : 'false'}
-                aria-describedby={errors.name ? 'register-name-error' : undefined}
+                error={errors.name}
                 {...register('name')}
             />
-            {errors.name && <p id="register-name-error" className={styles.error}>{errors.name.message}</p>}
 
-            <label
-                className={styles.label} htmlFor="register-email">
-                Email
-            </label>
-
-            <input
+            <FormField
                 id="register-email"
-                className={styles.input}
-                type="text"
+                label="Email"
                 placeholder="example@example.com"
-                aria-invalid={errors.email ? 'true' : 'false'}
-                aria-describedby={errors.email ? 'register-email-error' : undefined}
+                error={errors.email}
                 {...register('email')}
             />
-            {errors.email && <p id="register-email-error" className={styles.error}>{errors.email.message}</p>}
 
-            <label
-                className={styles.label} htmlFor="register-password">
-                Password
-            </label>
-
-            <input
+            <PasswordInput
                 id="register-password"
-                className={styles.input}
-                type="password"
+                label="Password"
                 placeholder="********"
-                aria-invalid={errors.password ? 'true' : 'false'}
-                aria-describedby={
-                    errors.password ? 'register-password-hint register-password-error' : 'register-password-hint'
-                }
+                hint={PASSWORD_HINT}
+                error={errors.password}
                 {...register('password')}
             />
-            <p id="register-password-hint" className={styles.hint}>
-                {PASSWORD_HINT}
-            </p>
-            {errors.password && <p id="register-password-error" className={styles.error}>{errors.password.message}</p>}
 
-            <label
-                className={styles.label} htmlFor="register-confirm-password">
-                Confirm password
-            </label>
-
-            <input
+            <PasswordInput
                 id="register-confirm-password"
-                className={styles.input}
-                type="password"
+                label="Confirm password"
                 placeholder="********"
-                aria-invalid={errors.confirmPassword ? 'true' : 'false'}
-                aria-describedby={errors.confirmPassword ? 'register-confirm-password-error' : undefined}
+                error={errors.confirmPassword}
                 {...register('confirmPassword')}
             />
-            {errors.confirmPassword && <p id="register-confirm-password-error" className={styles.error}>{errors.confirmPassword.message}</p>}
 
             <Button type="submit" className={styles.submit} loading={mutation.isPending}>Register</Button>
 

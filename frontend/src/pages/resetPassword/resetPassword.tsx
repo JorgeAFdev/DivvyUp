@@ -11,6 +11,7 @@ import { PASSWORD_HINT, CONFIRM_PASSWORD_MISMATCH } from '../../utils/validation
 import styles from '../../components/auth/authForm.module.css';
 import Button from '../../components/button/button';
 import ButtonLink from '../../components/button/buttonLink';
+import PasswordInput from '../../components/formField/passwordInput';
 import StatusScreen from '../../components/statusScreen/statusScreen';
 
 // confirmPassword is a client-only field (Better Auth never receives it), so the
@@ -65,32 +66,22 @@ const ResetPassword = () => {
         <form onSubmit={handleSubmit(onSubmit)} className={styles.container}>
             <h2 className={styles.title}>Choose a new password</h2>
 
-            <label htmlFor="reset-password" className={styles.label}>New password</label>
-            <input
+            <PasswordInput
                 id="reset-password"
-                type="password"
+                label="New password"
                 placeholder="********"
-                aria-invalid={errors.newPassword ? 'true' : 'false'}
-                aria-describedby={
-                    errors.newPassword ? 'reset-password-hint reset-password-error' : 'reset-password-hint'
-                }
+                hint={PASSWORD_HINT}
+                error={errors.newPassword}
                 {...register('newPassword')}
-                className={styles.input}
             />
-            <p id="reset-password-hint" className={styles.hint}>{PASSWORD_HINT}</p>
-            {errors.newPassword && <p id="reset-password-error" className={styles.error}>{errors.newPassword.message}</p>}
 
-            <label htmlFor="reset-confirm" className={styles.label}>Confirm password</label>
-            <input
+            <PasswordInput
                 id="reset-confirm"
-                type="password"
+                label="Confirm password"
                 placeholder="********"
-                aria-invalid={errors.confirmPassword ? 'true' : 'false'}
-                aria-describedby={errors.confirmPassword ? 'reset-confirm-error' : undefined}
+                error={errors.confirmPassword}
                 {...register('confirmPassword')}
-                className={styles.input}
             />
-            {errors.confirmPassword && <p id="reset-confirm-error" className={styles.error}>{errors.confirmPassword.message}</p>}
 
             <Button type="submit" className={styles.submit} loading={resetPassword.isPending}>Reset password</Button>
 

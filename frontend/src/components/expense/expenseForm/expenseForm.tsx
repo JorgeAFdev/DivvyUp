@@ -7,6 +7,7 @@ import type { ExpenseInput } from "../../../utils/expenseApi";
 import styles from "./expenseform.module.css";
 import CloseButton from "../../closeButton/closeButton";
 import Button from "../../button/button";
+import FormField from "../../formField/formField";
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
@@ -48,34 +49,24 @@ const ExpenseForm = ({ onClose, onSubmit, title, defaultValues = {}, groupMember
             </div>
 
             <div className={styles.formFields}>
-                <div className={styles.formField}>
-                    <label htmlFor="description" className={styles.label}>Description</label>
-                    <input
-                        id="description"
-                        type="text"
-                        placeholder="Flights to madrid"
-                        autoFocus
-                        {...register("description")}
-                        className={`${styles.input} ${errors.description ? styles.errorInput : ""}`}
-                    />
-                    {errors.description && (
-                        <span className={styles.errorText}>{errors.description.message}</span>
-                    )}
-                </div>
+                <FormField
+                    id="description"
+                    label="Description"
+                    type="text"
+                    placeholder="Flights to madrid"
+                    autoFocus
+                    error={errors.description}
+                    {...register("description")}
+                />
 
-                <div className={styles.formField}>
-                    <label htmlFor="totalAmount" className={styles.label}>Total Amount</label>
-                    <input
-                        id="totalAmount"
-                        type="text"
-                        placeholder="20.50"
-                        {...register("totalAmount", { valueAsNumber: true })}
-                        className={`${styles.input} ${errors.totalAmount ? styles.errorInput : ""}`}
-                    />
-                    {errors.totalAmount && (
-                        <span className={styles.errorText}>{errors.totalAmount.message}</span>
-                    )}
-                </div>
+                <FormField
+                    id="totalAmount"
+                    label="Total Amount"
+                    type="text"
+                    placeholder="20.50"
+                    error={errors.totalAmount}
+                    {...register("totalAmount", { valueAsNumber: true })}
+                />
 
                 <div className={styles.payer}>
                     <label htmlFor="select-payer" className={styles.label}>Paid By</label>
