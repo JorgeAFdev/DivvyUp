@@ -101,7 +101,19 @@ traduzca. Es el patrón que ya existe en Cartobol y funciona.
   los códigos, no las reglas. Aquí se quiere lo segundo también, así que este punto es la mitad del
   patrón, no el patrón entero.
 
-## 17. Un `Button` propio, reutilizable y que pase WCAG
+## 17. Un `Button` propio, reutilizable y que pase WCAG — DONE el 20-08-2026
+
+**Entregado:** `components/button/button.tsx` (`<button>` propio, variantes `primary`/`secondary`/`ghost`,
+`size` `sm`/`md`/`lg`, `loading` con spinner, foco visible) + `buttonLink.tsx` (un `<Link>` con el
+mismo look, para los CTA de navegación, que deben seguir siendo `<a>`). Contraste AA con un token
+nuevo `--primary-color-strong` (#0b6ecf, 5.07:1) que no toca el azul de marca. Migrados todos los
+botones e enlaces-CTA de la app (auth, perfil, group, expense, debt, join, invite, landings). Los dos
+`dots` pasaron a `IconButton` con `aria-label`. El botón "Confirm" del `useConfirmationToast` quedó en
+el token accesible. El `logout` dejó de anidar un `<button>` dentro del `MenuItem`: ahora `Logout`
+rinde el propio `MenuItem` (patrón de `ThemeMenuItem`) y hace `signOut` + `navigate('/')` sin el
+reload innecesario. **Follow-up restante:** el `StatusScreen` (punto 19).
+
+Contexto original de la tarea, conservado abajo.
 
 Hoy conviven **dos implementaciones de botón sin nada en común**: los formularios usan `<button>`
 nativo con su propio CSS Module, y el resto de la app usa `@mui/material/Button` con su `sx` copiado.
@@ -198,4 +210,23 @@ que está por debajo de mínimos (44 de iOS, 48 de Android) y sale del `padding:
 `IconButton`. Ojo con el orden: el `minWidth` es trabajo que el `Drawer` tira a la basura, el de la
 hamburguesa no, porque el botón se queda igual. Y el mínimo de 48 para botones de sólo icono es la
 misma conversación que el punto 17.
+
+## 19. Un `StatusScreen` para las landings de resultado
+
+Cuatro pantallas comparten **exactamente** el mismo layout centrado —icono + título + texto + un
+CTA—: `pages/emailVerified`, `pages/emailChange`, y los estados de éxito (forgot) y de token
+inválido (reset). Hoy la duplicación se "resuelve" con `emailChange.tsx`, `forgotPassword.tsx` y
+`resetPassword.tsx` importando el módulo CSS de **otra** page (`import styles from
+'../emailVerified/emailVerified.module.css'`): una page tirando del CSS de otra, que es el smell.
+
+Extraer un componente presentacional en `components/` (p. ej. `StatusScreen`) que reciba
+`icon`/`title`/`text` y el CTA como `children` (slot abierto, no una prop `linkTo` —el CTA es un
+`<Link>` donde navega, un `<button>` donde acciona, y eso lo decide cada page). El CSS
+(`statusScreen.module.css`) vive una sola vez y nadie importa el módulo de otra page. Las cuatro
+pantallas pasan a componerlo.
+
+Ortogonal al punto 17 (esto es estructura, no botones), por eso va aparte. El CTA de esas landings
+ya es un `<ButtonLink>` (hecho en el 17), así que este punto es **solo el refactor de layout**: el
+contenedor + icono + título + texto. El smell que queda es el `import styles from
+'../emailVerified/emailVerified.module.css'` en emailChange/forgot/reset para esas clases de layout.
 
