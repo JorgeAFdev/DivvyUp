@@ -12,42 +12,6 @@
 - Lo mínimo para tapar el agujero es un `<Route index element={...} />` dentro del layout. Redirigir a `/groups` si hay token y a `/login` si no es de una línea, y sirve mientras no exista landing.
 - Para la landing de verdad: qué cuenta (el proyecto ya tiene capturas y copy en el `README.md` que se pueden reaprovechar), y si debe redirigir a `/groups` cuando el usuario ya está logueado.
 
-## 10. `react-router` 7.18.1 tiene un aviso de seguridad, y el parche es un major
-
-**Decidido el 04-08-2026: se hace, pero más adelante y en su propia rama.** No estamos afectados hoy
-(ver abajo), así que no es urgente y no se cuela en ningún otro PR: subir de major el router que
-gobierna todas las rutas necesita su rama, su PR y una pasada completa de Cypress.
-
-**Estado actual (verificado):**
-
-- `pnpm audit --prod`, que es lo que de verdad se despliega, devuelve **una sola** vulnerabilidad:
-  `react-router` >=7.12.0 <8.3.0, severidad alta, *RSC Mode CSRF Bypass*
-  ([GHSA-qwww-vcr4-c8h2](https://github.com/advisories/GHSA-qwww-vcr4-c8h2)). El resto de avisos que
-  enseña GitHub en cada push son de dependencias de desarrollo.
-- **La exposición real aquí es prácticamente nula**: el fallo es del modo RSC y esta app no usa React
-  Server Components ni el router de datos. No hay `createBrowserRouter` ni nada de `@react-router/server`.
-  Los 15 imports de `react-router-dom` que hay en `src/` son la API declarativa (`BrowserRouter` en
-  `App.jsx:2`, más `Link`, `Navigate`, `Outlet`, `useNavigate`, `useParams`, `useLocation`): ni un
-  `loader` ni una `action` en todo el front. Y las mutaciones van por axios contra Express con
-  `Authorization: Bearer` explícito, que no viaja solo en una petición cross-site, así que el vector
-  CSRF clásico tampoco aplica.
-- El parche es `>=8.3.0`, o sea **subir de major**, en la librería que gobierna todas las rutas,
-  incluida `/join/:inviteCode` y el `RequireAuth` que conserva el destino.
-
-**A tener en cuenta cuando se haga:**
-
-- No es un `pnpm update`: hay que leer la guía de migración de v7 a v8 y volver a pasar los cinco
-  specs de Cypress, que son la única red que cubre el enrutado.
-- Ojo con `minimumReleaseAge: 4320` en `pnpm-workspace.yaml`: una versión publicada hace menos de
-  tres días no resuelve.
-- La ruta que más vigilar es `/join/:inviteCode` y el `RequireAuth` que conserva el destino
-  (`components/auth/requireAuth.jsx`), porque es lo último que se montó y lo que peor se ve si se
-  rompe: `useLocation` y `Navigate` con `state` son justo lo que toca una migración de router.
-- Los 36 tests de jest del front no tocan el enrutado, así que la validación real es Cypress y nada
-  más.
-- Cambia el estado del riesgo si algún día se plantea SSR o RSC en el front: en cuanto se escriba la
-  primera server action, esto pasa de aplazable a bloqueante y hay que subir antes.
-
 ## 18. El desplegable móvil a un `Drawer` (opcional)
 
 El header colapsado usa `Menu` a propósito, y para lo que hay dentro hoy sigue siendo la elección
