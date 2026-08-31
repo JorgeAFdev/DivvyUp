@@ -1,7 +1,6 @@
 .userContainer {
     padding: 20px;
     background-color: var(--secondary-bg-color);
-    color: var(--color);
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
     text-align: center;
@@ -22,7 +21,6 @@
 
 .text {
     font-size: 18px;
-    color: var(--color);
     margin-bottom: 20px;
     transition: var(--theme-transition);
 }

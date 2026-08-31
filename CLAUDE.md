@@ -279,7 +279,15 @@ Styling is CSS Modules (`foo.module.css` beside `foo.tsx`) plus MUI. `context/da
 
 **Every colour is declared in `App.css`, and nowhere else.** `theme/appTheme.ts` holds no colour value: `createAppTheme(darkMode)` reads them out of the stylesheet and hands them to `createTheme`. MUI consumes the palette, it does not own it.
 
+**Text colour is inherited from `body`, not restated per component.** `index.css` sets `body { color: var(--color) }` and everything takes it from there, so a component only declares `color` when it wants a *different* one. The exception is the elements that do not inherit it: `<input>`, `<select>`, `<button>` and `<a>` get their colour from the UA, so `formField`, `groupForm`, `expenseForm`, `join`, `userEditForm`'s file input, `googleButton`, the header's `navItem` and `Button`'s `secondary`/`ghost` still set it by hand. Dropping one of those repaints the control black in dark mode; dropping it anywhere else changes nothing.
+
 `:root` carries the light values and `body.dark` restates only the five that differ; the primaries are shared. The names are the ones the CSS Modules already consume: `--color`, `--bg-color`, `--secondary-bg-color`, `--border-color`, `--placeholder-color`, `--primary-color`, `--primary-color-dark`, and `--primary-color-strong` / `--primary-color-strong-hover` (the AA filled-button blue, `:root`-only because a fill is its own background and reads the same in both themes — see the Button section). A new colour goes in `:root`, plus `body.dark` if dark needs a different one.
+
+`:root` also carries the non-colour design tokens: `--transition-base` / `--theme-transition`, and the font stacks below.
+
+**The typefaces are self-hosted through Fontsource, not a `<link>` in `index.html`.** `@fontsource/ibm-plex-sans` and `@fontsource/ibm-plex-mono` are imported in `App.tsx` beside `App.css` (latin subsets, weights 400 and 700 only), so the faces ship with the bundle and there is no third-party request. The stacks are `--font-body` (IBM Plex Sans, on `body`) and `--font-mono` (IBM Plex Mono). The mono is **for money**: `balance`, `debt` and `expense` render amounts with it plus `font-variant-numeric: tabular-nums`, so a figure holds its width when the value changes. Fallbacks are the metric neighbours, so a face that has not loaded does not reflow the page.
+
+**`appTheme.ts` sets `typography.fontFamily` to `var(--font-body)`.** Without it MUI's own default (Roboto, Helvetica, Arial) wins on every `Avatar`, `MenuItem` and `Tooltip`, which is the one place the CSS cascade cannot reach. A `var()` is correct there and wrong in the `palette`, for the reason in the next list: typography is copied into CSS, palette values are parsed in JS.
 
 Four rules hold that together:
 

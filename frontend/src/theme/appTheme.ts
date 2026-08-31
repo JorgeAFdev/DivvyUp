@@ -65,6 +65,9 @@ export const createAppTheme = (darkMode: boolean) =>
     createTheme({
         cssVariables: true,
         palette: readPalette(darkMode),
+        // A var() works here (unlike the palette) because MUI copies it into
+        // CSS. Without it MUI's Roboto default wins on Avatar, MenuItem, Tooltip.
+        typography: { fontFamily: 'var(--font-body)' },
         components: {
             MuiButton: {
                 styleOverrides: {

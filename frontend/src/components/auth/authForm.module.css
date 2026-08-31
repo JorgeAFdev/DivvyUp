@@ -4,7 +4,6 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  color: var(--color);
   transition: var(--theme-transition);
 }
 
