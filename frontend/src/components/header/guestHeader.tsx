@@ -6,7 +6,7 @@ import { ThemeToggle } from './themeToggle';
 const GuestHeader = () => (
     <header className={styles.header}>
         <HeaderLogo />
-        <nav className={styles.nav}>
+        <nav className={styles.nav} aria-label="Main">
             <Link to="/login" className={styles.navItem} >Login</Link>
             <Link to="/register" className={styles.navItem} >Register</Link>
             <ThemeToggle />
