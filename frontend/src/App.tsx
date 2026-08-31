@@ -5,6 +5,7 @@ import "@fontsource/ibm-plex-mono/latin-400.css";
 import "@fontsource/ibm-plex-mono/latin-700.css";
 import "./App.css";
 import Layout from "./components/layout/layout";
+import Landing from "./pages/landing/landing";
 import Groups from "./pages/groups/groups";
 import GroupDetails from "./pages/groups/groupDetails/groupDetails";
 import MyExpenses from "./pages/user/expenses/myExpenses";
@@ -28,7 +29,8 @@ function App() {
       <DarkModeContextProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Layout />}>
+            <Route path="/" element={<Landing />} />
+            <Route element={<Layout />}>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<RegisterForm />} />
               <Route path="/profile" element={<RequireAuth><User /></RequireAuth>} />

@@ -1,0 +1,115 @@
+.hero {
+    padding: clamp(40px, 9vh, 96px) 0 clamp(56px, 10vh, 120px);
+}
+
+.grid {
+    display: grid;
+    gap: clamp(48px, 7vw, 88px);
+    align-items: center;
+}
+
+@media (min-width: 900px) {
+    .grid {
+        grid-template-columns: 7fr 5fr;
+    }
+}
+
+.eyebrow {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: var(--muted);
+}
+
+.headline {
+    margin-top: 22px;
+    max-width: 15ch;
+    font-family: var(--font-display);
+    font-size: clamp(3.25rem, 8.5vw, 7rem);
+    font-weight: 400;
+    /* Instrument Serif hangs long descenders and needs none of the negative
+       tracking a grotesque wants. */
+    line-height: 1.02;
+    letter-spacing: -0.005em;
+}
+
+.headline em {
+    font-style: italic;
+}
+
+.subhead {
+    max-width: 46ch;
+    margin-top: 28px;
+    font-size: clamp(1.0625rem, 1.5vw, 1.25rem);
+    line-height: 1.6;
+    text-wrap: pretty;
+    opacity: var(--muted);
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 40px;
+}
+
+.figure {
+    display: flex;
+    justify-content: center;
+}
+
+@media (min-width: 900px) {
+    .figure {
+        justify-content: flex-end;
+        transform: rotate(2.2deg) translateY(16px);
+    }
+}
+
+@keyframes rise {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+}
+
+@keyframes settle {
+    from {
+        opacity: 0;
+        transform: rotate(6deg) translateY(40px);
+    }
+}
+
+.eyebrow,
+.headline,
+.subhead,
+.actions {
+    animation: rise 800ms cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+
+.headline {
+    animation-delay: 90ms;
+}
+
+.subhead {
+    animation-delay: 180ms;
+}
+
+.actions {
+    animation-delay: 270ms;
+}
+
+.figure {
+    animation: settle 900ms cubic-bezier(0.2, 0.7, 0.3, 1) 320ms backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .eyebrow,
+    .headline,
+    .subhead,
+    .actions,
+    .figure {
+        animation: none;
+    }
+}

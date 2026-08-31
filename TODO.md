@@ -1,17 +1,5 @@
 # TODO
 
-## 3. Landing page
-
-**Estado actual (verificado):**
-
-- En `frontend/src/App.jsx:26` la ruta `/` monta `<Layout>` con rutas hijas, pero **no hay ruta índice**. Al entrar en `/` el `<Outlet />` no renderiza nada: se ve el header y el `<main>` vacío.
-- El `<Route path="*" element={<NoMatch />} />` **no** cubre este caso: `/` casa exactamente con la ruta padre, así que no cae en el comodín.
-
-**A decidir:**
-
-- Lo mínimo para tapar el agujero es un `<Route index element={...} />` dentro del layout. Redirigir a `/groups` si hay token y a `/login` si no es de una línea, y sirve mientras no exista landing.
-- Para la landing de verdad: qué cuenta (el proyecto ya tiene capturas y copy en el `README.md` que se pueden reaprovechar), y si debe redirigir a `/groups` cuando el usuario ya está logueado.
-
 ## 18. El desplegable móvil a un `Drawer` (opcional)
 
 El header colapsado usa `Menu` a propósito, y para lo que hay dentro hoy sigue siendo la elección
