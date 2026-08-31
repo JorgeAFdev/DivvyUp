@@ -1,10 +1,9 @@
-import { Navigate, useLocation } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/userContextAuth';
 
 // Sends you to login remembering where you were headed, so an invite link
 // survives having to register first.
-const RequireAuth = ({ children }: { children: ReactNode }) => {
+const RequireAuth = () => {
     const { user, isPending } = useAuth();
     const location = useLocation();
 
@@ -16,7 +15,7 @@ const RequireAuth = ({ children }: { children: ReactNode }) => {
         return <Navigate to={`/login?next=${next}`} replace />;
     }
 
-    return <>{children}</>;
+    return <Outlet />;
 };
 
 export default RequireAuth;

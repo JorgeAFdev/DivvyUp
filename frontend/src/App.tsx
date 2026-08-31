@@ -33,10 +33,12 @@ function App() {
             <Route element={<Layout />}>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<RegisterForm />} />
-              <Route path="/profile" element={<RequireAuth><User /></RequireAuth>} />
-              <Route path="/groups" element={<RequireAuth><Groups /></RequireAuth>} />
-              <Route path="/groups/:groupId/expenses" element={<RequireAuth><GroupDetails /></RequireAuth>} />
-              <Route path="/my-expenses" element={<RequireAuth><MyExpenses /></RequireAuth>} />
+              <Route element={<RequireAuth />}>
+                <Route path="/profile" element={<User />} />
+                <Route path="/groups" element={<Groups />} />
+                <Route path="/groups/:groupId/expenses" element={<GroupDetails />} />
+                <Route path="/my-expenses" element={<MyExpenses />} />
+              </Route>
               <Route path="/join/:inviteCode" element={<Join />} />
               <Route path="/email-verified" element={<EmailVerified />} />
               <Route path="/email-change" element={<EmailChange />} />
