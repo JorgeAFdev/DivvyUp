@@ -5,7 +5,6 @@
     border-radius: 10px;
     min-width: 70px;
     background-color: var(--bg-color);
-    color: var(--color);
     transition: var(--theme-transition);
 }
 
@@ -23,4 +22,6 @@
 .amount {
     display: flex;
     justify-content: center;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
 }

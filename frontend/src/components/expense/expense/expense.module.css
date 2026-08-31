@@ -1,7 +1,6 @@
 .expense {
     padding: 15px;
     border-radius: 10px;
-    color: var(--color);
     border: 1px solid var(--border-color);
     transition: var(--theme-transition);
     /* background-color: var(--secondary-bg-color); */
@@ -32,6 +31,11 @@
     justify-content: center;
     align-items: center;
     gap: 10px;
+}
+
+.right strong {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
 }
 
 .buttons {

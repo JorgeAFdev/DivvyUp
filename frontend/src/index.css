@@ -1,6 +1,7 @@
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-body);
+  color: var(--color);
   background-color: var(--bg-color);
   transition: var(--theme-transition);
 }
