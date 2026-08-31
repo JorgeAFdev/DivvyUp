@@ -1,0 +1,68 @@
+.receipt {
+    --tooth: 14px;
+
+    width: min(100%, 22rem);
+    padding: 32px 28px calc(var(--tooth) + 26px);
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-bottom: 0;
+    box-shadow: 0 26px 60px -28px rgb(0 0 0 / 0.45);
+    font-family: var(--font-mono);
+    font-size: 0.9375rem;
+    /* A mask, not a drawn strip: the wash behind is a gradient, so no opaque
+       cover-up would match it. */
+    -webkit-mask:
+        linear-gradient(#000 0 0) top / 100% calc(100% - var(--tooth)) no-repeat,
+        radial-gradient(circle at 50% 0, transparent var(--tooth), #000 0) bottom / calc(var(--tooth) * 2) var(--tooth) repeat-x;
+    mask:
+        linear-gradient(#000 0 0) top / 100% calc(100% - var(--tooth)) no-repeat,
+        radial-gradient(circle at 50% 0, transparent var(--tooth), #000 0) bottom / calc(var(--tooth) * 2) var(--tooth) repeat-x;
+}
+
+.brand {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    letter-spacing: 0.02em;
+    text-align: center;
+}
+
+.meta {
+    margin-top: 10px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    text-align: center;
+    opacity: var(--muted);
+}
+
+.rows {
+    margin-top: 18px;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 5px 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.rule {
+    margin: 12px 0;
+    border-top: 1px dashed var(--border-color);
+}
+
+.total {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+/* Weight, not colour: at this size neither brand blue clears AA on the light
+   page (2.97:1 and 3.32:1). */
+.settle {
+    margin-top: 20px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-align: center;
+}

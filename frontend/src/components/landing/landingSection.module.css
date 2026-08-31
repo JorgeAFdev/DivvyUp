@@ -1,0 +1,8 @@
+.section {
+    width: 100%;
+}
+
+.inner {
+    width: min(90%, 120rem);
+    margin: 0 auto;
+}

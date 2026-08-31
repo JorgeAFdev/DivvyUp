@@ -1,0 +1,143 @@
+/* One stylesheet for the three: splitting it would be three places deciding
+   what a hairline card looks like. Same reason header.module.css is shared. */
+
+.vignette {
+    width: 100%;
+    max-width: 30rem;
+    padding: 24px;
+    border: 1px solid var(--border-color);
+    background-color: var(--secondary-bg-color);
+    box-shadow: 0 22px 48px -32px rgb(0 0 0 / 0.4);
+    transition: var(--theme-transition);
+}
+
+.label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    opacity: var(--muted);
+}
+
+.label:not(:first-child) {
+    margin-top: 26px;
+}
+
+.chips {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    list-style: none;
+}
+
+.chip {
+    flex: 1;
+    min-width: 74px;
+    padding: 12px 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+    text-align: center;
+    font-size: 0.9375rem;
+    transition: var(--theme-transition);
+}
+
+.chipRule {
+    display: block;
+    margin: 6px 0;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.chipAmount {
+    display: block;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.debt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 14px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+    font-size: 0.9375rem;
+    transition: var(--theme-transition);
+}
+
+.members {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+    list-style: none;
+}
+
+.member {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+    transition: var(--theme-transition);
+}
+
+.memberName {
+    flex: 1;
+    font-size: 0.9375rem;
+}
+
+.status {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    opacity: var(--muted);
+}
+
+.invite {
+    margin-top: 14px;
+    padding: 11px 14px;
+    border: 1px dashed var(--border-color);
+    background-color: var(--bg-color);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+    transition: var(--theme-transition);
+}
+
+.toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+    box-shadow: 0 10px 26px -18px rgb(0 0 0 / 0.5);
+    transition: var(--theme-transition);
+}
+
+.toastStacked {
+    margin: 12px 0 0 clamp(0px, 4vw, 30px);
+}
+
+/* --primary-color is 2.97:1 here, under the 3:1 non-text graphics need. */
+.toastIcon {
+    flex-shrink: 0;
+    color: var(--primary-color-dark);
+}
+
+.toastTitle {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.toastBody {
+    margin-top: 3px;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    opacity: var(--muted);
+}

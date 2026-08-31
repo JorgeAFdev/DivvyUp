@@ -14,6 +14,13 @@
        tabular figures hold their width when an amount changes. */
     --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    /* Landing only. Georgia is the fallback as the nearest by metrics, so a face
+       that has not loaded yet does not reflow the headline. */
+    --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+
+    /* Muted-text opacity: blends to 7.2:1 light and 11.5:1 dark. Below ~0.72 it
+       fails AA in light. */
+    --muted: 0.78;
     --theme-transition: background-color var(--transition-base), color var(--transition-base), border-color var(--transition-base);
 
     /* Every colour in the app, declared here and in body.dark and nowhere else.

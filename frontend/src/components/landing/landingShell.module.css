@@ -1,0 +1,21 @@
+.shell {
+    transition: var(--theme-transition);
+}
+
+.shell::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: min(860px, 96vh);
+    background-image:
+        radial-gradient(color-mix(in srgb, var(--primary-color) 26%, transparent) 1px, transparent 1px),
+        linear-gradient(168deg,
+            color-mix(in srgb, var(--primary-color) 15%, var(--bg-color)),
+            color-mix(in srgb, var(--primary-color-dark) 5%, var(--bg-color)) 52%,
+            var(--bg-color));
+    background-size: 26px 26px, auto;
+    z-index: -1;
+    -webkit-mask-image: linear-gradient(#000 55%, transparent);
+    mask-image: linear-gradient(#000 55%, transparent);
+    pointer-events: none;
+}
