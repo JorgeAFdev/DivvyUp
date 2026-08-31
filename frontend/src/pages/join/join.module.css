@@ -4,7 +4,6 @@
     padding: 24px;
     border-radius: 8px;
     background-color: var(--secondary-bg-color);
-    color: var(--color);
     transition: var(--theme-transition);
 }
 
@@ -39,7 +38,6 @@
     cursor: pointer;
     background-color: var(--bg-color);
     border: 1px solid var(--border-color);
-    color: var(--color);
     font-size: 1rem;
     transition: var(--theme-transition);
 }

@@ -4,7 +4,6 @@
     margin: 0 auto;
     padding: 20px;
     background-color: var(--secondary-bg-color);
-    color: var(--color);
     border-radius: 8px;
     transition: var(--theme-transition);
 }
@@ -17,7 +16,6 @@
 .formTitle {
     font-size: 24px;
     font-weight: 600;
-    color: var(--color);
     text-align: center;
     transition: var(--theme-transition);
 }
@@ -28,19 +26,18 @@
     display: block;
     text-align: left;
     font-weight: bold;
-    color: var(--color);
     margin: 15px 0 5px 0;
     transition: var(--theme-transition);
 }
 
 .formInput {
+    color: var(--color);
     width: 100%;
     padding: 10px;
     font-size: 16px;
     border-radius: 6px;
     background-color: var(--secondary-bg-color);
     border: 1px solid var(--border-color);
-    color: var(--color);
     margin-bottom: 15px;
     box-sizing: border-box;
     transition: var(--theme-transition);

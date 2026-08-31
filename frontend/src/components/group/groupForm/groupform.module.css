@@ -4,7 +4,6 @@
     padding: 20px;
     border-radius: 8px;
     background-color: var(--secondary-bg-color);
-    color: var(--color);
     transition: var(--theme-transition);
 }
 

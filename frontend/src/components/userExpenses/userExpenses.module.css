@@ -12,6 +12,5 @@
 }
 
 .text {
-    color: var(--color);
     transition: var(--theme-transition);
 }
