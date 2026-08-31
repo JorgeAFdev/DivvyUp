@@ -21,6 +21,7 @@ The project is a **pnpm-workspaces monorepo** driven by **Turborepo**. All works
 - **React Hook Form**
 - **MUI (Material UI)**
 - **CSS Modules**
+- **Fontsource** (self-hosted IBM Plex Sans/Mono and Instrument Serif, no third-party font request)
 - **Axios**
 - **Better Auth** (React client — cookie session)
 - **React Toastify**
@@ -32,7 +33,7 @@ The project is a **pnpm-workspaces monorepo** driven by **Turborepo**. All works
 - **TypeScript** (`strict`)
 - **MongoDB** with **Mongoose** (`InferSchemaType`)
 - **decimal.js** — all monetary math (never native floats)
-- **Better Auth** — email/password auth with `httpOnly` cookie sessions
+- **Better Auth** — email/password and Google OAuth, with `httpOnly` cookie sessions, email verification and password reset
 - **Socket.io** — real-time notifications
 - **Cloudinary** (profile images) + **Multer**
 - **Resend** — transactional email
@@ -128,7 +129,7 @@ DivvyUp/
 │   │   ├── mongo/          # MongoDB connection
 │   │   ├── routers/        # Express route definitions
 │   │   ├── schemas/        # Mongoose models
-│   │   ├── security/       # JWT middleware
+│   │   ├── security/       # Better Auth instance and the session guard
 │   │   ├── serializers/    # Mongoose docs -> @monorepo/shared response contract
 │   │   ├── services/       # Core domain logic (ledger, split, email, notifications)
 │   │   ├── socket/         # WebSocket server and event handlers
@@ -157,7 +158,8 @@ DivvyUp/
 │   └── package.json   
 │
 ├── packages/
-│   └── shared/             # @monorepo/shared — serialized API contract (compiled to dist/)
+│   ├── shared/             # @monorepo/shared — serialized API contract (compiled to dist/)
+│   └── validation/         # @monorepo/validation — Zod request schemas, shared by both ends
 │
 ├── package.json            # Root package file (monorepo manager)
 ├── turbo.json              # Turborepo config
@@ -173,6 +175,7 @@ DivvyUp/
 - Calculate individual user balances.
 - Automatically generate debts based on group expenses.
 - Mark debts as paid.
+- Public landing page at `/`, readable without an account.
 - Real-time notifications via WebSockets.
 - User authentication and session management.
 - Dark mode support.
@@ -186,6 +189,11 @@ You can try the project live here: **[https://divvyup.jorgeaf.dev](https://divvy
 ---
 
 ## 📸 Screenshots
+
+### 🏠 Landing
+![Landing](./screenshots/landing.png)
+
+The public page at `/`, which is what the live demo opens on. Signed-in visitors read the same page with the app nav in the header.
 
 ### 🧑‍🤝‍🧑 Groups
 ![Groups](./screenshots/groups.png)
