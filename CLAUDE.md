@@ -275,6 +275,50 @@ Two rules about the collapsed menu, both of them decisions rather than details, 
 - **The order is `Groups`, `Expenses` | `Profile`, `Dark mode` | `Logout`, and `Logout` goes last behind its own divider.** It is the only destructive action in the menu and it reloads the page, so on a 390px touch target the one thing next to it is a divider.
 - **The theme toggle is the only entry that does not close the menu.** The other four navigate or end the session; this one is a switch, and its label flipping between `Dark mode` and `Light mode` is the confirmation that it worked. Closing threw that away and made undoing it cost two taps. It is also text-only in the menu — an icon there pushed its label out of line with the other five.
 
+### The landing is its own route, outside `Layout`
+
+`/` renders `pages/landing/landing.tsx`; every app screen sits under a **pathless**
+`<Route element={<Layout />}>`, so the absolute child paths and the `*` -> `NoMatch`
+fallback are unchanged. The landing is out of `Layout` because `layout.module.css`
+caps `main` at `width: min(90%, 120rem)`, and a boxed main cannot do edge-to-edge
+hero bands without `100vw` hacks.
+
+**It is public.** A visitor with a session reads the same page; there is no redirect
+to `/groups`. It renders `Header`, not `GuestHeader`, so a signed-in reader gets the
+app nav and the header is what tells them they are signed in — which is why the hero
+CTAs stay "Get started" / "Log in" for everyone. The page returns `null` while
+`isPending`, because `Header` renders nothing until the session resolves and painting
+first would drop the hero in and shove it down a moment later.
+
+The page file composes and holds no stylesheet of its own. `components/landing/`
+carries the parts:
+
+- **`LandingShell`** imports the two Instrument Serif faces and paints the wash
+  behind header and hero. The wash is a `::before` at `z-index: -1`, which needs the
+  shell to be a stacking context; it is not `position: relative`, so the wash
+  resolves against the initial containing block and only lands correctly because the
+  shell is first in the document.
+- **`LandingSection`** is the full-bleed band every section composes: the `<section>`
+  spans the viewport, an inner container caps content at the app's measure. Sections
+  never take a `variant` prop.
+- **`LandingFeatures` / `LandingFeature`.** The row never knows which side it falls
+  on: the left/right alternation is an `nth-child` rule in the band's stylesheet, and
+  the `01/02/03` numerals are a CSS `counter`, so adding a row cannot leave the
+  sequence lying.
+- **`vignettes/`** are faux app UI built from the real `Button`, `MemberAvatar` and
+  `Icon` with static data, not screenshots, so they theme with the app and cannot go
+  stale. Each is `aria-hidden` (the row's heading and copy already say it) and any
+  focusable child inside carries `tabIndex={-1}`.
+
+`--font-display` and `--muted` in `App.css` are used only here. The brand blues are
+**not** used as landing text: `--primary-color` is 2.97:1 and `--primary-color-dark`
+3.32:1 against the light page, so emphasis is carried by weight and the blue is
+reserved for the filled buttons, where `--primary-color-strong` does clear AA.
+
+What the page was scoped to do, which of those decisions were reversed while
+building it and why is in
+[docs/archive/task-3-landing-page.md](docs/archive/task-3-landing-page.md).
+
 Styling is CSS Modules (`foo.module.css` beside `foo.tsx`) plus MUI. `context/darkModeContext.tsx` still exists, but recent commits deliberately removed per-component `useDarkMode` usage in favor of the MUI theme (`useTheme`) — follow that direction in new components. The exception is `header/themeToggle.tsx`, which needs `toggleDarkMode` itself: it is the switch.
 
 **Every colour is declared in `App.css`, and nowhere else.** `theme/appTheme.ts` holds no colour value: `createAppTheme(darkMode)` reads them out of the stylesheet and hands them to `createTheme`. MUI consumes the palette, it does not own it.
