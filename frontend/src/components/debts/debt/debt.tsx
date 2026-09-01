@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 import { useSettleDebt } from '../../../hooks/usePayments';
 import { apiErrorMessage } from '../../../utils/apiError';
+import { formatAmount } from '../../../utils/money';
 
 const Debt = ({ debt, groupId }: { debt: HydratedPayment; groupId: string }) => {
     const { showConfirmationToast } = useConfirmationToast();
@@ -30,7 +31,7 @@ const Debt = ({ debt, groupId }: { debt: HydratedPayment; groupId: string }) => 
 
     return (
         <li className={styles.debt}>
-            <p>{debt.from?.name} owes <strong>{debt.amount}€</strong> to {debt.to?.name}</p>
+            <p>{debt.from?.name} owes <strong>{formatAmount(debt.amount)}€</strong> to {debt.to?.name}</p>
             <Button size="sm" onClick={handlePayDebt} loading={settleDebt.isPending}>
                 Mark as paid
             </Button>

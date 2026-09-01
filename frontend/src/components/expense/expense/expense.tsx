@@ -7,6 +7,7 @@ import { useConfirmationToast } from '../../../hooks/useConfirmationToast';
 import { useDeleteExpense, useUpdateExpense } from '../../../hooks/useExpenses';
 import type { ExpenseInput } from '../../../utils/expenseApi';
 import { apiErrorMessage } from '../../../utils/apiError';
+import { formatAmount } from '../../../utils/money';
 import { Tooltip } from 'react-tooltip';
 import MemberAvatar from '../../avatar/memberAvatar';
 
@@ -70,7 +71,7 @@ const Expense = ({ expense, groupId, groupMembers }: ExpenseProps) => {
                     </div>
                 </div>
                 <div className={styles.right}>
-                    <p><strong>{expense.totalAmount}€</strong></p>
+                    <p><strong>{formatAmount(expense.totalAmount)}€</strong></p>
                     <div className={styles.actions}>
                         <ExpenseActions groupMembers={groupMembers} handleEditExpense={handleEditExpense} editPending={updateExpense.isPending} onDelete={handleDeleteExpense} isEditing={isEditing} setIsEditing={setIsEditing} defaultValues={expense} />
                     </div>
