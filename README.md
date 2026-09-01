@@ -51,7 +51,7 @@ The project is a **pnpm-workspaces monorepo** driven by **Turborepo**. All works
 - 🛢️ **Database** → [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
 - 📦 **Image registry** → GitHub Container Registry (`ghcr.io`)
 
-**How it ships.** A push to `main` that touches the backend triggers a GitHub Action: it builds the multi-stage `backend/Dockerfile`, pushes `ghcr.io/divvyup-app/splitwise:latest`, then triggers a Coolify redeploy and polls it to `finished`/`failed`, so a broken image fails the job instead of going green. The frontend is built by Cloudflare Pages straight from the repo (`vite build`).
+**How it ships.** A push to `main` that touches the backend triggers a GitHub Action: it builds the multi-stage `backend/Dockerfile`, pushes `ghcr.io/<owner>/divvyup:latest`, then triggers a Coolify redeploy and polls it to `finished`/`failed`, so a broken image fails the job instead of going green. The frontend is built by Cloudflare Pages straight from the repo (`vite build`).
 
 ---
 

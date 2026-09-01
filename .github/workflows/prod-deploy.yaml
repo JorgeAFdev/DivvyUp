@@ -18,6 +18,7 @@ on:
       - '.npmrc'
       - '.dockerignore'
       - '.github/workflows/prod-deploy.yaml'
+  workflow_dispatch:
 
 jobs:
   build-deploy:
@@ -37,8 +38,10 @@ jobs:
       # pnpm-workspace.yaml; the Dockerfile itself still lives in backend/.
       - name: 'Build Backend Image'
         run: |
-          docker build . --file backend/Dockerfile --tag ghcr.io/divvyup-app/splitwise:latest
-          docker push ghcr.io/divvyup-app/splitwise:latest
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          image="ghcr.io/$owner/divvyup:latest"
+          docker build . --file backend/Dockerfile --tag "$image"
+          docker push "$image"
 
       - name: 'Trigger Coolify redeploy and wait'
         env:
