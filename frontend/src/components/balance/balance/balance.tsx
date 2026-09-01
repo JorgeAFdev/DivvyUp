@@ -1,7 +1,10 @@
 import type { HydratedBalanceEntry } from '@monorepo/shared';
+import { formatAmount } from '../../../utils/money';
 import styles from "./balance.module.css"
 
 const Balance = ({ balance }: { balance: HydratedBalanceEntry }) => {
+    const sign = balance.amount > 0 ? '+' : '';
+
     return (
         <li className={styles.card}>
             <div className={styles.name}>
@@ -9,7 +12,7 @@ const Balance = ({ balance }: { balance: HydratedBalanceEntry }) => {
             </div>
             <span className={styles.dashed}></span>
             <div className={styles.amount}>
-                {balance.amount < 0 ? <p>{balance?.amount}€</p> : <p>+{balance?.amount}€</p>}
+                <p>{sign}{formatAmount(balance.amount)}€</p>
             </div>
         </li>
     )
