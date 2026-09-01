@@ -1,6 +1,6 @@
 import styles from './landingFooter.module.css';
 
-const REPO_URL = 'https://github.com/DivvyUp-app/DivvyUp';
+const REPO_URL = 'https://github.com/JorgeAFdev/DivvyUp';
 
 const LandingFooter = () => (
     <footer className={styles.footer}>

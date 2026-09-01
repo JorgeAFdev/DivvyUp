@@ -1,9 +1,9 @@
 # Migración a Better Auth — plan y registro de decisiones
 
 > **Estado: migración COMPLETA — documento archivado (20-08-2026).** Los cuatro child PRs entraron y
-> están en prod: core ([#126](https://github.com/DivvyUp-app/DivvyUp/pull/126)), Google OAuth
-> ([#128](https://github.com/DivvyUp-app/DivvyUp/pull/128)), verificación + Resend + cambio de email
-> ([#129](https://github.com/DivvyUp-app/DivvyUp/pull/129)) y **reset de contraseña** (el PR que archiva
+> están en prod: core ([#126](https://github.com/JorgeAFdev/DivvyUp/pull/126)), Google OAuth
+> ([#128](https://github.com/JorgeAFdev/DivvyUp/pull/128)), verificación + Resend + cambio de email
+> ([#129](https://github.com/JorgeAFdev/DivvyUp/pull/129)) y **reset de contraseña** (el PR que archiva
 > este doc). El auth artesanal (JWT en `localStorage`, `bcryptjs`, `security/jwt.ts`, controlador
 > `/auth` propio) queda retirado: Better Auth es la única autoridad de registro, hashing, credenciales,
 > sesiones (cookie `divvyup_session` httpOnly) y OAuth. **Absorbe también el punto 1 del TODO** (revisar
