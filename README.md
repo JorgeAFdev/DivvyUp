@@ -219,8 +219,11 @@ User profile screen showing the name, email and avatar, with an option to edit t
 
 ## Authors
 
-- [Jorge Álvarez](https://github.com/JorgeAFdev)
-- [Alex Biescas](https://github.com/biescaszzz)
+Built and maintained by [Jorge Álvarez](https://github.com/JorgeAFdev).
+
+Originally started as a master's project, with contributions from
+[Alex Biescas](https://github.com/biescaszzz). The architecture,
+authentication, UX and design have since been rewritten.
 
 ---
 
