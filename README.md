@@ -213,7 +213,7 @@ Section where the user can view all the expenses they’ve participated in, orga
 ### 🙋‍♂️ Profile
 ![Profile](./screenshots/profile.png)
 
-User profile screen with options to edit personal information or log out.
+User profile screen showing the name, email and avatar, with an option to edit them.
 
 ---
 
