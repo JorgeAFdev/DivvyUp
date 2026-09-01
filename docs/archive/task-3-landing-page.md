@@ -106,7 +106,7 @@ full-bleed route outside `<Layout>`**, with a **logged-in → `/groups` redirect
    from the existing `--primary-color` → `--primary-color-dark` (both already
    defined and themed). No new named colors.
 8. **Footer** (minimal): wordmark + a **"Source on GitHub"** link
-   (`https://github.com/DivvyUp-app/DivvyUp`, external, opens in a new tab) + the
+   (`https://github.com/JorgeAFdev/DivvyUp`, external, opens in a new tab) + the
    attribution line, exactly:
    **`Originally created by Jorge Álvarez & Alex Biescas · Further developed by Jorge Álvarez`**
    (the separator is a middot `·`, not an em dash). Context: the project has been

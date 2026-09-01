@@ -63,7 +63,7 @@ Follow the steps below to run the project locally.
 ### 1. Clone the Repository and install dependencies
 
 ```bash
-git clone https://github.com/DivvyUp-app/DivvyUp.git
+git clone https://github.com/JorgeAFdev/DivvyUp.git
 cd DivvyUp
 pnpm install
 ```
