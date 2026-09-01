@@ -218,7 +218,11 @@ So request paths in tests have no `/api` prefix, and `req.app.get('socketio')` i
 
 ### Real-time notifications
 
-`socket.server.ts` puts each client into a room named `user:<userId>` when it emits `register`. The `io` instance is stashed with `app.set('socketio', io)` and controllers retrieve it via `req.app.get('socketio')`, then call `sendNotificationToUser(io, userId, type, message, data)` from `services/notifications.ts`, which emits a `notification` event to that room. Frontend side is `components/notifications/notifications.tsx` — a render-null component that opens the socket and pipes events into react-toastify.
+`socket.server.ts` validates the Better Auth session cookie in an `io.use` handshake middleware, stashes the id on `socket.data.userId` and joins the client to `user:<userId>` on `connection`. **The room is never chosen by the client:** it used to come from a userId sent in a `register` event, which let any client join `user:<someone-else>` and read their notifications. The frontend just opens the socket with `withCredentials: true` so the cookie rides the handshake, and a `getSession` throw rejects the handshake rather than escaping as an unhandled rejection.
+
+The `io` instance is stashed with `app.set('socketio', io)` and controllers retrieve it via `req.app.get('socketio')`, then call `sendNotificationToUser(io, userId, type, message, data)` from `services/notifications.ts`, which emits a `notification` event to that room. The types are `GROUP_CREATED`, `EXPENSE_CREATED` and `DEBT_SETTLED`. Frontend side is `components/notifications/notifications.tsx` — a render-null component that opens the socket and pipes events into react-toastify.
+
+**The socket carries notifications, not state.** The consumer does `toast.info(data.message)` and nothing else: it invalidates no cache and writes no balance. Balances are always up to date, but through the ledger hooks above, not through this. So "live balances over Socket.IO" is wrong; the socket only says something happened.
 
 Notifications only go to members with a linked `user` — `linkedUserIds()` in `utils/members.ts` filters them — since emitting to a member without an account means emitting into an empty room.
 
