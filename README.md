@@ -47,7 +47,7 @@ The project is a **pnpm-workspaces monorepo** driven by **Turborepo**. All works
 
 ### Deployment
 - 🌐 **Frontend** → [Cloudflare Pages](https://pages.cloudflare.com/), live at **https://divvyup.jorgeaf.dev**
-- 🌐 **Backend** → self-hosted **[Coolify](https://coolify.io/)** on an OVH VPS, live at **https://divvyup-api.jorgeaf.dev**
+- 🌐 **Backend** → self-hosted **[Coolify](https://coolify.io/)** on a private VPS, live at **https://divvyup-api.jorgeaf.dev**
 - 🛢️ **Database** → [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
 - 📦 **Image registry** → GitHub Container Registry (`ghcr.io`)
 
