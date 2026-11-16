@@ -4,9 +4,9 @@ import { vi } from 'vitest';
 // session would otherwise make a real Resend call. Stub the SDK globally; the
 // email service's own test re-mocks 'resend' locally to assert the payload.
 vi.mock('resend', () => ({
-    Resend: vi.fn(() => ({
-        emails: { send: vi.fn().mockResolvedValue({ data: { id: 'test' }, error: null }) },
-    })),
+    Resend: vi.fn(function () {
+        return { emails: { send: vi.fn().mockResolvedValue({ data: { id: 'test' }, error: null }) } };
+    }),
 }));
 
 // Better Auth reads these at call time, like jwt.ts used to read jwt_secret, so

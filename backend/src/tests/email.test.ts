@@ -1,7 +1,9 @@
 const { sendMock } = vi.hoisted(() => ({ sendMock: vi.fn() }));
 
 vi.mock('resend', () => ({
-    Resend: vi.fn(() => ({ emails: { send: sendMock } }))
+    Resend: vi.fn(function () {
+        return { emails: { send: sendMock } };
+    })
 }));
 
 const { default: sendEmail } = await import('../services/email.js');
